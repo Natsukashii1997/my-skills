@@ -15,7 +15,7 @@
 | [lumiedu-automation-advisor](skills/lumiedu-automation-advisor/SKILL.md) | `~/.codex/skills` | 同上的另一版（只能点名调用） |
 | [thinking-model-capture](skills/thinking-model-capture/SKILL.md) | `~/.codex/skills` | 沉淀思维模型候选 |
 | [skill-governance-audit](skills/skill-governance-audit/SKILL.md) | `~/.codex/skills` | Skill 启用前的治理审计 |
-| [excel-aura](skills/excel-aura/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「Excel-Aura」表格配色与版式标准：10 套标准配色 + 行列字体对齐规则，飞书 / Excel 通用 |
+| [excel-aura](skills/excel-aura/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「Excel-Aura」表格配色与版式标准：按表型给写法，10 套标准配色 +「底线 + 默认值」版式规则，带写入前预览和表格审查；新建、美化已有表都能用，飞书 / Excel 通用 |
 
 链接关系以 [links.tsv](links.tsv) 为准。
 

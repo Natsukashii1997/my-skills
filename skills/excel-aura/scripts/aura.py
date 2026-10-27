@@ -7,14 +7,22 @@
   aura.py feishu layout.json [--out-dir DIR] [--skip-merges]
                                                 生成飞书 +styles-put 规格（按 70 项自动分片；重刷时跳过合并）
   aura.py xlsx layout.json in.xlsx out.xlsx     给本地 xlsx 上同一套样式
+  aura.py preview layout.json [--sheet 名] [--cells cells.json] [--info info.json] [--out x.html] [--png x.png]
+                                                写入前预览：原表样式叠上新样式渲染成 HTML（可选 PNG），并列出风险
+  aura.py audit cells.json [--info info.json] [--before 原表cells.json]
+                                                检查一张表（含别人美化过的）的残留与不合规之处；给 --before 时核对值和公式
 
-layout.json 的写法见 references/layout-spec.md。
+cells.json 是 `+cells-get --include value,formula,style --output-path` 的产物，info.json 是 `+sheet-info` 的输出。
+layout.json 的写法见 references/layout.md。
 """
 import argparse
 import colorsys
+import html
 import json
 import pathlib
 import re
+import shutil
+import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -111,7 +119,15 @@ def suite_tokens(sid, n=5):
 
 ROW = {"top": 12, "title": 52, "subtitle": 24, "gap": 12, "section": 32,
        "header": 40, "body": 34, "compact": 30, "total": 36, "note": 24}
+# 页级疏密：长清单用 compact，卡片 / 少行测算用 airy；layout 里 "rows" 还能逐项覆盖
+DENSITY = {"compact": {"header": 34, "body": 28, "compact": 26, "total": 32},
+           "normal": {},
+           "airy": {"header": 44, "body": 38, "compact": 34, "total": 40}}
 FONT = {"title": 15, "section": 11, "header": 10, "body": 10, "note": 9}
+SIDES = ("top", "bottom", "left", "right")
+# 清旧样式：已有表先把整片区域洗成白底常规字，免得空格子里留着旧底色、斜体、旧边框（数字格式不动）
+RESET = dict(background_color="#FFFFFF", font_weight="normal", font_style="normal", font_line="none",
+             horizontal_alignment="left", word_wrap="overflow")
 
 # 列类型 → 对齐、宽度上下限、数字格式
 TYPES = {
@@ -182,7 +198,7 @@ class Sheet:
     def __init__(self, tok, font):
         self.tok, self.font = tok, font
         self.style = {}      # (r,c) -> dict
-        self.merges, self.rows, self.cols = [], {}, {}
+        self.merges, self.unmerges, self.rows, self.cols = [], [], {}, {}
 
     def put(self, rng, *bases, _border=None, **st):
         """给区域盖样式：bases（如基础字体）先铺，关键字参数覆盖其上。"""
@@ -196,7 +212,7 @@ class Sheet:
 
     def box(self, rng, color):
         side = {"style": "solid", "weight": "thin", "color": color}
-        self.put(rng, _border={k: dict(side) for k in ("top", "bottom", "left", "right")})
+        self.put(rng, _border={k: dict(side) for k in SIDES})
 
     def row(self, r, size, force=False):
         # 同一物理行有并排区块时取最大值，row_sizes 显式值用 force 覆盖
@@ -212,7 +228,14 @@ def build_sheet(spec, tok, font):
     N = tok["neutral"]
     sh = Sheet(tok, font)
     hue = lambda i: tok["hues"][(max(i, 1) - 1) % len(tok["hues"])]  # 超过色数循环取色
+    # 本页的行高、字号：默认值 ← 疏密档 ← layout 里逐项覆盖
+    ROW = {**globals()["ROW"], **DENSITY[spec.get("density", "normal")], **spec.get("rows", {})}
+    FONT = {**globals()["FONT"], **spec.get("fonts", {})}
     base = dict(font_family=font, font_size=FONT["body"], font_color=N["text"], vertical_alignment="middle")
+
+    if spec.get("reset"):                     # 必须最先铺，后面的样式逐项盖在上面
+        sh.put(spec["reset"], base, **RESET, _border={k: {"style": "none"} for k in SIDES})
+    sh.unmerges = list(spec.get("unmerge", []))
 
     if spec.get("gutter", True):
         sh.cols[1] = GUTTER_W
@@ -374,6 +397,17 @@ def _rects(style):
     return sorted(out, key=lambda x: x[:4])
 
 
+def _runs(sizes):
+    """{序号: 尺寸} → [(起, 止, 尺寸)]：连续且尺寸相同的行 / 列并成一项，省 +styles-put 的操作额度。"""
+    out = []
+    for i, s in sorted(sizes.items()):
+        if out and out[-1][1] == i - 1 and out[-1][2] == s:
+            out[-1][1] = i
+        else:
+            out.append([i, i, s])
+    return [tuple(x) for x in out]
+
+
 def to_feishu(name, sh, chunk=70, merges=True):
     items = []
     for r1, c1, r2, c2, st in _rects(sh.style):
@@ -382,8 +416,8 @@ def to_feishu(name, sh, chunk=70, merges=True):
         if "border" in st:
             d["border_styles"] = st["border"]
         items.append(d)
-    rows = [{"range": f"{r}:{r}", "size": s} for r, s in sorted(sh.rows.items())]
-    cols = [{"range": f"{n2col(c)}:{n2col(c)}", "size": s} for c, s in sorted(sh.cols.items())]
+    rows = [{"range": f"{a}:{b}", "size": s} for a, b, s in _runs(sh.rows)]
+    cols = [{"range": f"{n2col(a)}:{n2col(b)}", "size": s} for a, b, s in _runs(sh.cols)]
     specs = []
     first = {"name": name}
     if not merges:                             # 重刷样式时跳过：飞书的合并不能重复执行
@@ -408,6 +442,9 @@ def to_feishu(name, sh, chunk=70, merges=True):
 def to_xlsx(ws, sh):
     from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
+    for m in sh.unmerges:
+        if m in {str(x) for x in ws.merged_cells.ranges}:
+            ws.unmerge_cells(m)
     for m in sh.merges:
         ws.merge_cells(m)
     for (r, c), st in sh.style.items():
@@ -424,7 +461,7 @@ def to_xlsx(ws, sh):
             cell.number_format = st["number_format"]
         if st.get("border"):
             sd = lambda k: (Side(style=st["border"][k]["weight"], color=st["border"][k]["color"].lstrip("#"))
-                            if k in st["border"] else Side())
+                            if st["border"].get(k, {}).get("style", "none") != "none" else Side())
             cell.border = Border(top=sd("top"), bottom=sd("bottom"), left=sd("left"), right=sd("right"))
     for r, px in sh.rows.items():
         ws.row_dimensions[r].height = round(px * 0.75, 1)       # px → 磅
@@ -434,6 +471,309 @@ def to_xlsx(ws, sh):
         fr, fc = sh.freeze.get("rows", 0), sh.freeze.get("cols", 0)
         ws.freeze_panes = ws.cell(row=fr + 1, column=fc + 1)
     ws.sheet_view.showGridLines = False
+
+# ---------- 读回读结果：+cells-get / +sheet-info ----------
+
+def _hex6(c):
+    """飞书回读的颜色有 #abc、#aabbcc、rgb(r, g, b) 几种写法，统一成 #RRGGBB。"""
+    if not c:
+        return None
+    m = re.fullmatch(r"rgba?\((\d+),\s*(\d+),\s*(\d+).*\)", c.strip())
+    if m:
+        return _hex([int(v) for v in m.groups()])
+    c = c.strip().upper()
+    return "#" + "".join(ch * 2 for ch in c[1:]) if re.fullmatch(r"#[0-9A-F]{3}", c) else c
+
+
+def load_cells(path, sheet=None):
+    """{(行, 列): {value, formula, style}}。认 +cells-get 的输出（可带外层 data），也认 demo.py 的 values.json。"""
+    d = json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
+    d = d.get("data", d)
+    grid = {}
+    if "ranges" in d:
+        if d.get("has_more"):
+            print(f"注意：{path} 没读全（has_more），请用 --output-path 重新读", file=sys.stderr)
+        for rg in d["ranges"]:
+            for i, row in enumerate(rg["cells"]):       # 行列号以 row_indices / col_indices 为准，不按下标数
+                for j, cell in enumerate(row):
+                    grid[(int(rg["row_indices"][i]), col2n(rg["col_indices"][j]))] = {
+                        "value": cell.get("value"), "formula": cell.get("formula"),
+                        "style": cell.get("cell_styles") or {}}
+        return grid
+    for item in d.get(sheet) or next(iter(d.values())):
+        c1, r1, _, _ = parse(item["range"])
+        for i, row in enumerate(item["cells"]):
+            for j, cell in enumerate(row):
+                grid[(r1 + i, c1 + j)] = {"value": cell.get("value"), "formula": cell.get("formula"), "style": {}}
+    return grid
+
+
+def load_info(path):
+    if not path:
+        return {}
+    d = json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
+    d = d.get("data", d)
+    span = lambda s: range(int(str(s).split(":")[0]), int(str(s).split(":")[-1]) + 1)
+    info = {"hidden_cols": {col2n(c) for c in d.get("hidden_columns", [])},
+            "hidden_rows": {r for s in d.get("hidden_rows", []) for r in span(s)},
+            "merges": [m["range"] for m in d.get("merged_cells", [])],
+            "rows": {}, "cols": {}, "auto_rows": set()}
+    for x in d.get("row_heights", []):
+        for r in span(x["rows"]):
+            info["rows"][r] = x["height"]
+            if x.get("type") == "auto":
+                info["auto_rows"].add(r)
+    for x in d.get("column_widths", []):
+        a, b = x["cols"].split(":")
+        for c in range(col2n(a), col2n(b) + 1):
+            info["cols"][c] = x["width"]
+    return info
+
+
+def _empty(cell):
+    return not cell or (cell.get("value") in (None, "") and not cell.get("formula"))
+
+
+def _overlap(a, b):
+    a1, ar1, a2, ar2 = parse(a)
+    b1, br1, b2, br2 = parse(b)
+    return not (a2 < b1 or b2 < a1 or ar2 < br1 or br2 < ar1)
+
+
+def _spans(keys, limit=8):
+    """一堆格子 → 「A2:C2、J29:K29 等 n 处」：同一行连续的并成一段。"""
+    segs = []
+    for r, c in sorted(keys):
+        if segs and segs[-1][0] == r and segs[-1][2] == c - 1:
+            segs[-1][2] = c
+        else:
+            segs.append([r, c, c])
+    txt = [f"{n2col(a)}{r}" + (f":{n2col(b)}{r}" if b > a else "") for r, a, b in segs]
+    return "、".join(txt[:limit]) + (f" 等 {len(txt)} 处" if len(txt) > limit else "")
+
+# ---------- 写入前检查与预览 ----------
+
+def lint(spec, sh, info, grid):
+    """写入前查会出事的地方：隐藏列被设宽、新旧合并撞车、合并吞内容、已有表开着页边距或没洗旧样式。"""
+    warn = []
+    for c in sorted(set(sh.cols) & info.get("hidden_cols", set())):
+        warn.append(f"{n2col(c)} 列是隐藏列，设列宽会让它显示出来：从页级 columns 里拿掉（类型可以写在区块的 columns 里）")
+    old = [m for m in info.get("merges", []) if m not in sh.unmerges]
+    for m in sh.merges:
+        for o in old:
+            if m == o:
+                warn.append(f"{m} 已经合并过：重刷时加 --skip-merges")
+            elif _overlap(m, o):
+                warn.append(f"新合并 {m} 和已有合并 {o} 重叠：把 {o} 写进 unmerge")
+    for m in sh.unmerges:
+        if info and m not in info.get("merges", []):
+            warn.append(f"unmerge 里的 {m} 在表里并没有合并")
+    for m in sh.merges:
+        c1, r1, _, _ = parse(m)
+        lost = [(r, c) for r, c in cells(m) if (r, c) != (r1, c1) and not _empty(grid.get((r, c)))]
+        if lost:
+            warn.append(f"合并 {m} 会吞掉 {_spans(lost)} 的内容")
+    if spec.get("gutter", True) and any(c == 1 and not _empty(v) for (_, c), v in grid.items()):
+        warn.append("A 列有内容却开着 gutter（会把 A 列压成 20px 页边距）：已有表写 \"gutter\": false")
+    if any(v["style"] for v in grid.values()) and not spec.get("reset"):
+        warn.append("这是已有表但没写 reset：旧底色、斜体、旧边框会留在区块没盖到的格子里")
+    return warn
+
+
+def _fmt(v, f):
+    """按数字格式粗略显示，够预览用：千分位、小数位、百分比、¥。"""
+    if v in (None, ""):
+        return ""
+    x = v
+    if isinstance(v, str):
+        try:
+            x = float(v.replace(",", "").replace("¥", ""))     # cells-get 把数字按原格式写成了字符串
+        except ValueError:
+            return v
+    if not f or f in ("@", "General"):
+        return v if isinstance(v, str) else f"{x:g}"
+    m = re.search(r"0(?:\.(0+))?", f)
+    pct = "%" in f
+    s = format(x * 100 if pct else x, ("," if "," in f else "") + f".{len(m[1] or '') if m else 0}f")
+    return ("¥" if "¥" in f else "") + s + ("%" if pct else "")
+
+
+def preview_html(name, sh, grid, info, warns):
+    """原表样式逐项叠上新样式（和飞书 +styles-put 的效果一致），渲染成一张网页。"""
+    hc, hr = info.get("hidden_cols", set()), info.get("hidden_rows", set())
+    used = [k for k, v in grid.items() if not _empty(v)] + list(sh.style)
+    maxr, maxc = max(r for r, _ in used), max(c for _, c in used)
+    rows = {**info.get("rows", {}), **sh.rows}
+    cols = {**info.get("cols", {}), **sh.cols}
+    merges = [m for m in info.get("merges", []) if m not in sh.unmerges] + sh.merges
+    vis_r = [r for r in range(1, maxr + 1) if r not in hr]
+    vis_c = [c for c in range(1, maxc + 1) if c not in hc]
+    span, covered = {}, set()
+    for m in merges:
+        c1, r1, c2, r2 = parse(m)
+        span[(r1, c1)] = (len([r for r in range(r1, r2 + 1) if r not in hr]),
+                          len([c for c in range(c1, c2 + 1) if c not in hc]))
+        covered |= set(cells(m)) - {(r1, c1)}
+    out = []
+    for r in vis_r:
+        tds = []
+        for c in vis_c:
+            if (r, c) in covered:
+                continue
+            g = grid.get((r, c), {})
+            st = {**g.get("style", {}), **sh.style.get((r, c), {})}
+            css = [f"background:{_hex6(st.get('background_color')) or '#FFFFFF'}",
+                   f"color:{_hex6(st.get('font_color')) or '#1F2329'}",
+                   f"font-size:{st.get('font_size', 10) * 4 / 3:.1f}px",
+                   f"font-weight:{700 if st.get('font_weight') == 'bold' else 400}",
+                   f"font-style:{st.get('font_style') or 'normal'}",
+                   f"text-align:{st.get('horizontal_alignment') or 'left'}",
+                   "white-space:" + ("normal" if st.get("word_wrap") == "auto-wrap" else "nowrap")]
+            for k, sd in (st.get("border") or st.get("border_styles") or {}).items():
+                if sd.get("style", "none") != "none":
+                    css.append(f"border-{k}:{2 if sd.get('weight') in ('medium', 'thick') else 1}px solid {_hex6(sd.get('color')) or '#000'}")
+            txt = html.escape(_fmt(g.get("value"), st.get("number_format")))
+            if not txt and g.get("formula"):
+                txt = f'<i style="color:#8F959E">{html.escape(g["formula"])}</i>'
+            rs, cs = span.get((r, c), (1, 1))
+            tds.append(f'<td rowspan="{rs}" colspan="{cs}" style="{";".join(css)}">{txt}</td>')
+        out.append(f'<tr style="height:{rows.get(r, 27)}px"><th>{r}</th>{"".join(tds)}</tr>')
+    width = sum(cols.get(c, 100) for c in vis_c) + 32
+    head = "".join(f"<th>{n2col(c)}</th>" for c in vis_c)
+    notes = (f'<ul class="warn">{"".join(f"<li>{html.escape(w)}</li>" for w in warns)}</ul>' if warns
+             else '<p class="ok">写入前检查：没发现风险</p>')
+    hid = f"（隐藏列 {'、'.join(n2col(c) for c in sorted(hc))} 未显示）" if hc else ""
+    page = f"""<!doctype html><html><head><meta charset="utf-8"><style>
+body{{margin:16px;background:#fff;font-family:Arial,"PingFang SC","Microsoft YaHei",sans-serif}}
+h1{{font-size:15px;color:#1F2329;margin:0 0 6px}} .warn{{color:#B42318;font-size:13px;margin:0 0 10px;padding-left:18px}}
+.ok{{color:#2E7D32;font-size:13px;margin:0 0 10px}}
+table{{border-collapse:collapse;table-layout:fixed;width:{width}px}}
+td{{border:1px solid #EEF0F2;padding:0 6px;overflow:hidden;box-sizing:border-box;vertical-align:middle}}
+th{{background:#F5F6F7;color:#8F959E;font:400 11px Arial;border:1px solid #E4E5E7}}
+</style></head><body><h1>预览 · {html.escape(name)}{hid}</h1>{notes}<table>
+<colgroup><col style="width:32px">{"".join(f'<col style="width:{cols.get(c, 100)}px">' for c in vis_c)}</colgroup>
+<tr style="height:22px"><th></th>{head}</tr>{"".join(out)}</table></body></html>"""
+    height = sum(rows.get(r, 27) for r in vis_r) + 140 + 20 * len(warns)
+    return page, width + 40, height
+
+
+CHROME = ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "google-chrome", "chromium", "chromium-browser"]
+
+
+def screenshot(page, png, w, h):
+    exe = next((p for p in CHROME if shutil.which(p) or pathlib.Path(p).exists()), None)
+    if not exe:
+        print("没找到 Chrome，只生成了 HTML", file=sys.stderr)
+        return
+    subprocess.run([exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", f"--window-size={w},{h}",
+                    "--force-device-scale-factor=1", f"--screenshot={pathlib.Path(png).resolve()}",
+                    pathlib.Path(page).resolve().as_uri()], capture_output=True, timeout=90)
+    print(png)
+
+# ---------- 审查：一张表（谁美化的都行）还剩哪些问题 ----------
+
+NUMERIC = re.compile(r"^[-¥]?[\d,]+(\.\d+)?%?$")
+
+
+def audit(grid, info, before=None):
+    """只看看得见的格子（隐藏行列、被合并盖住的格子不算）。返回 (问题, 提示)。"""
+    hc, hr = info.get("hidden_cols", set()), info.get("hidden_rows", set())
+    covered = set()
+    for m in info.get("merges", []):
+        c1, r1, _, _ = parse(m)
+        covered |= set(cells(m)) - {(r1, c1)}
+    vis = {k: v for k, v in grid.items() if k[1] not in hc and k[0] not in hr and k not in covered}
+    full = {k: v for k, v in vis.items() if not _empty(v)}
+    if not full:
+        return ["没读到内容"], []
+    maxr, maxc = max(r for r, _ in full), max(c for _, c in full)
+    area = {k: v for k, v in vis.items() if k[0] <= maxr and k[1] <= maxc}
+    S = lambda v: v["style"]
+    bg = lambda v: _hex6(S(v).get("background_color")) or WHITE
+    probs, tips = [], []
+
+    if before is not None:
+        diff = [k for k in set(grid) | set(before)
+                if (grid.get(k, {}).get("value"), grid.get(k, {}).get("formula")) !=
+                   (before.get(k, {}).get("value"), before.get(k, {}).get("formula"))]
+        (probs if diff else tips).append(f"值和公式与原表相比改了 {len(diff)} 格：{_spans(diff)}" if diff
+                                         else "值和公式与原表一致")
+
+    ital = [k for k, v in area.items() if S(v).get("font_style") == "italic"]
+    if ital:
+        probs.append(f"斜体 {len(ital)} 格：{_spans(ital)}")
+
+    by_bg = {}
+    for k, v in area.items():
+        by_bg.setdefault(bg(v), [[], []])[_empty(v)].append(k)
+    for color, (filled, empty) in sorted(by_bg.items()):
+        if color != WHITE and not filled:
+            probs.append(f"底色 {color} 只出现在空格子里（多半是旧样式残留）：{_spans(empty)}")
+
+    bands = {bg(v) for v in full.values() if contrast(bg(v), WHITE) >= 3 and
+             contrast(_hex6(S(v).get("font_color")) or "#000000", WHITE) < 1.5}
+    if len(bands) > 1:
+        probs.append(f"用了 {len(bands)} 种深色带（{'、'.join(sorted(bands))}），一页只该有一个深色")
+
+    low = [k for k, v in full.items() if v.get("value") not in (None, "") and
+           contrast(_hex6(S(v).get("font_color")) or "#1F2329", bg(v)) < 2.9]
+    if low:
+        probs.append(f"文字和底色对比度不足 3：{_spans(low)}")
+
+    sizes = {}
+    for k, v in full.items():
+        sizes.setdefault(S(v).get("font_size"), []).append(k)
+    dist = "、".join(f"{s} 号 {len(ks)} 格" for s, ks in sorted(sizes.items(), key=lambda x: -len(x[1])))
+    if len(sizes) > 4 or max(s or 0 for s in sizes) >= 18:
+        probs.append(f"字号层级太多或有 18 号以上的大字：{dist}")
+    else:
+        tips.append(f"字号分布：{dist}")
+    fams = {S(v).get("font_family") or "默认" for v in full.values()}
+    if len(fams) > 1:
+        tips.append(f"字体混用：{'、'.join(sorted(fams))}")
+    black = [k for k, v in full.items() if _hex6(S(v).get("font_color")) == "#000000"]
+    if black:
+        tips.append(f"纯黑字 {len(black)} 格（标准用 #1F2329）：{_spans(black, 4)}")
+
+    for c in range(1, maxc + 1):                # 同一列连续的一段数字，格式应当一致
+        run = []
+        for r in range(1, maxr + 2):
+            v = full.get((r, c))
+            num = v and (isinstance(v["value"], (int, float)) or NUMERIC.match(str(v["value"] or "")))
+            if num:
+                run.append(S(v).get("number_format"))
+                continue
+            if len(set(run)) > 1:
+                probs.append(f"{n2col(c)} 列第 {r - len(run)}–{r - 1} 行数字格式不一：{'、'.join(sorted(map(str, set(run))))}")
+            run = []
+
+    if not any(any(sd.get("style", "none") != "none" for sd in (S(v).get("border") or S(v).get("border_styles") or {}).values())
+               for v in full.values()):
+        tips.append("整页没有边框，只靠网格线对齐")
+    anchors = {(parse(m)[1], parse(m)[0]) for m in info.get("merges", [])}
+    wide, tight = [], []
+    for c in range(1, maxc + 1):                # 列宽对照内容估算：中文 15px、其他 8px、加 28px 内边距
+        w = info.get("cols", {}).get(c)
+        need = [text_px(_fmt(v["value"], S(v).get("number_format")) if v["value"] not in (None, "") else "")
+                for (r, cc), v in full.items() if cc == c and (r, c) not in anchors
+                and S(v).get("word_wrap") != "auto-wrap"]
+        if not w or not need:
+            continue
+        if w > max(need) * 1.5 and w - max(need) > 40:
+            wide.append(f"{n2col(c)}（{w}px，内容约 {max(need)}px）")
+        elif w < max(need) - 8:
+            tight.append(f"{n2col(c)}（{w}px，内容约 {max(need)}px）")
+    if tight:
+        probs.append(f"这些列放不下内容，会被截断或显示 ####：{'、'.join(tight)}")
+    if wide:
+        tips.append(f"这些列比内容宽很多，表会显得散：{'、'.join(wide)}")
+    for m in info.get("merges", []):
+        if parse(m)[2] > maxc:
+            probs.append(f"合并 {m} 超出表格右边界（内容只到 {n2col(maxc)} 列）")
+    auto = sorted(r for r in info.get("auto_rows", set()) if r <= maxr and r not in hr)
+    if auto:
+        tips.append(f"这些行没设行高（自动）：{'、'.join(map(str, auto))}")
+    return probs, tips
 
 # ---------- CLI ----------
 
@@ -445,6 +785,12 @@ def main():
     f = sub.add_parser("feishu"); f.add_argument("layout"); f.add_argument("--out-dir", default=".")
     f.add_argument("--skip-merges", action="store_true", help="表里已合并过（重刷样式）时加上")
     x = sub.add_parser("xlsx"); x.add_argument("layout"); x.add_argument("src"); x.add_argument("dst")
+    pv = sub.add_parser("preview"); pv.add_argument("layout"); pv.add_argument("--sheet", help="默认 layout 里第一页")
+    pv.add_argument("--cells", help="原表回读（+cells-get）或 demo 的 values.json")
+    pv.add_argument("--info", help="原表 +sheet-info（合并、隐藏、行高列宽）")
+    pv.add_argument("--out", default="preview.html"); pv.add_argument("--png")
+    u = sub.add_parser("audit"); u.add_argument("cells"); u.add_argument("--info")
+    u.add_argument("--before", help="改之前回读的 cells.json，用来核对值和公式")
     a = ap.parse_args()
 
     if a.cmd == "list":
@@ -455,6 +801,13 @@ def main():
         json.dump(suite_tokens(a.suite, a.colors), sys.stdout, ensure_ascii=False, indent=1)
         print()
         return
+    if a.cmd == "audit":
+        probs, tips = audit(load_cells(a.cells), load_info(a.info), load_cells(a.before) if a.before else None)
+        print(f"问题（{len(probs)}）")
+        print("\n".join(f"  ✗ {x}" for x in probs) or "  无")
+        print("提示")
+        print("\n".join(f"  · {x}" for x in tips) or "  无")
+        return
 
     lay = json.loads(pathlib.Path(a.layout).read_text(encoding="utf-8"))
     font = lay.get("font", "Arial")
@@ -462,11 +815,27 @@ def main():
                                                       s.get("colors", lay.get("colors", 3))), font))
              for s in lay["sheets"]]
 
-    if a.cmd == "feishu":
+    if a.cmd == "preview":
+        i = next((k for k, s in enumerate(lay["sheets"]) if s["name"] == a.sheet), 0) if a.sheet else 0
+        (name, sh), spec = built[i], lay["sheets"][i]
+        grid = load_cells(a.cells, name) if a.cells else {}
+        info = load_info(a.info)
+        warns = lint(spec, sh, info, grid)
+        page, w, h = preview_html(name, sh, grid, info, warns)
+        pathlib.Path(a.out).write_text(page, encoding="utf-8")
+        print(a.out)
+        print("\n".join(f"  ! {x}" for x in warns) or "  写入前检查：没发现风险")
+        if a.png:
+            screenshot(a.out, a.png, w, h)
+    elif a.cmd == "feishu":
         out = pathlib.Path(a.out_dir)
         out.mkdir(parents=True, exist_ok=True)
         n = 0
         for name, sh in built:
+            if sh.unmerges:                    # +styles-put 不能取消合并，要先单独跑
+                print(f"先取消「{name}」的这些合并，再跑下面的 styles 文件：")
+                for m in sh.unmerges:
+                    print(f"  lark-cli sheets +cells-unmerge --url <表> --sheet-name '{name}' --range {m}")
             for spec in to_feishu(name, sh, merges=not a.skip_merges):
                 n += 1
                 p = out / f"styles-{n:02d}.json"
