@@ -84,7 +84,7 @@
 色数不够时自动退回：只有 1 色时，`input` 用 ① 的浅底，`calc` 用 ① 的斑马纹底。
 
 **tags**
-- 只给状态列用：`good`、`warn`、`bad`、`info`、`neutral`。
+- 只给状态列用：`good`、`warn`、`bad`、`info`、`neutral`。只上文字色，`bad` 另加浅红底。
 
 **paint**
 - 逃生口，只在色卡展示这类特殊需求时用。正常表格不应该用到。
