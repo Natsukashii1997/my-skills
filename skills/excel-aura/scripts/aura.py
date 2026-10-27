@@ -632,7 +632,7 @@ def preview_html(name, sh, grid, info, warns):
             for k, sd in (st.get("border") or st.get("border_styles") or {}).items():
                 if sd.get("style", "none") != "none":
                     css.append(f"border-{k}:{2 if sd.get('weight') in ('medium', 'thick') else 1}px solid {_hex6(sd.get('color')) or '#000'}")
-            txt = html.escape(_fmt(g.get("value"), st.get("number_format")))
+            txt = html.escape(_fmt(g.get("value"), st.get("number_format"))).replace("\n", "<br>")
             if not txt and g.get("formula"):
                 txt = f'<i style="color:#8F959E">{html.escape(g["formula"])}</i>'
             rs, cs = span.get((r, c), (1, 1))
@@ -752,9 +752,9 @@ def audit(grid, info, before=None):
         tips.append("整页没有边框，只靠网格线对齐")
     anchors = {(parse(m)[1], parse(m)[0]) for m in info.get("merges", [])}
     wide, tight = [], []
-    for c in range(1, maxc + 1):                # 列宽对照内容估算：中文 15px、其他 8px、加 28px 内边距
+    for c in range(1, maxc + 1):                # 列宽对照内容估算：中文 15px、其他 8px、加 28px 内边距；多行按最长一行
         w = info.get("cols", {}).get(c)
-        need = [text_px(_fmt(v["value"], S(v).get("number_format")) if v["value"] not in (None, "") else "")
+        need = [max(map(text_px, _fmt(v["value"], S(v).get("number_format")).split("\n")))
                 for (r, cc), v in full.items() if cc == c and (r, c) not in anchors
                 and S(v).get("word_wrap") != "auto-wrap"]
         if not w or not need:
