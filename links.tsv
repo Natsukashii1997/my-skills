@@ -9,3 +9,5 @@ lumiedu-ai-collaboration	~/.codex/skills
 lumiedu-automation-advisor	~/.codex/skills
 thinking-model-capture	~/.codex/skills
 skill-governance-audit	~/.codex/skills
+excel-aura	~/.claude/skills
+excel-aura	~/.agents/skills
