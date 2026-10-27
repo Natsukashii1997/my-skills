@@ -78,11 +78,10 @@ def suite_sheet(sid):
         for c, cell in zip("BCDEFGHIJ", [v(i + 1), text(d), v(LINES[li]), v(proj), v(who), v(st), v(amt), v(rate), v(note)]):
             put(r, c, cell)
         tags.append({"range": f"G{r}", "tone": TONE[st]})
-        roles.append({"range": f"D{r}", "role": f"hue{li + 1}"})
     put(19, "B", v("合计"))
     put(19, "H", v("=SUM(H7:H18)"))
     put(19, "I", v("=AVERAGE(I7:I18)"))
-    put(20, "B", v("注：状态用全套共用的状态色；业务线按色序 ①–⑤ 着色；合计、完成率均值、汇总区实际值都是公式。"))
+    put(20, "B", v("注：状态只用文字色，只有风险带浅红底；正文不按类别铺色；合计、完成率均值、汇总区实际值都是公式。"))
 
     for r, label, val, role, fmt in CALC:
         put(r, "L", v(label))
@@ -106,7 +105,6 @@ def suite_sheet(sid):
                  v(f"=F{r}-D{r}"), v(f"=IF(D{r}=0,0,F{r}/D{r})"), v(note)]
         for c, cell in zip("BCDEFGHIJ", cells):
             put(r, c, cell)
-        roles.append({"range": f"C{r}", "role": f"hue{i + 1}"})
         H, lr = tok["hues"][i], 24 + i     # 色卡块表头在 23 行，色卡从 24 行起
         put(lr, "L", v(f"{CIRCLED[i]} {H['name']}"))
         put(lr, "M", v(H["band"]))
@@ -116,7 +114,7 @@ def suite_sheet(sid):
     for c in "DEFGH":
         put(30, c, v(f"=SUM({c}25:{c}29)"))
     put(30, "I", v("=IF(D30=0,0,F30/D30)"))
-    put(31, "B", v("多色用法：只要 2 色时分组表头全用 ②；3 色时 ②③ 交替；4–5 色依次取。分类标记同理，超过色数就循环。"))
+    put(31, "B", v("色序：① 主色 ② 辅色（冷暖相对）③ 中性色 ④⑤ 邻近色——用到 5 色看起来仍只有两个色相家族。分组表头依次取 ②③④⑤，色数不够就循环。"))
 
     num = {"type": "money"}
     layout = {
@@ -214,12 +212,17 @@ def overview_sheet():
 
 
 def writes(name, grid):
-    """每行一项：从该行第一个非空格到最后一个非空格，中间空格写空串。"""
+    """每段连续的非空格一项；空格不写，免得撞上已合并区域（飞书不许往合并区非左上角写值）。"""
     items = []
     for r in sorted({r for r, _ in grid}):
-        cs = sorted(c for rr, c in grid if rr == r)
-        row = [grid.get((r, c), {"value": ""}) for c in range(cs[0], cs[-1] + 1)]
-        items.append({"sheet_name": name, "range": f"{aura.n2col(cs[0])}{r}:{aura.n2col(cs[-1])}{r}", "cells": [row]})
+        cs = sorted(c for rr, c in grid if rr == r and grid[(rr, c)].get("value", 0) != "")
+        while cs:
+            n = 1
+            while n < len(cs) and cs[n] == cs[0] + n:
+                n += 1
+            seg, cs = cs[:n], cs[n:]
+            items.append({"sheet_name": name, "range": f"{aura.n2col(seg[0])}{r}:{aura.n2col(seg[-1])}{r}",
+                          "cells": [[grid[(r, c)] for c in seg]]})
     return items
 
 

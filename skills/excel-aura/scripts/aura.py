@@ -92,11 +92,11 @@ def hue_tokens(name):
 
 
 def tone_tokens(key):
-    ramp = PAL["tones"][key]["ramp"]
-    if ramp is None:
-        return {"bg": "#F2F3F5", "ink": PAL["neutral"]["text_2"]}
-    L = PAL["ramps"][ramp]["steps"]
-    return {"bg": L[0], "ink": ink_on(L, L[0], 5.5)}
+    t = PAL["tones"][key]
+    if t["ramp"] is None:
+        return {"bg": "#F2F3F5", "ink": PAL["neutral"]["text_2"], "fill": t["fill"]}
+    L = PAL["ramps"][t["ramp"]]["steps"]
+    return {"bg": L[0], "ink": ink_on(L, L[0], 5.5), "fill": t["fill"]}
 
 
 def suite_tokens(sid, n=5):
@@ -327,9 +327,12 @@ def build_sheet(spec, tok, font):
             st["font_weight"] = "bold"
         sh.put(item["range"], **st)
 
-    for item in spec.get("tags", []):
+    for item in spec.get("tags", []):         # 状态只上文字色，只有「风险」类带浅底，免得一列彩块
         t = tok["tones"][item["tone"]]
-        sh.put(item["range"], background_color=t["bg"], font_color=t["ink"], horizontal_alignment="center")
+        st = dict(font_color=t["ink"], horizontal_alignment="center")
+        if t["fill"]:
+            st["background_color"] = t["bg"]
+        sh.put(item["range"], **st)
 
     for rng in spec.get("notes", []):
         sh.merge(rng)
