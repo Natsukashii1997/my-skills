@@ -198,8 +198,9 @@ class Sheet:
         side = {"style": "solid", "weight": "thin", "color": color}
         self.put(rng, _border={k: dict(side) for k in ("top", "bottom", "left", "right")})
 
-    def row(self, r, size):
-        self.rows[r] = size
+    def row(self, r, size, force=False):
+        # 同一物理行有并排区块时取最大值，row_sizes 显式值用 force 覆盖
+        self.rows[r] = size if force else max(size, self.rows.get(r, 0))
 
     def merge(self, rng):
         if ":" in rng:
@@ -210,7 +211,7 @@ def build_sheet(spec, tok, font):
     P = tok["hues"][0]
     N = tok["neutral"]
     sh = Sheet(tok, font)
-    hue = lambda i: tok["hues"][min(max(i, 1), len(tok["hues"])) - 1]
+    hue = lambda i: tok["hues"][(max(i, 1) - 1) % len(tok["hues"])]  # 超过色数循环取色
     base = dict(font_family=font, font_size=FONT["body"], font_color=N["text"], vertical_alignment="middle")
 
     if spec.get("gutter", True):
@@ -341,7 +342,7 @@ def build_sheet(spec, tok, font):
         sh.row(parse(rng)[1], ROW["note"])
 
     for r, size in spec.get("row_sizes", {}).items():
-        sh.row(int(r), size)
+        sh.row(int(r), size, force=True)
     sh.freeze = spec.get("freeze")
     return sh
 
