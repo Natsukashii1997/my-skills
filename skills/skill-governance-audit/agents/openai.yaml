@@ -1,0 +1,6 @@
+interface:
+  display_name: "Skill Governance Audit"
+  short_description: "Preflight and audit local Skill conflicts"
+  default_prompt: "Use $skill-governance-audit to preflight this Skill package before it is activated."
+policy:
+  allow_implicit_invocation: true

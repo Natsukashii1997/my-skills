@@ -1,0 +1,4 @@
+interface:
+  display_name: "GET 笔记检索"
+  short_description: "检索 GET 全量笔记与会议完整转写，为带教回答补充一手上下文"
+  default_prompt: "Use $get-notes-retrieval to find relevant GET meeting notes and full transcripts for this question."

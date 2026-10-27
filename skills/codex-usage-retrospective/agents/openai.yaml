@@ -1,0 +1,6 @@
+interface:
+  display_name: "Codex 半月复盘"
+  short_description: "复盘决策、行动与协作证据，验证上期改进并形成可审核的方法沉淀"
+  default_prompt: "使用 $codex-usage-retrospective 复盘指定半月内我在 Codex 中的动作行为、决策与交付，核验上期改进，完成有证据的优化和方法建议。"
+policy:
+  allow_implicit_invocation: true

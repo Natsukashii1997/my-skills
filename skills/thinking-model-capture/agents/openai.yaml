@@ -1,0 +1,5 @@
+interface:
+  display_name: "思维模型候选"
+  short_description: "按明确请求评估可复用思维机制，并遵循当前知识库规则处理待验证候选"
+policy:
+  allow_implicit_invocation: false

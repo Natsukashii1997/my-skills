@@ -1,0 +1,6 @@
+interface:
+  display_name: "项目起步"
+  short_description: "给项目铺 Claude / Codex 接力用的协作骨架"
+  default_prompt: "Use $project-starter to lay the collaboration skeleton in this project."
+policy:
+  allow_implicit_invocation: false

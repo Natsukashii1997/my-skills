@@ -1,0 +1,11 @@
+# 每行：skill 名<TAB>链接到的目录。一个 skill 可以有多行。改完跑 scripts/link.sh。
+# ~/.claude/skills 给 Claude；~/.agents/skills 给 Codex（Codex 也读 ~/.codex/skills）。
+project-starter	~/.agents/skills
+get-notes-retrieval	~/.agents/skills
+business-project-router	~/.codex/skills
+codex-usage-retrospective	~/.codex/skills
+lark-doc-refine	~/.codex/skills
+lumiedu-ai-collaboration	~/.codex/skills
+lumiedu-automation-advisor	~/.codex/skills
+thinking-model-capture	~/.codex/skills
+skill-governance-audit	~/.codex/skills
