@@ -20,9 +20,12 @@
 
 ## 新建一个 skill
 
-1. 在 `skills/<名字>/` 下写 `SKILL.md`（目录名和 frontmatter 里的 `name` 一致）。
+1. 按《工程流程》开 issue、在 worktree 分支里写 `skills/<名字>/SKILL.md`（目录名和 frontmatter 里的 `name` 一致，`link.sh` 会核对）。
 2. 在 `links.tsv` 加行：两边都要用就各加一行 `~/.claude/skills` 和 `~/.agents/skills`；只给 Codex 用就写 `~/.agents/skills` 或 `~/.codex/skills`。
-3. 跑 `sh scripts/link.sh`，再按《工程流程》走 PR 合进 main（见 [AGENTS.md](AGENTS.md) 末尾）。
+3. 开 PR，合进 main（见 [AGENTS.md](AGENTS.md) 末尾）。
+4. 主目录 `git pull --ff-only`，再在主目录跑 `sh scripts/link.sh`。`link.sh` 在 worktree 里会拒绝运行：在那里建的链接会随 worktree 删除一起断掉。
+
+改名或删掉 skill 后，`link.sh` 会提示工具目录里留下的断链，确认不用了手动 `rm` 掉。
 
 ## 换电脑或链接坏了
 
