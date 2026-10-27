@@ -13,7 +13,7 @@ description: 「Excel-Aura」表格配色与版式标准：产出或美化任何
 
 ## 一、怎么用（每次都按这个顺序）
 
-1. **先把数据写对**：飞书用 lark-sheets，本地用 openpyxl / xlsx skill；数字写成数字，合计写成公式。
+1. **先把数据写对**：飞书用 lark-sheets，本地用 openpyxl / xlsx skill；数字写成数字，合计写成公式。飞书新建时先建空页，不在 `+workbook-create` 里预写标题等内容（预写的会带上文本格式，和后续样式不一致）；值和公式统一用 `+cells-set` 写，只写非空的连续段。
 2. **选套组**：用户点名就用点名的。没点名时按用途在下表选，拿不准用 **S02 雾蓝奶咖**（最百搭）；参考表那类经营测算用 **S01**。
 3. **定色数**：表里有几类东西要用颜色区分，就用几色，最多 5 色。要 N 色就取该套色序的前 N 个，见下文第三节。
 4. **写 layout.json**：描述表格结构，包括标题、区块、表头、正文、合计、列类型、角色、状态。写法见 [references/layout.md](references/layout.md)。
@@ -23,7 +23,9 @@ description: 「Excel-Aura」表格配色与版式标准：产出或美化任何
    python3 $A/aura.py feishu layout.json --out-dir ./aura-styles      # 飞书：逐个文件跑 +styles-put
    python3 $A/aura.py xlsx layout.json in.xlsx out.xlsx               # 本地 Excel
    ```
-   飞书：对每个 `aura-styles/styles-NN.json` 跑 `lark-cli sheets +styles-put --url <表> --styles @./aura-styles/styles-NN.json`。lark-cli 只认当前目录下的相对路径。**再刷一次样式时加 `--skip-merges`**，因为飞书不允许重复合并已合并的格子。
+   飞书：对每个 `aura-styles/styles-NN.json` 跑 `lark-cli sheets +styles-put --url <表> --styles @./aura-styles/styles-NN.json`。lark-cli 只认当前目录下的相对路径。**再刷一次样式时加 `--skip-merges`**，因为飞书不允许重复合并已合并的格子。中途遇到限频或部分失败，先用 `+sheet-info --include merges` 回读，按回读结果续跑，不要从头重放合并。
+
+   飞书表格就用 `feishu` 子命令直接落样式，不要先生成 xlsx 再导入：导入时飞书会重新换算尺寸，行高列宽整体放大约 1.25–1.35 倍。
 6. **回读核对**：飞书用 `+cells-get --include style` 抽查标题、表头、正文、合计各一格，在浏览器里看一眼整页；Excel 打开检查有没有 `####` 或被截断的文字。
 
 脚本不能直接用时，也可以手工照第二到第五节的规则落样式。派生色用 `python3 $A/aura.py tokens S02 --colors 3` 查，不要自己调色。
@@ -53,7 +55,8 @@ description: 「Excel-Aura」表格配色与版式标准：产出或美化任何
 - **2 色**：① 管结构，② 标「输入 / 假设」或第二类区块。
 - **3 色**：再加 ③，标「公式结果」。这正是参考表「藏青 + 黄底输入 + 绿底计算」的结构。
 - **4–5 色**：只在确实有 4–5 类并列对象时用，例如分组表头、并排区块。④⑤ 和前面同家族，只做补位。
-- 分类数超过色数就循环取色，不加套组以外的颜色。
+- 分组表头、`hue2`–`hue5` 这类按序号取色的地方，序号超过色数就循环取色（3 色时 ④ → ①、⑤ → ②），不加套组以外的颜色。`input` / `calc` 不循环，色数不够时按 layout.md 里的规则退回。
+- 状态色（完成、进行中、风险等）全套共用，不计入色数。
 
 **同屏色彩预算**（这一条决定看着杂不杂）：
 - 一页只允许 ① 一个深色，其余色只出现浅色级。
@@ -79,6 +82,7 @@ description: 「Excel-Aura」表格配色与版式标准：产出或美化任何
 **行高（px）**
 - 顶部留白 12，标题 52，副标题 24，区块间隔 12，分区标题 32。
 - 表头 40，正文 34（密集清单 30），合计 36，注释 24。
+- 并排区块落在同一行时取较高的那个（如左边表头 40、右边分区标题 32，这一行就是 40）；`row_sizes` 手写的行高优先。
 
 **列宽**
 - 先按列类型给基准宽度，再按最长内容估算：中文每字约 15px，数字和英文约 8px，另加 28px 内边距。
