@@ -16,6 +16,7 @@
 | [thinking-model-capture](skills/thinking-model-capture/SKILL.md) | `~/.codex/skills` | 沉淀思维模型候选 |
 | [skill-governance-audit](skills/skill-governance-audit/SKILL.md) | `~/.codex/skills` | Skill 启用前的治理审计 |
 | [excel-aura](skills/excel-aura/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「Excel-Aura」表格配色与版式标准：按表型给写法，10 套标准配色 +「底线 + 默认值」版式规则，带写入前预览和表格审查；新建、美化已有表都能用，飞书 / Excel 通用 |
+| [hairline-page](skills/hairline-page/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「Hairline 细线」网页风格：方法论、方案讲解做成有网站质感的单文件 HTML；细线分层、识别色串主线、动效只演示真实业务过程 |
 
 链接关系以 [links.tsv](links.tsv) 为准。
 
