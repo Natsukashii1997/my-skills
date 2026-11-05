@@ -239,6 +239,31 @@ class ClassifyTests(Fixture):
         self.list_json("--now", str(LATER))
         self.assertEqual(os.stat(os.path.join(gitdir, "index")).st_mtime, before)
 
+    def test_generated_dirs_do_not_block(self):
+        # 本机实测：postpane 已合并的 worktree 里有构建生成的 src-tauri/resources（git 忽略），
+        # digiworld 的有 Playwright 的 test-results/，都被当成「本地独有文件」挡住了清理
+        common = os.path.join(self.main, sh(self.main, "git", "rev-parse", "--git-common-dir"))
+        write(os.path.join(common, "info", "exclude"), "test-results/\ngen/\n")
+        p = self.w["普通合并"]
+        write(os.path.join(p, "test-results", "run", "trace.zip"), "x\n")
+        write(os.path.join(p, "gen", "engine.bin"), "built\n")
+        key = WS.norm(p)
+
+        it = self.list_json("--now", str(LATER))[key]
+        self.assertEqual(it["tier"], WS.LOOK)  # 没声明时 gen/ 仍按本地独有文件处理
+        self.assertEqual(it["ignored_unique"], ["gen/"])  # test-results/ 已认得是能重新生成的
+
+        cfg = os.path.join(self.tmp, "regen.json")
+        write(cfg, json.dumps({"names": [], "paths": {"项目甲": ["gen"]}}, ensure_ascii=False))
+        it = self.list_json("--now", str(LATER), "--regen-config", cfg)[key]
+        self.assertEqual(it["tier"], WS.SAFE)
+        self.assertEqual(it["regen_declared"], ["gen"])
+        self.assertIn("按 regen.json 当作可重新生成：gen", "；".join(it["reasons"]))
+
+        write(cfg, json.dumps({"names": [], "paths": {"别的仓库": ["gen"]}}, ensure_ascii=False))
+        it = self.list_json("--now", str(LATER), "--regen-config", cfg)[key]
+        self.assertEqual(it["tier"], WS.LOOK)  # 只对声明的那个仓库生效
+
     def test_report_text(self):
         rc, out, err = run_cli("list", self.root, "--no-gh", "--state-dir", self.state, "--now", str(LATER))
         self.assertEqual(rc, 0, err)
@@ -308,6 +333,31 @@ class SweepTests(Fixture):
         self.assertTrue(os.path.isdir(self.w["普通合并"]))
         self.assertFalse(os.path.isdir(self.w["中文路径"]))
         self.assertTrue(os.path.isdir(self.w["squash合并"]))
+
+
+class RegenConfigTests(unittest.TestCase):
+    def test_load_and_match(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(WS.load_regen(os.path.join(d, "没有.json")), {"names": set(), "paths": {}})
+            cfg = os.path.join(d, "regen.json")
+            for bad in ({"paths": {"甲": ["../外面"]}}, {"paths": {"甲": ["/abs"]}},
+                        {"paths": {"甲": ["a/../../b"]}}, {"paths": {"甲": "gen"}}, {"names": "x"}):
+                write(cfg, json.dumps(bad, ensure_ascii=False))
+                with self.assertRaises(ValueError, msg=bad):
+                    WS.load_regen(cfg)
+            write(cfg, json.dumps({"names": ["out2"], "paths": {"甲": ["src/gen/"]}}, ensure_ascii=False))
+            r = WS.load_regen(cfg)
+            self.assertEqual(r["paths"]["甲"], ["src/gen"])
+            self.assertEqual(WS.declared_regen("src/gen/", ["src/gen"]), "src/gen")
+            self.assertEqual(WS.declared_regen("src/gen/x/y", ["src/gen"]), "src/gen")
+            self.assertIsNone(WS.declared_regen("src/generated/", ["src/gen"]))
+            self.assertIsNone(WS.declared_regen("src/", ["src/gen"]))  # 范围更大的不放过
+        self.assertTrue(WS.is_regen("test-results/"))
+        self.assertTrue(WS.is_regen("a/playwright-report/"))
+
+    def test_shipped_config_is_valid(self):
+        r = WS.load_regen(WS.REGEN_CONFIG)
+        self.assertIn("src/apps/desktop/src-tauri/resources", r["paths"]["postpane"])
 
 
 class UnitTests(unittest.TestCase):

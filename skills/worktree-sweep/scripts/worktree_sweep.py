@@ -41,7 +41,10 @@ REGEN_NAMES = {
     "node_modules", ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".tox",
     "dist", "build", "out", ".next", ".nuxt", ".svelte-kit", ".turbo", ".cache", ".parcel-cache", ".vite",
     "coverage", ".nyc_output", "target", ".gradle", ".DS_Store", "Thumbs.db", ".eslintcache",
+    "test-results", "playwright-report", "blob-report",  # Playwright 等测试工具每次跑都会重写
 }
+# 各项目自己声明的「能重新生成」的目录，放在 skill 目录的 regen.json（见 SKILL.md「项目自己的生成目录」）
+REGEN_CONFIG = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "regen.json")
 REGEN_SUFFIX = (".pyc", ".pyo", ".tsbuildinfo", ".log")
 # worktree 里做到一半的操作：工作区可能是干净的，但删了就丢了
 IN_PROGRESS = (("rebase-merge", "rebase"), ("rebase-apply", "rebase / am"), ("MERGE_HEAD", "合并"),
@@ -344,42 +347,82 @@ def status(wt):
     return dirty, ignored
 
 
-def is_regen(rel):
+def load_regen(path):
+    """读项目声明的生成目录。文件不存在就当没有；格式不对直接报错，免得悄悄放宽删除条件。"""
+    empty = {"names": set(), "paths": {}}
+    if not path or not os.path.exists(path):
+        return empty
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    names = data.get("names", [])
+    paths = data.get("paths", {})
+    if not isinstance(names, list) or not isinstance(paths, dict) \
+            or not all(isinstance(v, list) for v in paths.values()):
+        raise ValueError(f"{path} 格式不对：names 要是列表，paths 要是「仓库名: [相对路径, …]」")
+    clean = {}
+    for repo, items in paths.items():
+        rels = []
+        for raw in items:
+            p = str(raw).strip()
+            if os.path.isabs(p) or p.startswith("~"):
+                raise ValueError(f"{path}：{repo} 里的「{p}」要写成仓库里的相对路径")
+            p = p.strip("/")
+            if not p or "/../" in f"/{p}/" or p == "..":
+                raise ValueError(f"{path}：{repo} 里的「{p}」要写成仓库里的相对路径")
+            rels.append(p)
+        clean[repo] = rels
+    return {"names": {str(n) for n in names}, "paths": clean}
+
+
+def is_regen(rel, extra_names=()):
     name = rel.rstrip("/").split("/")[-1]
-    return name in REGEN_NAMES or name.endswith(REGEN_SUFFIX)
+    return name in REGEN_NAMES or name in extra_names or name.endswith(REGEN_SUFFIX)
 
 
-def same_content(a, b, budget):
+def declared_regen(rel, declared):
+    """rel 是否落在项目声明的生成目录里（等于它或在它下面）。"""
+    r = rel.rstrip("/")
+    return next((d for d in declared if r == d or r.startswith(d + "/")), None)
+
+
+def same_content(a, b, budget, extra_names=()):
     if os.path.islink(a):
         return os.path.islink(b) and os.readlink(a) == os.readlink(b)
     if os.path.isfile(a):
         return os.path.isfile(b) and not os.path.islink(b) and filecmp.cmp(a, b, shallow=False)
     if os.path.isdir(a):
         for dp, dns, fns in os.walk(a):
-            dns[:] = [x for x in dns if x not in REGEN_NAMES]
+            dns[:] = [x for x in dns if x not in REGEN_NAMES and x not in extra_names]
             for f in fns:
-                if is_regen(f):
+                if is_regen(f, extra_names):
                     continue
                 budget[0] -= 1
                 if budget[0] < 0:
                     return False
                 fa = os.path.join(dp, f)
-                if not same_content(fa, os.path.join(b, os.path.relpath(fa, a)), budget):
+                if not same_content(fa, os.path.join(b, os.path.relpath(fa, a)), budget, extra_names):
                     return False
         return True
     return True
 
 
-def ignored_unique(wt, main, ignored):
-    """git 不管、又不能重新生成、主工作区里也没有同样一份的本地文件（例如单独改过的 .env）。"""
-    res = []
+def ignored_unique(wt, main, ignored, extra_names=(), declared=()):
+    """git 不管、又不能重新生成、主工作区里也没有同样一份的本地文件（例如单独改过的 .env）。
+
+    返回 (这类文件, 按项目声明当作可重新生成而略过的目录)。
+    """
+    res, skipped = [], []
     for rel in ignored:
-        if is_regen(rel):
+        if is_regen(rel, extra_names):
+            continue
+        d = declared_regen(rel, declared)
+        if d:
+            skipped.append(d)
             continue
         r = rel.rstrip("/")
-        if not same_content(os.path.join(wt, r), os.path.join(main, r) if main else "", [500]):
+        if not same_content(os.path.join(wt, r), os.path.join(main, r) if main else "", [500], extra_names):
             res.append(rel)
-    return res
+    return res, sorted(set(skipped))
 
 
 def last_active(wt, gitdir, head, dirty):
@@ -420,7 +463,8 @@ def analyze(repo, e, ctx):
         "locked": e["locked"], "lock_reason": e["lock_reason"],
         "prunable": e["prunable"] or not os.path.isdir(path),
         "dirty": [], "unpushed": 0, "merged": None, "remote": None, "pr": None,
-        "occupied": [], "ignored_unique": [], "in_progress": [], "last_active": None, "size_kb": None,
+        "occupied": [], "ignored_unique": [], "regen_declared": [], "in_progress": [], "last_active": None,
+        "size_kb": None,
         "error": None,
     }
     if w["is_main"]:
@@ -445,7 +489,9 @@ def analyze(repo, e, ctx):
         w["dirty"] = dirty
         w["last_active"] = last_active(path, gitdir, e["head"], dirty)
         if w["merged"] and not dirty:
-            w["ignored_unique"] = ignored_unique(path, main, ignored)
+            regen = ctx.get("regen") or {"names": set(), "paths": {}}
+            w["ignored_unique"], w["regen_declared"] = ignored_unique(
+                path, main, ignored, regen["names"], regen["paths"].get(repo["name"], []))
         cwds = ctx.get("cwds")
         if cwds:
             w["occupied"] = sorted({f"{cmd}（pid {pid}）" for pid, cmd, d in cwds if under(d, path)})
@@ -485,7 +531,10 @@ def classify(w, now, grace_hours, stale_days):
             return LOOK, [f"已合并，但有 git 不管、主目录里也没有同样一份的本地文件：{shown}"]
         if fresh:
             return KEEP, [f"已合并，但 {grace_hours} 小时内还有动静，可能有会话在用，先留着"]
-        return SAFE, [f"已合并：{w['merged']}"]
+        note = [f"已合并：{w['merged']}"]
+        if w.get("regen_declared"):
+            note.append("按 regen.json 当作可重新生成：" + "、".join(w["regen_declared"][:3]))
+        return SAFE, note
     if w["pr"] and w["pr"].get("state") == "MERGED":
         return LOOK, [f"PR #{w['pr']['number']} 已合并，但这里还有没进默认分支的改动（合并后又改过，或该先 --fetch）"]
     if w["unpushed"]:
@@ -508,7 +557,7 @@ def du_kb(path):
 
 def scan(repos, opts, now):
     cwds = None if opts.no_lsof else process_cwds()
-    ctx = {"cwds": cwds}
+    ctx = {"cwds": cwds, "regen": load_regen(getattr(opts, "regen_config", None) or REGEN_CONFIG)}
     notes = []
     if cwds is None:
         notes.append("没查「是否有程序正在用」（找不到 lsof 或已关闭）")
@@ -854,6 +903,7 @@ def main(argv=None):
         p.add_argument("--no-lsof", action="store_true", help="不查是否有程序正在用")
         p.add_argument("--state-dir", help=f"清单和记录存放目录（默认 {DEFAULT_STATE}）")
         p.add_argument("--max-depth", type=int, default=4, help="往根目录下找仓库的层数（默认 4）")
+        p.add_argument("--regen-config", help="项目声明的生成目录（默认 skill 目录里的 regen.json）")
         p.add_argument("--now", type=float, help=argparse.SUPPRESS)  # 测试用：假装现在是这个时间戳
 
     p = sub.add_parser("list", help="只出报告（默认）")
