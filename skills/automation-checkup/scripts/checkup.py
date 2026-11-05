@@ -378,6 +378,22 @@ def count_calendar_fires(entries: list[dict], after: dt.datetime, until: dt.date
     return n
 
 
+def max_fires_per_day(entries: list[dict], around: dt.datetime) -> int:
+    """around 前 7 天里，单日最多有几个计划运行点（覆盖按星期排的计划）。"""
+    return max(len({t for e in entries for t in _fires_on_date(e, around.date() - dt.timedelta(days=i))})
+               for i in range(7))
+
+
+def count_calendar_days(entries: list[dict], after: dt.datetime, until: dt.datetime, cap: int = 99) -> int:
+    """after 那天之后、until 之前，有计划运行点的日子有几天（after 当天不算）。"""
+    days: set = set()
+    for t in iter_calendar_fires_desc(entries, until):
+        if t.date() <= after.date() or len(days) >= cap:
+            break
+        days.add(t.date())
+    return len(days)
+
+
 # ---------------------------------------------------------------------------
 # 程序、日志
 # ---------------------------------------------------------------------------
@@ -823,7 +839,14 @@ def assess_job(job: Job, ctx: Context, item: Item) -> None:
             conditional = isinstance(ka, dict) and not only_on_failure
             runs = ld.runs or 0
             if ld.state == "running":
-                if runs >= cfg["restart_runs_act"]:
+                if sig == 15 and runs >= cfg["restart_runs_warn"]:
+                    # 上次是被要求退出（SIGTERM）后重新拉起：发版、手动重启、注销时常见，不像崩溃。
+                    # 只看得到最后一次，之前有没有崩溃过不知道，所以仍提醒一句，但不算「需要处理」。
+                    exit_flagged = True
+                    item.add(WARN, f"常驻服务在跑，本次登录以来启动了 {runs} 次；但上次是被要求退出后重新拉起的，"
+                                   f"多半是发版或手动重启，不像崩溃；{exit_desc}。",
+                             "目前能用。如果最近没有重启或发版过它，再看日志末尾确认有没有崩溃。", 10)
+                elif runs >= cfg["restart_runs_act"]:
                     exit_flagged = True
                     item.add(ACT, f"常驻服务在跑，但本次登录以来已经启动了 {runs} 次，说明在反复崩溃又被拉起；{exit_desc}。",
                              "看日志末尾找崩溃原因；原因修好之前它会一直断断续续。", 15)
@@ -864,6 +887,7 @@ def assess_job(job: Job, ctx: Context, item: Item) -> None:
                          "手动触发一次看看会不会生成日志；不会就检查程序路径和权限。", 25)
         else:
             cutoff = now - dt.timedelta(minutes=cfg["grace_minutes"])
+            by_day = False
             if job.kind == "interval":
                 interval = job.plist["StartInterval"]
                 missed = max(0, int((cutoff - timing_last).total_seconds() // interval))
@@ -872,12 +896,21 @@ def assess_job(job: Job, ctx: Context, item: Item) -> None:
                 entries = _calendar_entries(job.plist)
                 expected = last_calendar_fire(entries, cutoff)
                 missed = count_calendar_fires(entries, timing_last, cutoff)
+                if missed and max_fires_per_day(entries, cutoff) > 1:
+                    # 一天排了好几个点的，常见于「当天补跑窗口」：当天做成后，后面的点直接退出、不写日志。
+                    # 这类按天判断：日志最后更新那天之后，还有几天该跑却一行日志都没有。
+                    by_day = True
+                    missed = count_calendar_days(entries, timing_last, cutoff)
             if expected:
                 item.facts.append("按计划最近一次应运行：" + fmt_time(expected, now))
             stale_h = (now - timing_last).total_seconds() / 3600
             if missed >= 1:
                 times = f" {missed} 次" if (job.kind == "interval" or missed < 99) else "至少 99 次"
-                text = f"疑似该跑没跑：日志停在 {fmt_time(timing_last, now)}，按计划这之后应该运行{times}。"
+                if by_day:
+                    text = (f"疑似该跑没跑：日志停在 {fmt_time(timing_last, now)}，"
+                            f"之后有 {missed if missed < 99 else '至少 99'} 天按计划该运行，却没有日志。")
+                else:
+                    text = f"疑似该跑没跑：日志停在 {fmt_time(timing_last, now)}，按计划这之后应该运行{times}。"
                 advice = ("先确认电脑那段时间是不是关机了；不是的话看日志末尾和 launchd 状态找原因。"
                           "如果这个任务平时就不写日志，把它加到 config.json 的 quiet_labels 里，以后不再按日志判断。")
                 sev = ACT if (missed >= cfg["missed_runs_act"] and stale_h >= cfg["stale_hours_act"]) else WARN

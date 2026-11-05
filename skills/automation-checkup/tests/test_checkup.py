@@ -404,6 +404,39 @@ class AssessEdgeCaseTests(unittest.TestCase):
                          checkup.LaunchdState(loaded=True, state="running", pid=9, runs=25, last_exit=1))
         self.assertEqual(it.tier, checkup.ACT)
 
+    def test_keepalive_restarted_by_sigterm_is_not_crash(self):
+        # 本机实测：数字世界悬浮窗启动 25 次，上次是 Terminated: 15（发版时主动重启），进程已稳定跑了 7 天
+        it = self.assess({"KeepAlive": True},
+                         checkup.LaunchdState(loaded=True, state="running", pid=9, runs=25,
+                                              last_signal="Terminated: 15"))
+        self.assertEqual(it.tier, checkup.WARN)
+        self.assertIn("不像崩溃", it.findings[0].problem)
+        self.assertNotIn("反复崩溃", it.findings[0].problem)
+
+    def retry_window(self) -> list:
+        return [{"Hour": h, "Minute": m} for h in range(6, 23) for m in (0, 30)]
+
+    def test_same_day_retry_window_is_not_missed(self):
+        # 本机实测：GitHub 中心每天 09:00 起每 15 分钟一个点，当天成功后后面的点不写日志
+        it = self.assess({"StartCalendarInterval": self.retry_window(),
+                          "StandardOutPath": self.log("out.log", 4.3)},
+                         checkup.LaunchdState(loaded=True, state="not running", last_exit=0))
+        self.assertEqual(it.tier, checkup.OK)
+
+    def test_retry_window_counts_missed_days(self):
+        it = self.assess({"StartCalendarInterval": self.retry_window(),
+                          "StandardOutPath": self.log("out.log", 72)},
+                         checkup.LaunchdState(loaded=True, state="not running", last_exit=0))
+        self.assertEqual(it.tier, checkup.ACT)
+        self.assertIn("3 天按计划该运行", it.findings[0].problem)
+
+    def test_once_a_day_still_counts_runs(self):
+        it = self.assess({"StartCalendarInterval": {"Hour": 9, "Minute": 0},
+                          "StandardOutPath": self.log("out.log", 25.5)},
+                         checkup.LaunchdState(loaded=True, state="not running", last_exit=0))
+        self.assertEqual(it.tier, checkup.WARN)
+        self.assertIn("应该运行 1 次", it.findings[0].problem)
+
 
 class EnvironmentFallbackTests(unittest.TestCase):
     def test_without_launchctl_hermes_crontab(self):
