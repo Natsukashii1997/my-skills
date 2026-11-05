@@ -1,0 +1,4 @@
+interface:
+  display_name: "知识库备份"
+  short_description: "Obsidian 知识库和本地项目的加密异地备份：备份、检查、恢复演练"
+  default_prompt: "Use $vault-backup to back up my Obsidian vault and local projects, check the backup, or run a restore drill."
