@@ -17,3 +17,5 @@ ai-landing-method	~/.claude/skills
 ai-landing-method	~/.agents/skills
 vault-backup	~/.claude/skills
 vault-backup	~/.agents/skills
+session-retro	~/.claude/skills
+session-retro	~/.agents/skills
