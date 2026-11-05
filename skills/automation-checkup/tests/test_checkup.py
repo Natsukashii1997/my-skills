@@ -158,6 +158,11 @@ class ScheduleTests(unittest.TestCase):
                     {"Hour": 0, "Minute": 30}]
         self.assertEqual(checkup.calendar_window_start(midnight, NOW), 23 * 60)
 
+    def test_twice_a_day_is_not_a_window(self):
+        for pts in ([(9, 0), (18, 0)], [(8, 0), (20, 0)], [(8, 0), (12, 0), (16, 0)]):
+            entries = [{"Hour": h, "Minute": m} for h, m in pts]
+            self.assertIsNone(checkup.calendar_window_start(entries, NOW), pts)
+
     def test_cross_midnight_window_not_missed(self):
         midnight = [{"Hour": 23, "Minute": 0}, {"Hour": 23, "Minute": 30}, {"Hour": 0, "Minute": 0},
                     {"Hour": 0, "Minute": 30}]
@@ -244,8 +249,11 @@ class ProgramCheckTests(unittest.TestCase):
     def test_relative_program_uses_only_launchd_std_path(self):
         pc = self.check(["sh", "-c", "true"], EnvironmentVariables={"PATH": "/nowhere"})
         self.assertTrue(pc.program_exists)  # /bin/sh 在标准 PATH 里
-        pc = self.check(["definitely-not-a-real-cmd-xyz"], EnvironmentVariables={"PATH": f"{self.h}/proj"})
-        self.assertFalse(pc.program_exists)
+        tool = self.home / "proj" / "uniq-tool-xyz"
+        tool.write_text("#!/bin/sh\n")
+        tool.chmod(0o755)
+        pc = self.check(["uniq-tool-xyz"], EnvironmentVariables={"PATH": f"{self.h}/proj"})
+        self.assertFalse(pc.program_exists)  # 只在 /usr/bin:/bin:/usr/sbin:/sbin 里找，不看 plist 的 PATH
 
     def test_inline_command_checks_only_executed_paths(self):
         cmd = (f"mkdir -p {self.h}/out/new && cd {self.h}/proj && ./run.sh >> {self.h}/logs/new.log; "
@@ -257,6 +265,25 @@ class ProgramCheckTests(unittest.TestCase):
         self.assertEqual(pc.inline_missing, [f"{self.h}/gone"])
         pc = self.check(["/bin/bash", "-c", f'"{self.h}/my scripts/x.sh" && {self.h}/gone/tool --flag'])
         self.assertEqual(pc.inline_missing, [f"{self.h}/gone/tool"])
+
+    def test_non_shell_inline_code_is_not_parsed_as_command(self):
+        for args in (["/usr/bin/python3", "-c", "open('/tmp/heartbeat.txt','w').write('ok')"],
+                     ["/usr/local/bin/node", "-e", f"require('fs').writeFileSync('{self.h}/out/r.json', '1')"]):
+            pc = self.check(args)
+            self.assertIsNotNone(pc.inline)
+            self.assertEqual(pc.inline_missing, [], args)
+
+    def test_permission_denied_is_not_missing(self):
+        orig = checkup.path_state
+        checkup.path_state = lambda p: "denied" if str(p).startswith("/secret") else orig(p)
+        try:
+            pc = self.check(["/bin/bash", "/secret/proj/run.sh"], WorkingDirectory="/secret/proj")
+            self.assertIsNone(pc.script_exists)
+            self.assertIsNone(pc.workdir_exists)
+            self.assertEqual(sorted(pc.denied), ["/secret/proj", "/secret/proj/run.sh"])
+            self.assertEqual(checkup.missing_in_shell("cd /secret/x && ./run.sh", self.home, None), [])
+        finally:
+            checkup.path_state = orig
 
     def test_missing_program(self):
         self.assertFalse(checkup.check_program({"Program": f"{self.h}/bin/nope"}, self.home).program_exists)
@@ -299,6 +326,11 @@ class RedactTests(unittest.TestCase):
         "jwt eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0In0.abcDEF123": "eyJhbGciOiJIUzI1NiJ9",
         "发送给 13812345678": "13812345678",
         "mail zhang.san@lumiedu.cn": "zhang.san@",
+        "password=sunshine": "sunshine",
+        '"password": "Dragonfly"': "Dragonfly",
+        "PASSWORD=Qwerty": "Qwerty",
+        "api_key=abcdefghij": "abcdefghij",
+        "secret=hunter": "hunter",
     }
     KEPT = [
         "HEAD is now at 3f2b8c1e9a7d4c1e8f2a1b2c3d4e5f6071829304 fix",
@@ -309,6 +341,10 @@ class RedactTests(unittest.TestCase):
         "refresh token: expired",
         "sent 120 messages to 3 groups",
         "id 3f2b8c1e-9a7d-4c1e-8f2a-1b2c3d4e5f60 done",
+        "input_tokens=1234 output_tokens=567 max_tokens=4096",
+        "Using basic authentication",
+        "credentials: /Users/nat/keys/sa.json",
+        "authorization: required",
     ]
 
     def test_secrets_hidden(self):
@@ -419,9 +455,15 @@ class ReadOnlyTests(unittest.TestCase):
             ctx_root = Path(d) / "s"
             ctx = scenario.build_scenario(ctx_root)
             out = Path(d) / "reports" / "自动化体检-20261105-1030.md"
+            stub = Path(d) / "stub-bin"
+            stub.write_text("#!/bin/sh\n[ \"$1\" = print ] && { echo 'Could not find service' >&2; exit 113; }\nexit 0\n")
+            stub.chmod(0o755)
             code = textwrap.dedent(f"""
                 import sys, os, json
                 sys.path.insert(0, {str(SCRIPT.parent)!r})
+                import checkup as _c
+                _c.LAUNCHCTL = {str(stub)!r}
+                _c.CRONTAB = {str(stub)!r}
                 events = []
                 WRITE = os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_TRUNC | os.O_APPEND
                 def hook(ev, args):
@@ -445,16 +487,22 @@ class ReadOnlyTests(unittest.TestCase):
             r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env=env, timeout=60)
             self.assertEqual(r.returncode, 0, r.stderr)
             events = json.loads(r.stdout.split("EVENTS=", 1)[1])
-            allowed = {str(out), str(out.with_suffix(".json")), str(out.parent)}
+            files = {str(out), str(out.with_suffix(".json")), "/dev/null"}  # 子进程的 stdin 接 /dev/null
+            dirs = {str(p) for p in out.parents}
+            popens = []
             for ev, target in events:
                 if ev == "popen":
-                    self.assertIn(target.split("'")[1] if "'" in target else target,
-                                  (checkup.LAUNCHCTL, checkup.CRONTAB), target)
+                    popens.append(target)
+                    self.assertIn(str(stub), target)
                     continue
-                if ev in ("os.mkdir", "write", "os.chmod"):
-                    self.assertTrue(target in allowed or str(out.parent).startswith(target), (ev, target))
+                if ev in ("write", "os.chmod"):
+                    self.assertIn(target, files, (ev, target))
+                    continue
+                if ev == "os.mkdir":
+                    self.assertIn(target, dirs, (ev, target))
                     continue
                 self.fail(f"出现了不该有的动作：{ev} {target}")
+            self.assertTrue(popens)  # 真的起过子进程，且都是替身的 launchctl / crontab
             self.assertTrue(any(ev == "write" and t == str(out) for ev, t in events))
 
 
@@ -702,6 +750,16 @@ class AssessEdgeCaseTests(unittest.TestCase):
                          self.S(state="not running", last_exit=0))
         self.assertEqual(it.tier, WARN)
 
+    def test_short_gap_headline_in_minutes(self):
+        it = self.assess({"StartInterval": 300, "StandardOutPath": self.log("out.log", 25 / 60)},
+                         self.S(state="not running", last_exit=0))
+        self.assertEqual(it.findings[0].headline, "25 分钟没跑")
+
+    def test_flapping_with_clean_exits_is_not_called_crash(self):
+        it = self.assess({"KeepAlive": True}, self.S(state="running", runs=25, last_exit=0))
+        self.assertEqual(it.tier, ACT)
+        self.assertNotIn("崩溃", it.findings[0].problem + it.findings[0].headline)
+
     def test_sigterm_is_only_warning(self):
         self.assertEqual(self.assess({"StartInterval": 600}, self.S(state="not running", last_exit=143)).tier, WARN)
 
@@ -909,6 +967,123 @@ class FlowTests(unittest.TestCase):
             self.assertEqual(rc, 0)
             self.assertIn("# 自动化体检报告", buf.getvalue())
             self.assertEqual(list(Path(d).iterdir()), [])
+
+    def test_bad_config_falls_back_and_is_reported(self):
+        with tempfile.TemporaryDirectory() as d:
+            bad = Path(d) / "c.json"
+            bad.write_text(json.dumps({"tasks": {"cn.x": "牛马之家"}, "grace_minutes": "15", "nope": 1}),
+                           encoding="utf-8")
+            cfg = checkup.load_config(bad)
+            self.assertEqual(cfg["grace_minutes"], 15)
+            self.assertEqual(cfg["tasks"], {})
+            self.assertEqual(len(cfg["_problems"]), 3)
+            broken = Path(d) / "b.json"
+            broken.write_text("{ not json", encoding="utf-8")
+            self.assertIn("读不了", checkup.load_config(broken)["_problems"][0])
+            ctx = scenario.build_scenario(Path(d) / "s")
+            ctx.cfg = cfg
+            md = checkup.render_markdown(checkup.run_checkup(ctx))
+        self.assertIn("grace_minutes", md)
+        self.assertIn("# 自动化体检报告", md)
+
+    def test_malformed_hermes_jobs_do_not_crash(self):
+        with tempfile.TemporaryDirectory() as d:
+            ctx = scenario.build_scenario(Path(d))
+            jobs = ctx.home / ".hermes/cron/jobs.json"
+            jobs.write_text(json.dumps({"jobs": [
+                {"id": "a", "name": "字符串计划", "schedule": "0 9 * * *", "failure_streak": "n/a",
+                 "last_status": "error", "last_error": None},
+                {"id": "b", "name": {"嵌套": 1}, "next_run_at": 12345},
+                "不是对象",
+            ]}), encoding="utf-8")
+            (ctx.home / ".hermes/profiles/work/cron/jobs.json").write_text('{"jobs": null}', encoding="utf-8")
+            rep = checkup.run_checkup(ctx)
+            md = checkup.render_markdown(rep)
+        h = next(i for i in rep.items if i.key == "hermes:默认")
+        self.assertIn("hermes_failed:a", [f.code for f in h.findings])
+        self.assertIn("# 自动化体检报告", md)
+
+    def test_hermes_name_is_redacted_everywhere(self):
+        with tempfile.TemporaryDirectory() as d:
+            ctx = scenario.build_scenario(Path(d))
+            jobs = ctx.home / ".hermes/cron/jobs.json"
+            hook = "https://open.feishu.cn/open-apis/bot/v2/hook/3f2b8c1e-9a7d-4c1e-8f2a-1b2c3d4e5f60"
+            jobs.write_text(json.dumps({"jobs": [{"id": "x", "name": f"推送 {hook}", "enabled": False,
+                                                  "paused_at": "2026-11-01T00:00:00"}]}), encoding="utf-8")
+            rep = checkup.run_checkup(ctx)
+            md, js = checkup.render_markdown(rep), checkup.report_to_json(rep)
+        self.assertNotIn("3f2b8c1e-9a7d", md)
+        self.assertNotIn("3f2b8c1e-9a7d", js)
+        self.assertNotIn(str(ctx.home), js)  # JSON 里家目录也写成 ~
+
+    def test_multiline_inline_command_does_not_break_markdown(self):
+        with tempfile.TemporaryDirectory() as d:
+            ctx = scenario.build_scenario(Path(d))
+            (ctx.agents_dir / "cn.lumiedu.multi.plist").write_bytes(plistlib.dumps(
+                {"Label": "cn.lumiedu.multi", "ProgramArguments": ["/bin/bash", "-c",
+                                                                   "set -e\n# 每天同步\n- not a list\ncd /nonexistent-dir"],
+                 "StartInterval": 600}))
+            md = checkup.render_markdown(checkup.run_checkup(ctx))
+        self.assertNotIn("\n# 每天同步", md)
+        self.assertNotIn("\n- not a list", md)
+
+    def test_disabled_but_loaded_is_flagged(self):
+        with tempfile.TemporaryDirectory() as d:
+            ctx = scenario.build_scenario(Path(d))
+            orig = ctx.runner._execute
+
+            def with_disabled(argv, timeout):
+                r = orig(argv, timeout)
+                if argv[1] == "print-disabled":
+                    r = checkup.CmdResult(0, r.out + '\t"cn.niuma-home.web" => disabled\n', "")
+                return r
+            ctx.runner._execute = with_disabled
+            rep = checkup.run_checkup(ctx)
+        it = next(i for i in rep.items if i.key == "job:cn.niuma-home.web")
+        self.assertEqual([f.code for f in it.findings], ["disabled_running"])
+
+    def test_group_lists_each_task_reason_and_dup_names_get_labels(self):
+        with tempfile.TemporaryDirectory() as d:
+            ctx = scenario.build_scenario(Path(d))
+            for i in range(3):
+                p = ctx.agents_dir / f"cn.lumiedu.p{i}.plist"
+                p.write_bytes(plistlib.dumps({"Label": f"cn.lumiedu.p{i}", "Program": "/bin/sh", "KeepAlive": True}))
+            orig = ctx.runner._execute
+
+            def running(argv, timeout):
+                if argv[1] == "print" and "cn.lumiedu.p" in argv[2]:
+                    lab = argv[2].split("/", 2)[2]
+                    return checkup.CmdResult(0, scenario.print_text(lab, "running", 1, "(never exited)", 9,
+                                                                    home=str(ctx.home)), "")
+                return orig(argv, timeout)
+            ctx.runner._execute = running
+            for i in range(3):
+                os.chmod(ctx.agents_dir / f"cn.lumiedu.p{i}.plist", 0o666)
+            md = checkup.render_markdown(checkup.run_checkup(ctx))
+        block = md.split("3 个任务配置文件权限不对", 1)[1].split("\n### ", 1)[0]
+        for i in range(3):
+            self.assertIn(f"cn.lumiedu.p{i}", block)
+        self.assertEqual(block.count("组或其他人可写"), 3)
+        self.assertIn("数字分身（cn.digital-twin.healthcheck）", md)  # 中文名重名时附上任务名
+
+    def test_history_only_counts_checked_scopes_and_out_variants(self):
+        with tempfile.TemporaryDirectory() as d:
+            ctx = scenario.build_scenario(Path(d) / "s")
+            out_dir = Path(d) / "reports"
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                checkup.main(["--agents-dir", str(ctx.agents_dir), "--out", str(out_dir / "first.md")])
+                os.utime(out_dir / "first.json", (1, 1))  # 让它确定是「更早」那份
+                checkup.main(["--agents-dir", str(ctx.agents_dir), "--out", str(out_dir / "second.json"),
+                              "--no-hermes", "--no-crontab"])
+            second = out_dir / "second.md"
+            self.assertTrue(second.exists())  # --out 给 .json 时报告仍写成 .md
+            md = second.read_text(encoding="utf-8")
+            self.assertIn("比上次体检", md)
+            self.assertIn("已恢复 0 个", md)  # 这次没查 hermes、crontab，不能算恢复
+            with contextlib.redirect_stdout(buf):
+                checkup.main(["--agents-dir", str(ctx.agents_dir), "--out", str(out_dir) + "/"])
+            self.assertTrue(any(p.name.startswith("自动化体检-") and p.suffix == ".md" for p in out_dir.iterdir()))
 
     def test_quiet_label_skips_timing(self):
         with tempfile.TemporaryDirectory() as d:

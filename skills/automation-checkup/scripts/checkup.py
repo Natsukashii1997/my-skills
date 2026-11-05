@@ -438,17 +438,18 @@ def max_fires_per_day(entries: list[dict], around: dt.datetime) -> int:
 
 
 def calendar_window_start(entries: list[dict], around: dt.datetime) -> int | None:
-    """一天里的多个时间点集中在一段窗口里（跨度不超过 12 小时，常见于「当天补跑窗口」）时，
+    """一天里的多个时间点（至少 3 个，相邻不超过 60 分钟）集中在一段窗口里（跨度不超过 12 小时，常见于「当天补跑窗口」）时，
     返回窗口起点距 0 点的分钟数；时间点铺满全天（每小时、每 15 分钟一次）时返回 None。
     窗口可以跨午夜：取相邻时间点之间最大的空档作为一天的分界。"""
-    if max_fires_per_day(entries, around) < 2:
-        return None
+    if max_fires_per_day(entries, around) < 3:
+        return None  # 一天一两次（例如早晚各一次）是各自独立的运行，逐次计数
     mins = sorted({t.hour * 60 + t.minute for i in range(7) for e in entries
                    for t in _fires_on_date(e, around.date() - dt.timedelta(days=i))})
     n = len(mins)
-    gaps = [((mins[(i + 1) % n] - mins[i]) % 1440 or 1440, mins[(i + 1) % n]) for i in range(n)]
-    largest, start = max(gaps)
-    return start if 1440 - largest <= 720 else None
+    gaps = sorted(((mins[(i + 1) % n] - mins[i]) % 1440 or 1440, mins[(i + 1) % n]) for i in range(n))
+    largest, start = gaps[-1]
+    inner = max(g for g, _ in gaps[:-1])
+    return start if 1440 - largest <= 720 and inner <= 60 else None
 
 
 def count_missed_windows(entries: list[dict], start_min: int, last_ok: dt.datetime, cutoff: dt.datetime,
@@ -513,6 +514,32 @@ def _looks_like_path(a: str) -> bool:
     return a.startswith(("/", "~", "./", "../")) or a.endswith(SCRIPT_EXT)
 
 
+def path_state(p: str) -> str:
+    """'file' / 'dir' / 'other' / 'missing' / 'denied'。没有权限时不能当成「不存在」：
+    体检进程（终端、Codex）没有「文稿」等文件夹的访问授权时，os.path.exists 会悄悄返回 False。"""
+    try:
+        st = os.stat(p)
+    except (FileNotFoundError, NotADirectoryError):
+        return "missing"
+    except OSError:
+        return "denied"
+    if stat.S_ISREG(st.st_mode):
+        return "file"
+    if stat.S_ISDIR(st.st_mode):
+        return "dir"
+    return "other"
+
+
+def _exists(p: str) -> bool | None:
+    s = path_state(p)
+    return None if s == "denied" else s != "missing"
+
+
+def _isdir(p: str) -> bool | None:
+    s = path_state(p)
+    return None if s == "denied" else s == "dir"
+
+
 def _expand(p: str, home: Path) -> str:
     if p == "~" or p.startswith("~/"):
         return str(home) + p[1:]
@@ -537,6 +564,7 @@ class ProgramCheck:
     workdir: str | None = None
     workdir_exists: bool | None = None
     tilde: list[str] = field(default_factory=list)       # launchd 不展开 ~ 的地方
+    denied: list[str] = field(default_factory=list)      # 体检进程没权限看、判断不了在不在的路径
     protected: list[str] = field(default_factory=list)   # 落在「文稿」等受隐私保护的文件夹里
 
 
@@ -567,7 +595,9 @@ def check_program(pl: dict, home: Path) -> ProgramCheck:
             pc.tilde.append(f"工作目录 `{wd}`")
             pc.workdir_exists = None
         else:
-            pc.workdir_exists = os.path.isdir(wd)
+            pc.workdir_exists = _isdir(wd)
+            if pc.workdir_exists is None:
+                pc.denied.append(wd)
             note_protected(wd)
     if not program:
         return pc
@@ -583,7 +613,9 @@ def check_program(pl: dict, home: Path) -> ProgramCheck:
         return pc
     else:
         pc.program_resolved = shutil.which(prog, path=LAUNCHD_STD_PATH)
-    pc.program_exists = bool(pc.program_resolved) and os.path.exists(pc.program_resolved)
+    pc.program_exists = _exists(pc.program_resolved) if pc.program_resolved else False
+    if pc.program_exists is None:
+        pc.denied.append(pc.program_resolved)
     if pc.program_exists:
         pc.program_executable = os.access(pc.program_resolved, os.X_OK)
         note_protected(pc.program_resolved)
@@ -611,8 +643,9 @@ def check_program(pl: dict, home: Path) -> ProgramCheck:
             continue
         if a in inline_flags or (fam == "shell" and re.fullmatch(r"-[a-zA-Z]*c[a-zA-Z]*", a)):
             pc.inline = rest[i + 1] if i + 1 < len(rest) else ""
-            cwd = _expand(wd, home) if wd and not wd.startswith("~") else None
-            pc.inline_missing = missing_in_shell(pc.inline, home, cwd)
+            if fam == "shell":  # python -c / node -e 里是代码，不是 shell 命令，不按命令解析
+                cwd = _expand(wd, home) if wd and not wd.startswith("~") else None
+                pc.inline_missing = missing_in_shell(pc.inline, home, cwd)
             return pc
         if fam == "python" and a == "-m":
             return pc  # python -m 模块名，没法按文件核对
@@ -635,7 +668,9 @@ def check_program(pl: dict, home: Path) -> ProgramCheck:
                 return pc
             p = os.path.join(wd or "/", p)
         pc.script = p
-        pc.script_exists = os.path.exists(p)
+        pc.script_exists = _exists(p)
+        if pc.script_exists is None:
+            pc.denied.append(p)
         note_protected(p)
         return pc
     return pc
@@ -673,7 +708,10 @@ def missing_in_shell(cmd: str, home: Path, cwd: str | None) -> list[str]:
 
     def check(w: str, want_dir: bool = False):
         p = resolve(w)
-        if p and not (os.path.isdir(p) if want_dir else os.path.exists(p)) and p not in missing:
+        if not p:
+            return
+        ok = _isdir(p) if want_dir else _exists(p)
+        if ok is False and p not in missing:
             missing.append(p)
 
     segs, cur = [], []
@@ -705,7 +743,7 @@ def missing_in_shell(cmd: str, home: Path, cwd: str | None) -> list[str]:
             if len(words) > 1:
                 check(words[1], want_dir=True)
                 p = resolve(words[1])
-                cwd = p if p and os.path.isdir(p) else None  # cd 失败后，相对它的路径不再推算
+                cwd = p if p and _isdir(p) else None  # cd 失败后，相对它的路径不再推算
             continue
         if w0 in ("source", "."):
             if len(words) > 1:
@@ -736,9 +774,11 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 HIDDEN = "[已隐藏]"
 _NOT_SECRET = r"(?!(?:expired|invalid|required|incorrect|missing|none|null|true|false|not|is|was|has|ok|error|" \
               r"failed|empty|mismatch|denied|refused|\[已隐藏\])\b)"
-_KEYNAME = (r"(?:[A-Za-z0-9]+[_-])*(?:access|refresh|app|api|tenant|user|client|session|auth|bot|webhook|private)?[_-]?"
-            r"(?:token|secret|password|passwd|pwd|api[_-]?key|access[_-]?key|private[_-]?key|authorization|"
-            r"credentials?)(?:[_-]?[A-Za-z0-9]+)*")
+# 强密钥键：值一律隐藏（除了 expired 这类状态词）
+_STRONG_KEY = (r"(?:[A-Za-z0-9]+[_-])*(?:password|passwd|pwd|secret|api[_-]?key|apikey|access[_-]?key|"
+               r"private[_-]?key)(?:[_-]?[A-Za-z0-9]+)*")
+# token 类键：值是普通英文单词（invalid token: signature mismatch）时保留；input_tokens=123 这类计数不算
+_TOKEN_KEY = r"(?:[A-Za-z0-9]+[_-])*(?:token|authorization|auth|credentials?)(?:[_-][A-Za-z0-9]+)*"
 _B = r"(?<![A-Za-z0-9_])"  # 前边界：不用 \b，中文紧贴时也能匹配
 
 
@@ -769,11 +809,16 @@ REDACT_RULES = [
     (re.compile(r"(?i)([?&](?:key|sig|signature|code|auth|token|access_token|secret|password|x-amz-signature|"
                 r"x-amz-credential|apikey|api_key)=)[^&\s\"']+"), r"\1" + HIDDEN),
     # 请求头
-    (re.compile(r"(?i)\b((?:proxy-)?authorization|set-cookie|cookie)(\s*[:=]\s*).+"), r"\1\2" + HIDDEN),
-    (re.compile(r"(?i)\b(bearer|basic)\s+[A-Za-z0-9._\-+/=]{8,}"), r"\1 " + HIDDEN),
+    (re.compile(rf"(?i)\b((?:proxy-)?authorization|set-cookie|cookie)(\s*[:=]\s*){_NOT_SECRET}\S.*"), r"\1\2" + HIDDEN),
+    (re.compile(r"(?i)\b(bearer)\s+[A-Za-z0-9._\-+/=]{8,}"), r"\1 " + HIDDEN),
+    # Basic 后面要像 base64 凭据（带数字、= 结尾或够长）才算，「Using basic authentication」不动
+    (re.compile(r"(?i)\b(basic)\s+(?=[A-Za-z0-9+/=]*\d|[A-Za-z0-9+/]{20,}|[A-Za-z0-9+/]+=)[A-Za-z0-9+/=]{8,}"),
+     r"\1 " + HIDDEN),
     # 键值：app_secret=x、"token": "x"、LARK_APP_SECRET='x'、密码：x
-    (re.compile(rf"(?i){_B}({_KEYNAME}['\"]?\s*[:=：]\s*)(['\"]?){_NOT_SECRET}(?![a-z]{{1,12}}\b)([^\s'\"，,;&]+)"),
+    (re.compile(rf"(?i){_B}({_STRONG_KEY}['\"]?\s*[:=：]\s*)(['\"]?){_NOT_SECRET}(?![/~])([^\s'\"，,;&]+)"),
      r"\1\2" + HIDDEN),
+    (re.compile(rf"(?i){_B}({_TOKEN_KEY}['\"]?\s*[:=：]\s*)(['\"]?){_NOT_SECRET}(?-i:(?![a-z]{{1,12}}\b))(?![/~])"
+                rf"([^\s'\"，,;&]+)"), r"\1\2" + HIDDEN),
     (re.compile(r"(密码|口令|密钥|令牌)(\s*[:=：为是]\s*)([^\s，,;]+)"), r"\1\2" + HIDDEN),
     # 命令行参数：--token x、--password=x
     (re.compile(r"(?i)(--?(?:token|secret|password|passwd|pass|api[-_]?key|access[-_]?token|auth|app[-_]?secret)\b)"
@@ -839,7 +884,7 @@ class LogInfo:
     exists: bool = False
     special: bool = False       # /dev/null、管道等，不是普通文件
     tilde: bool = False         # 路径以 ~ 开头，launchd 不展开
-    dir_exists: bool = True
+    dir_exists: bool | None = True
     unreadable: bool = False
     mtime: str | None = None
     size: int = 0
@@ -879,11 +924,12 @@ def inspect_log(kind: str, path: str, n: int) -> LogInfo:
     if path.startswith("~"):
         info.tilde = True
         return info
-    info.dir_exists = os.path.isdir(os.path.dirname(path) or "/")
-    if os.path.exists(path) and not os.path.isfile(path):
+    info.dir_exists = _isdir(os.path.dirname(path) or "/")
+    state = path_state(path)
+    if state in ("dir", "other"):
         info.special = True
         return info
-    if os.path.isfile(path):
+    if state == "file":
         st = os.stat(path)
         info.exists = True
         info.size = st.st_size
@@ -933,6 +979,7 @@ class Finding:
     advice: str
     rank: int = 50   # 同一档里谁排前面：越小越急
     new: bool | None = None
+    detail: str = ""  # 合并同类项时，写在这个任务那一行的具体说明
 
 
 @dataclass
@@ -950,6 +997,8 @@ class Item:
     excerpts: list = field(default_factory=list)
     raw: str | None = None
     blind: bool = False
+    state_known: bool = True                 # 这次读到了 launchd 状态（对比上次时用）
+    denied: list[str] = field(default_factory=list)
     last_run: str | None = None
     next_run: str | None = None
 
@@ -959,8 +1008,9 @@ class Item:
             return OK
         return max((f.severity for f in self.findings), key=SEVERITY_RANK.get)
 
-    def add(self, severity: str, code: str, headline: str, problem: str, advice: str, rank: int = 50) -> Finding:
-        f = Finding(severity, code, headline, problem, advice, rank)
+    def add(self, severity: str, code: str, headline: str, problem: str, advice: str, rank: int = 50,
+            detail: str = "") -> Finding:
+        f = Finding(severity, code, headline, problem, advice, rank, detail=detail)
         self.findings.append(f)
         return f
 
@@ -983,6 +1033,7 @@ class Job:
     kind: str = "manual"
     plist_disabled: bool = False
     disabled_effective: bool = False   # 综合 launchctl 停用记录和 plist 的 Disabled 键之后的结论
+    disabled_but_loaded: bool = False  # 在停用名单里，但当前还加载着（下次登录后就没了）
     launchd: LaunchdState | None = None
     program: ProgramCheck | None = None
     logs: list[LogInfo] = field(default_factory=list)
@@ -1016,15 +1067,47 @@ class Report:
     launchd_readable: bool = True
     previous: str | None = None
     resolved: list[str] = field(default_factory=list)
+    checked: list[str] = field(default_factory=list)  # 这次查了哪些范围：launchagents / hermes / crontab
 
 
 def load_config(path: Path | None = None) -> dict:
+    """读配置。写错的项（JSON 语法错、类型不对）回退默认值，问题记在 cfg["_problems"] 里写进报告，
+    不让一处笔误拖垮整份体检，也不把配置的错推到任务头上。"""
     cfg = json.loads(json.dumps(DEFAULT_CONFIG))
+    problems: list[str] = []
     for p in [SKILL_DIR / "config.json", path]:
-        if p and Path(p).is_file():
+        if not (p and Path(p).is_file()):
+            continue
+        try:
             with open(p, encoding="utf-8") as f:
                 user = json.load(f)
-            cfg.update({k: v for k, v in user.items() if not k.startswith("_")})
+            if not isinstance(user, dict):
+                raise ValueError("最外层不是 {…}")
+        except Exception as e:
+            problems.append(f"配置文件 {p} 读不了（{type(e).__name__}），这次全部按默认配置体检。")
+            continue
+        for k, v in user.items():
+            if k.startswith("_"):
+                continue
+            if k not in DEFAULT_CONFIG:
+                problems.append(f"配置里的 `{k}` 不认识，已忽略。")
+                continue
+            want = type(DEFAULT_CONFIG[k])
+            ok = isinstance(v, want) and not (want is int and isinstance(v, bool))
+            if ok and want is list:
+                ok = all(isinstance(x, str) for x in v)
+            if ok and k == "aliases":
+                ok = all(isinstance(x, str) for x in v.values())
+            if ok and k == "tasks":
+                bad = [t for t, meta in v.items() if not isinstance(meta, dict)]
+                for t in bad:
+                    problems.append(f"配置 tasks 里 `{t}` 应该写成 {{\"名字\": …, \"做什么\": …, \"坏了影响\": …}}，已忽略这一项。")
+                v = {t: meta for t, meta in v.items() if isinstance(meta, dict)}
+            if not ok:
+                problems.append(f"配置里的 `{k}` 写法不对（应为 {want.__name__}），这次用默认值。")
+                continue
+            cfg[k] = v
+    cfg["_problems"] = problems
     return cfg
 
 
@@ -1034,12 +1117,14 @@ def _match_any(label: str, patterns) -> bool:
 
 def task_meta(label: str, cfg: dict) -> tuple[str | None, str | None, str | None]:
     """返回 (中文名, 做什么, 坏了影响)。tasks 里精确登记的优先，其次 aliases 通配。"""
-    t = cfg.get("tasks", {}).get(label) or {}
-    name = t.get("名字")
+    t = cfg.get("tasks", {}).get(label)
+    t = t if isinstance(t, dict) else {}
+    name = t.get("名字") if isinstance(t.get("名字"), str) else None
     if not name:
         hits = [(len(p), n) for p, n in cfg.get("aliases", {}).items() if fnmatch.fnmatchcase(label, p)]
         name = max(hits)[1] if hits else None
-    return name, t.get("做什么"), t.get("坏了影响")
+    text = lambda k: t.get(k) if isinstance(t.get(k), str) else None  # noqa: E731
+    return name, text("做什么"), text("坏了影响")
 
 
 def fmt_ago(t: dt.datetime, now: dt.datetime) -> str:
@@ -1171,6 +1256,7 @@ def assess_job(job: Job, ctx: Context, item: Item) -> None:
 
     # --- 事实 ---
     item.facts.append(["计划", job.schedule])
+    item.denied = list(pc.denied) + [os.path.dirname(l.path) for l in job.logs if l.dir_exists is None]
     if ld is None:
         item.facts.append(["运行状态", "没读到（launchctl 不可用）"])
     elif loaded is None:
@@ -1189,7 +1275,7 @@ def assess_job(job: Job, ctx: Context, item: Item) -> None:
         if ld.last_exit is not None:
             item.facts.append(["上次退出码", f"{ld.last_exit}，{explain_exit(ld.last_exit)}"])
     if pc.inline is not None:
-        item.facts.append(["命令", redact(pc.inline)[:200]])
+        item.facts.append(["命令", redact(_one_line(pc.inline))[:200]])
     elif pc.program:
         target = pc.script or pc.program_resolved or pc.program
         item.facts.append(["程序", target])
@@ -1247,7 +1333,7 @@ def assess_job(job: Job, ctx: Context, item: Item) -> None:
                  "需要你定：项目是不是挪走了？挪到哪就把工作目录改到哪。", 46)
     if not zombie:
         for lg in job.logs:
-            if not lg.tilde and not lg.special and not lg.dir_exists:
+            if not lg.tilde and not lg.special and lg.dir_exists is False:
                 broken = True
                 item.add(sev_file, "logdir_missing", "日志文件夹不在了",
                          f"{lg.kind}所在的文件夹 `{os.path.dirname(lg.path)}` 不存在，launchd 常因此直接启动失败（退出码 78）。",
@@ -1255,6 +1341,10 @@ def assess_job(job: Job, ctx: Context, item: Item) -> None:
     dead = zombie or broken
 
     # --- 加载与停用 ---
+    if job.disabled_but_loaded:
+        item.add(WARN, "disabled_running", "已停用，但还在跑",
+                 "这个任务已被停用，但当前还加载着。下次登录或重启后它不会再启动。",
+                 "需要你定：是要停掉它吗？是的话可以现在就卸载（agent 可以处理）；不是的话要重新启用，否则重启后它就没了。", 38)
     if disabled and not dead:
         item.add(WARN, "disabled", "已停用，文件还在",
                  "这个任务已被停用，不会自动运行，但配置文件还在。",
@@ -1269,15 +1359,15 @@ def assess_job(job: Job, ctx: Context, item: Item) -> None:
             item.add(ACT, "not_loaded", "没加载，不会运行",
                      f"配置文件在，但系统里没有这个任务，它现在根本不会运行（{why}）。",
                      "需要你定：还要这个任务吗？要就重新加载（agent 可以处理），不要就挪走配置文件，否则下次登录它可能又回来。",
-                     12 if job.kind == "keepalive" else 40)
+                     12 if job.kind == "keepalive" else 40, detail=why)
         else:
             item.add(WARN, "not_loaded", "没加载",
                      f"配置文件在，但系统里没有这个任务（{why}）。它只在登录或手动触发时运行，影响可能不大。",
-                     "需要你定：还要吗？不要就挪走配置文件。", 62)
+                     "需要你定：还要吗？不要就挪走配置文件。", 62, detail=why)
     if job.perm_problem and not (loaded is False and not dead and not disabled):
         item.add(WARN, "plist_perm", "配置文件权限不对",
                  f"配置文件 `{job.path.name}`：{job.perm_problem}。launchd 下次加载时会拒绝它。",
-                 "把文件改回只有你能改（agent 可以处理）。", 64)
+                 "把文件改回只有你能改（agent 可以处理）。", 64, detail=job.perm_problem)
 
     # --- 退出码与常驻服务 ---
     exit_flagged = dead  # 僵尸或配置坏了，失败退出只是症状，不再单列
@@ -1299,9 +1389,15 @@ def assess_job(job: Job, ctx: Context, item: Item) -> None:
                              "目前能用。如果最近没有重启或发版过它，再看日志确认有没有崩溃。", 20)
                 elif runs >= cfg["restart_runs_act"]:
                     exit_flagged = failing = True
-                    item.add(ACT, "service_flapping", "在反复崩溃又被拉起",
-                             f"常驻服务在跑，但这次加载以来已经启动了 {runs} 次，说明在反复崩溃；{exit_desc}。",
-                             "原因修好之前它会一直断断续续。原因在项目代码或依赖里的，要到项目里修。", 15)
+                    if nonzero:
+                        item.add(ACT, "service_flapping", "在反复崩溃又被拉起",
+                                 f"常驻服务在跑，但这次加载以来已经启动了 {runs} 次，说明在反复崩溃；{exit_desc}。",
+                                 "原因修好之前它会一直断断续续。原因在项目代码或依赖里的，要到项目里修。", 15)
+                    else:
+                        item.add(ACT, "service_flapping", "在反复退出又被拉起",
+                                 f"常驻服务在跑，但这次加载以来已经启动了 {runs} 次，每次都是正常退出后被重新拉起。"
+                                 "本该一直跑着的服务这样反复退出，中间会有空档。",
+                                 "查一下程序为什么会自己退出；原因在项目代码里的，要到项目里修。", 15)
                 elif runs >= cfg["restart_runs_warn"]:
                     exit_flagged = failing = nonzero
                     if nonzero:
@@ -1380,7 +1476,8 @@ def assess_job(job: Job, ctx: Context, item: Item) -> None:
                     what = f"按计划这之后应该运行 {missed} 次"
                 else:
                     what = f"按计划这之后应该运行 {missed if missed < 99 else '至少 99'} 次"
-                gap = f"{int(stale_h // 24)} 天" if stale_h >= 48 else f"{int(stale_h)} 小时"
+                gap = (f"{int(stale_h // 24)} 天" if stale_h >= 48 else f"{int(stale_h)} 小时" if stale_h >= 1
+                       else f"{max(1, int(stale_h * 60))} 分钟")
                 sev = ACT if (missed >= cfg["missed_runs_act"] and stale_h >= cfg["stale_hours_act"]) else WARN
                 sleep_note = ("每隔一段时间跑的任务，电脑睡眠（合盖）期间错过的点不会补跑；关机期间的也不补。"
                               if iv else "电脑关机期间错过的点不会补跑（睡眠期间错过的，醒来后会补跑一次）。")
@@ -1444,7 +1541,7 @@ def assess_naming(job: Job, item: Item) -> None:
     elif not job.others:
         item.add(WARN, "naming_mismatch", "文件名和任务名不一致",
                  f"文件名 `{job.path.name}` 和里面的任务名（Label）`{job.label}` 不一致，排查时容易找错文件。",
-                 "不影响运行；方便的时候把文件名改成和任务名一致。", 80)
+                 "不影响运行；方便的时候把文件名改成和任务名一致。", 80, detail=f"文件名 {job.path.name}")
 
 
 def assess_residue(paths: list[Path], live_labels: set[str]) -> Item | None:
@@ -1516,6 +1613,60 @@ def _hermes_state(job: dict) -> str:
     return stored if stored and stored != "paused" else "scheduled"
 
 
+def _one_line(v) -> str:
+    return re.sub(r"\s+", " ", str(v)).strip()
+
+
+def _assess_hermes_job(j: dict, it: Item, ctx: Context) -> int:
+    """检查一条 hermes 任务，返回 1（列入）或 0（已完成、已停用的不列）。"""
+    name = redact(_one_line(j.get("name") or j.get("id") or "未命名"))[:60].replace("`", "'")
+    state = _hermes_state(j)
+    if state == "completed" or (not j.get("enabled", True) and state != "paused"):
+        return 0
+    schedule = j.get("schedule")
+    sched = j.get("schedule_display") or (schedule.get("value") if isinstance(schedule, dict) else schedule) or "?"
+    sched = redact(_one_line(sched))[:60]
+    last = _parse_iso(j.get("last_run_at"))
+    nxt = _parse_iso(j.get("next_run_at"))
+    status = j.get("last_status")
+    status = _one_line(status) if status is not None else None
+    bits = [f"计划：{sched}"]
+    if state == "paused":
+        bits.append("已暂停")
+    if last:
+        st_cn = {"ok": "成功", "error": "失败", "delivery_failed": "结果没送达",
+                 "delivery_queued": "结果发送中"}.get(status, status)
+        bits.append(f"上次运行：{fmt_time(last, ctx.now)}" + (f"，{st_cn}" if status else ""))
+    if nxt and state != "paused":
+        bits.append(f"下次运行：{fmt_time(nxt, ctx.now)}")
+    it.facts.append([name, "；".join(bits)])
+    jid = _one_line(j.get("id") or name)[:40]
+    try:
+        streak = int(j.get("failure_streak") or 0)
+    except (TypeError, ValueError):
+        streak = 0
+    if state == "error" or (status and status not in ("ok", "delivery_queued", "delivery_failed")):
+        err = redact(_one_line(str(j.get("last_error") or "没有错误信息").splitlines()[0]))[:160]
+        it.add(ACT, f"hermes_failed:{jid}", f"「{name}」上次失败",
+               f"hermes 定时任务「{name}」上次运行失败：{err}" + (f"（已连续失败 {streak} 次）" if streak >= 2 else "") + "。",
+               "看失败原因；凭据过期、对方服务不通这类，要到对应项目或 hermes 配置里修。", 20)
+    elif status == "delivery_failed":
+        err = redact(_one_line(str(j.get("last_delivery_error") or "没有错误信息").splitlines()[0]))[:160]
+        it.add(ACT, f"hermes_undelivered:{jid}", f"「{name}」结果没送达",
+               f"hermes 定时任务「{name}」跑完了，但结果没送到：{err}。",
+               "多半是发送渠道（飞书群、机器人）的配置或权限问题。", 22)
+    if state == "paused":
+        it.add(WARN, f"hermes_paused:{jid}", f"「{name}」已暂停",
+               f"hermes 定时任务「{name}」已暂停，不会运行。",
+               "需要你定：是故意暂停的吗？不是的话 agent 可以恢复。", 40)
+    elif nxt and j.get("enabled", True) and (ctx.now - nxt).total_seconds() > ctx.cfg["hermes_overdue_minutes"] * 60:
+        it.add(ACT, f"hermes_overdue:{jid}", f"「{name}」过点没跑",
+               f"hermes 定时任务「{name}」本该在{sp(fmt_time(nxt, ctx.now))}运行，到现在还没跑。"
+               "多半是负责调度的 hermes 网关没在运行。",
+               "先看「飞书网关 Hermes」那一项是不是正常；网关恢复后会接着跑。", 14)
+    return 1
+
+
 def check_hermes(ctx: Context) -> tuple[list[Item], str]:
     stores = hermes_stores(ctx)
     if not stores:
@@ -1542,53 +1693,22 @@ def check_hermes(ctx: Context) -> tuple[list[Item], str]:
                    "让 agent 用 hermes 自己的命令看一下（会触发 hermes 的启动维护，先征得你同意）。", 50)
             items.append(it)
             continue
-        jobs = data.get("jobs", []) if isinstance(data, dict) else data if isinstance(data, list) else []
+        jobs = data.get("jobs") if isinstance(data, dict) else data
         if isinstance(jobs, dict):
             jobs = [dict(v, id=v.get("id", k)) for k, v in jobs.items() if isinstance(v, dict)]
-        jobs = [j for j in jobs if isinstance(j, dict)]
+        if not isinstance(jobs, list):
+            jobs = []
         live = 0
         for j in jobs:
-            name = str(j.get("name") or j.get("id") or "未命名")
-            state = _hermes_state(j)
-            if state == "completed" or (not j.get("enabled", True) and state != "paused"):
+            if not isinstance(j, dict):
                 continue
-            live += 1
-            sched = j.get("schedule_display") or (j.get("schedule") or {}).get("value") or "?"
-            last = _parse_iso(j.get("last_run_at"))
-            nxt = _parse_iso(j.get("next_run_at"))
-            status = j.get("last_status")
-            bits = [f"计划：{sched}"]
-            if state == "paused":
-                bits.append("已暂停")
-            if last:
-                st_cn = {"ok": "成功", "error": "失败", "delivery_failed": "结果没送达",
-                         "delivery_queued": "结果发送中"}.get(status, status)
-                bits.append(f"上次运行：{fmt_time(last, ctx.now)}" + (f"，{st_cn}" if status else ""))
-            if nxt and state != "paused":
-                bits.append(f"下次运行：{fmt_time(nxt, ctx.now)}")
-            it.facts.append([redact(name), "；".join(bits)])
-            jid = str(j.get("id") or name)
-            if state == "error" or (status and status not in ("ok", "delivery_queued", "delivery_failed")):
-                err = redact(str(j.get("last_error") or "没有错误信息").splitlines()[0])[:160]
-                streak = int(j.get("failure_streak") or 0)
-                it.add(ACT, f"hermes_failed:{jid}", f"「{name}」上次失败",
-                       f"hermes 定时任务「{name}」上次运行失败：{err}" + (f"（已连续失败 {streak} 次）" if streak >= 2 else "") + "。",
-                       "看失败原因；凭据过期、对方服务不通这类，要到对应项目或 hermes 配置里修。", 20)
-            elif status == "delivery_failed":
-                err = redact(str(j.get("last_delivery_error") or "没有错误信息").splitlines()[0])[:160]
-                it.add(ACT, f"hermes_undelivered:{jid}", f"「{name}」结果没送达",
-                       f"hermes 定时任务「{name}」跑完了，但结果没送到：{err}。",
-                       "多半是发送渠道（飞书群、机器人）的配置或权限问题。", 22)
-            if state == "paused":
-                it.add(WARN, f"hermes_paused:{jid}", f"「{name}」已暂停",
-                       f"hermes 定时任务「{name}」已暂停，不会运行。",
-                       "需要你定：是故意暂停的吗？不是的话 agent 可以恢复。", 40)
-            elif nxt and j.get("enabled", True) and state != "completed" and \
-                    (ctx.now - nxt).total_seconds() > ctx.cfg["hermes_overdue_minutes"] * 60:
-                it.add(ACT, f"hermes_overdue:{jid}", f"「{name}」过点没跑",
-                       f"hermes 定时任务「{name}」本该在{sp(fmt_time(nxt, ctx.now))}运行，到现在还没跑。"
-                       "多半是负责调度的 hermes 网关没在运行。",
-                       "先看「飞书网关 Hermes」那一项是不是正常；网关恢复后会接着跑。", 14)
+            try:
+                live += _assess_hermes_job(j, it, ctx)
+            except Exception as e:
+                live += 1
+                it.add(WARN, f"hermes_badjob:{len(it.findings)}", "有一条任务格式看不懂",
+                       f"hermes 任务文件里有一条任务的格式看不懂（{type(e).__name__}），没法检查它。",
+                       "hermes 升级后格式可能变了；可以让 agent 用 hermes 自己的命令看一下（先征得你同意）。", 52)
         if live == 0:
             continue
         it.name = f"hermes 定时任务（{profile}，{live} 个）"
@@ -1721,12 +1841,14 @@ def run_checkup(ctx: Context) -> Report:
             primary = next((j for j in group if j.path.name == f"{label}.plist"), group[0])
         primary.others = [j.path for j in group if j is not primary]
         primary.launchd = state
-        explicit_on = label in enabled_set
-        primary.disabled_effective = (not explicit_on and (label in disabled_set or primary.plist_disabled)
-                                       and not (state and state.loaded))
+        # launchctl 的停用记录优先；没有记录时才看 plist 里的 Disabled 键（它只是给 launchctl 的提示）
+        off = label in disabled_set or (primary.plist_disabled and label not in enabled_set)
+        primary.disabled_effective = off and not (state and state.loaded)
+        primary.disabled_but_loaded = off and bool(state and state.loaded)
         name, purpose, impact = task_meta(label, ctx.cfg)
         it = Item(key=f"job:{label}", name=name or label, kind="job", label=label,
-                  files=[primary.path.name] + [p.name for p in primary.others], purpose=purpose, impact=impact)
+                  files=[primary.path.name] + [p.name for p in primary.others], purpose=purpose, impact=impact,
+                  state_known=bool(state and state.loaded is not None))
         try:
             assess_job(primary, ctx, it)
             assess_naming(primary, it)
@@ -1744,6 +1866,12 @@ def run_checkup(ctx: Context) -> Report:
                    "需要你定：确认多出来的是备份后挪走（agent 可以处理）。", 64)
         items.append(it)
 
+    notes[:0] = list(ctx.cfg.get("_problems", []))
+    denied = sorted({d for it in items for d in it.denied})
+    if denied:
+        notes.append(f"有 {len(denied)} 个路径体检时没有权限读（多半在「文稿」「桌面」等受保护的文件夹里，运行体检的终端没有授权），"
+                     "这些路径在不在没法判断，没有按「不存在」判档：" + "、".join(f"`{d}`" for d in denied[:5])
+                     + ("等" if len(denied) > 5 else "") + "。")
     if launchd_unreadable:
         notes.append(f"有 {launchd_unreadable} 个任务没读到 launchd 状态（常见于在 SSH、沙箱或没有图形登录的环境里体检），"
                      "这些任务只检查了配置文件，没有按「没加载」判档。")
@@ -1755,20 +1883,25 @@ def run_checkup(ctx: Context) -> Report:
         notes.append(f"{len(blind)} 个定时任务没配输出日志，看不出有没有按时运行："
                      + "、".join(it.name for it in blind) + "。")
 
+    checked = ["launchagents"]
     hermes_status = "未检查"
     if ctx.check_hermes:
         hitems, hermes_status = check_hermes(ctx)
         items.extend(hitems)
+        if hermes_stores(ctx):
+            checked.append("hermes")
     crontab_status = "未检查"
     if ctx.check_crontab:
         it, crontab_status = check_crontab(ctx)
         if it:
             items.append(it)
+        if ctx.runner.available(CRONTAB):
+            checked.append("crontab")
 
     return Report(now=ctx.now.isoformat(timespec="minutes"), home=str(ctx.home), agents_dir=str(ctx.agents_dir),
                   items=items, excluded=sorted(excluded), notes=notes, hermes_status=hermes_status,
                   crontab_status=crontab_status, commands_run=list(ctx.runner.history),
-                  launchd_readable=launchd_unreadable == 0)
+                  launchd_readable=launchd_unreadable == 0, checked=checked)
 
 
 # ---------------------------------------------------------------------------
@@ -1785,6 +1918,12 @@ def finding_keys(rep_or_data) -> dict[tuple[str, str], str]:
     return out
 
 
+# 依赖 launchd 运行状态才判得出来的问题：这次没读到状态时，不能因为「没报」就算「已恢复」
+STATE_CODES = {"service_down", "service_flapping", "service_restarted", "service_sigterm", "service_gap",
+               "run_failed", "run_stopped", "not_loaded", "missed", "log_never", "disabled", "disabled_running",
+               "log_errors"}
+
+
 def apply_history(rep: Report, prev_path: Path | None) -> None:
     if not prev_path:
         return
@@ -1792,6 +1931,7 @@ def apply_history(rep: Report, prev_path: Path | None) -> None:
         prev = json.loads(prev_path.read_text(encoding="utf-8"))
         prev_keys = finding_keys(prev)
         prev_time = dt.datetime.fromisoformat(prev["now"])
+        prev_files = {i.get("key"): set(i.get("files") or []) for i in prev.get("items", [])}
     except Exception:
         return
     rep.previous = prev_time.isoformat(timespec="minutes")
@@ -1799,21 +1939,59 @@ def apply_history(rep: Report, prev_path: Path | None) -> None:
         for f in it.findings:
             f.new = (it.key, f.code) not in prev_keys
     cur = finding_keys(rep)
-    rep.resolved = [v for k, v in prev_keys.items() if k not in cur]
+    cur_items = {it.key: it for it in rep.items}
+    excluded = set(rep.excluded)
+    resolved = []
+    for (key, code), text in prev_keys.items():
+        if (key, code) in cur:
+            continue
+        scope = "hermes" if str(key).startswith("hermes:") else "crontab" if key == "crontab" else "launchagents"
+        if scope not in rep.checked:
+            continue  # 这次没查这一块
+        if prev_files.get(key, set()) & excluded:
+            continue  # 这次被配置排除了，不算恢复
+        now_it = cur_items.get(key)
+        if code in STATE_CODES and now_it is not None and not now_it.state_known:
+            continue  # 这次没读到运行状态
+        resolved.append(text)
+    rep.resolved = resolved
 
 
-def find_previous(out_dir: Path, current_name: str) -> Path | None:
+def find_previous(out_dir: Path, current: Path) -> Path | None:
+    """同目录里、除这次以外最新的一份体检 JSON（按文件修改时间，不依赖文件名）。"""
     if not out_dir.is_dir():
         return None
-    cands = sorted(p for p in out_dir.glob(f"{REPORT_PREFIX}*.json") if p.name < current_name)
-    return cands[-1] if cands else None
+    cands = []
+    for p in out_dir.glob("*.json"):
+        if p.resolve() == current.resolve():
+            continue
+        try:
+            if p.stat().st_size > 20 * 1024 * 1024:
+                continue
+            data = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if isinstance(data, dict) and "items" in data and "now" in data and "agents_dir" in data:
+            cands.append((p.stat().st_mtime, p))
+    return max(cands)[1] if cands else None
 
 
 # ---------------------------------------------------------------------------
 # 报告
 # ---------------------------------------------------------------------------
 
-GROUPABLE = {"not_loaded", "disabled", "naming_mismatch", "plist_perm"}
+# 可以合并的同类问题，合并后用的通用说法（各任务自己的原因写在各自那一行）
+GROUP_TEXT = {
+    "not_loaded": ("配置文件都在，但系统里没有这些任务，它们现在不会运行。",
+                   "需要你定：哪些还要？要的重新加载（agent 可以处理），不要的挪走配置文件。"),
+    "disabled": ("这些任务已被停用，不会自动运行，但配置文件还在。",
+                 "需要你定：不用的挪走配置文件；还要用的重新启用。"),
+    "naming_mismatch": ("这些配置文件的文件名和里面的任务名不一致，排查时容易找错文件。",
+                        "不影响运行；方便的时候统一改名。"),
+    "plist_perm": ("这些配置文件的属主或权限不对，launchd 下次加载时会拒绝它们。",
+                   "改回只有你能改（agent 可以处理）。"),
+}
+GROUPABLE = set(GROUP_TEXT)
 
 
 def _ic(s: str) -> str:
@@ -1828,6 +2006,11 @@ def _fence(lines: list[str]) -> str:
 
 def _sort_key(it: Item):
     return (it.urgency, {"job": 0, "file": 0, "hermes": 1, "crontab": 2, "residue": 3}.get(it.kind, 9), it.name)
+
+
+def _short_name(it: Item, dup_names: set[str]) -> str:
+    """开头列表里用的名字：中文名重名时（aliases 把多个任务映射成同一个名字）附上任务名。"""
+    return f"{it.name}（{it.label}）" if it.label and it.name in dup_names and it.name != it.label else it.name
 
 
 def _display(it: Item) -> str:
@@ -1890,11 +2073,14 @@ def render_markdown(rep: Report) -> str:
         for head, its, code in entries:
             num += 1
             index.append((num, head, its, code))
+    names = [it.name for it in rep.items if it.kind == "job"]
+    dup_names = {n for n in names if names.count(n) > 1}
     if act:
         L.append("要处理的：")
         for n, head, its, code in index[:len(act)]:
             it = its[0]
-            who = "、".join(x.name for x in its[:4]) + ("等" if len(its) > 4 else "") if code else it.name
+            who = ("、".join(_short_name(x, dup_names) for x in its[:4]) + ("等" if len(its) > 4 else "") if code
+                   else _short_name(it, dup_names))
             why = f"（{it.cause[1]}）" if (not code and it.cause and it.cause[1]) else ""
             new = " 〔新〕" if any(f.new for x in its for f in x.findings) else ""
             L.append(f"{n}. {who}：{head}{why}{new}")
@@ -1912,12 +2098,14 @@ def render_markdown(rep: Report) -> str:
             pos += 1
             if code:
                 f0 = its[0].top()
-                L += [f"### {pos}. {len(its)} 个任务{f0.headline}", ""]
+                problem, advice = GROUP_TEXT[code]
+                L += [f"### {pos}. {len(its)} 个任务{f0.headline}", "",
+                      f"- **问题**：{problem}", f"- **怎么办**：{advice}可以一次确认、逐个处理。", ""]
                 for x in its:
                     tag = " 〔新〕" if any(f.new for f in x.findings) else ""
-                    L.append(f"- {_display(x)}{tag}")
-                L += ["", f"- **问题**：{re.sub(r'这个任务', '这些任务', f0.problem)}",
-                      f"- **怎么办**：{f0.advice}可以一次确认、逐个处理。", ""]
+                    detail = x.top().detail if x.top() else ""
+                    L.append(f"- {_display(x)}{tag}" + (f"：{detail}" if detail else ""))
+                L.append("")
                 continue
             it = its[0]
             new = " 〔新〕" if any(f.new for f in it.findings) else ""
@@ -1933,7 +2121,7 @@ def render_markdown(rep: Report) -> str:
                     line, why = it.cause
                     L.append(f"- **原因**：{why}" + (f"。日志原文：{_ic(line)}" if line else ""))
                 L.append(f"- **怎么办**：{f.advice}")
-            details = [f"{k}：{v}" if k else v for k, v in it.facts]
+            details = [f"{k}：{_ic(v) if k == '命令' else _one_line(v)}" if k else _one_line(v) for k, v in it.facts]
             if it.next_run:
                 details.append(f"下次按计划运行：{it.next_run}")
             if it.kind in ("residue", "hermes", "crontab"):
@@ -1996,17 +2184,20 @@ def render_markdown(rep: Report) -> str:
             for kind, path, chunk in exs:
                 fence = _fence(chunk)
                 L += [f"{kind} {_ic(path)}：", "", fence + "text", *chunk, fence, ""]
-    md = "\n".join(L)
-    if rep.home and rep.home != "/":
-        md = re.sub(re.escape(rep.home) + r"(?=/|\b)", "~", md)
-    return md
+    return _tilde_home("\n".join(L), rep.home)
+
+
+def _tilde_home(text: str, home: str) -> str:
+    if home and home != "/":
+        text = re.sub(re.escape(home) + r"(?=/|\b)", "~", text)
+    return text
 
 
 def report_to_json(rep: Report) -> str:
     data = asdict(rep)
     for it, d in zip(rep.items, data["items"]):
         d["tier"] = it.tier
-    return json.dumps(data, ensure_ascii=False, indent=2)
+    return _tilde_home(json.dumps(data, ensure_ascii=False, indent=2), rep.home)
 
 
 # ---------------------------------------------------------------------------
@@ -2041,10 +2232,15 @@ def main(argv: list[str] | None = None) -> int:
     if a.stdout:
         print(render_markdown(rep))
         return 0
-    out = Path(a.out).expanduser() if a.out else home / "Documents/自动化体检" / f"{REPORT_PREFIX}{ctx.now:%Y%m%d-%H%M}.md"
+    default_name = f"{REPORT_PREFIX}{ctx.now:%Y%m%d-%H%M}.md"
+    out = Path(a.out).expanduser() if a.out else home / "Documents/自动化体检" / default_name
+    if a.out and (out.is_dir() or a.out.endswith(("/", os.sep))):
+        out = out / default_name
+    if out.suffix.lower() != ".md":
+        out = out.with_suffix(".md") if out.suffix.lower() == ".json" else out.with_name(out.name + ".md")
     out.parent.mkdir(parents=True, exist_ok=True)
     js = out.with_suffix(".json")
-    apply_history(rep, find_previous(out.parent, js.name))
+    apply_history(rep, find_previous(out.parent, js))
     _write_private(out, render_markdown(rep))
     _write_private(js, report_to_json(rep))
     tiers = [it.tier for it in rep.items]

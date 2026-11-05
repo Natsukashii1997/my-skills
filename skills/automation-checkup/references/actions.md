@@ -53,7 +53,9 @@
 - **停用（disable）会被记住**：`launchctl disable` 的状态存在系统里，配置文件挪走再放回来也还是停用。要重新用，先 `launchctl enable`。
 - **退出过多会被关进「penalty box」**：反复崩溃的常驻服务会被 launchd 暂缓重启。原因修好后，要 `bootout` 再 `bootstrap` 才会恢复。
 
-下面的 `<Label>` 是任务名，`<plist>` 是 `~/Library/LaunchAgents/<文件名>.plist` 的完整路径。每条命令都写成 `gui/$(id -u)`，不要依赖上一条命令里设的变量。
+下面的 `<Label>` 是任务名，`<plist>` 是 `~/Library/LaunchAgents/<文件名>.plist` 的完整路径。
+
+agent 每次执行命令都是一个新的 shell，上一条命令里设的变量会丢。所以每个代码块都写成一行，用 `&&` 串起来，整行一起执行，不要拆开。`R` 是备份文件夹，每行开头都重新算一次；备份文件名带上时分秒，同一天改两次不会互相覆盖。
 
 ## 常见处理
 
@@ -89,23 +91,22 @@ launchctl bootstrap gui/$(id -u) <plist>
 
 ### 改了配置文件之后让它生效
 适用于：把 `~` 改成完整路径、给 Program 写完整路径、加 PATH、改工作目录或日志路径。
+第一步，备份：
 ```bash
-D=~/Library/LaunchAgents.retired/$(date +%Y%m%d); mkdir -p "$D"
-cp <plist> "$D"/ && echo "$(date '+%F %T') 复制 <plist>：改之前的备份，回退时复制回去" >> "$D/说明.txt"
-# 改 plist（用 plutil -replace 或编辑器）……
-plutil -lint <plist>
-launchctl bootout gui/$(id -u)/<Label>
-for i in $(seq 15); do launchctl print gui/$(id -u)/<Label> >/dev/null 2>&1 || break; sleep 1; done
-launchctl bootstrap gui/$(id -u) <plist>
+R=~/Library/LaunchAgents.retired/$(date +%Y%m%d) && mkdir -p "$R" && B="$R/$(basename <plist>).$(date +%H%M%S)" && cp <plist> "$B" && echo "$(date '+%F %T') 备份 <plist> 到 $B：改之前的版本，回退时复制回去" >> "$R/说明.txt" && echo "$B"
 ```
-回退：把 `$D` 里的备份复制回原位置，再 bootout、等待、bootstrap。
+第二步，改 plist（`plutil -replace` 或编辑器）。
+
+第三步，检查格式、重新加载：
+```bash
+plutil -lint <plist> && launchctl bootout gui/$(id -u)/<Label>; for i in $(seq 15); do launchctl print gui/$(id -u)/<Label> >/dev/null 2>&1 || break; sleep 1; done; launchctl bootstrap gui/$(id -u) <plist>
+```
+回退：把第一步打印出来的备份复制回原位置，再执行第三步。
 
 ### 下线僵尸任务、不要的任务
+没加载的任务，`bootout` 会报错，可以忽略，后面照样执行：
 ```bash
-D=~/Library/LaunchAgents.retired/$(date +%Y%m%d); mkdir -p "$D"
-launchctl bootout gui/$(id -u)/<Label>      # 没加载的会报错，可以忽略
-for i in $(seq 15); do launchctl print gui/$(id -u)/<Label> >/dev/null 2>&1 || break; sleep 1; done
-mv <plist> "$D"/ && echo "$(date '+%F %T') 挪走 <plist>：<原因>；挪回 ~/Library/LaunchAgents/ 再 bootstrap 即可恢复" >> "$D/说明.txt"
+launchctl bootout gui/$(id -u)/<Label>; for i in $(seq 15); do launchctl print gui/$(id -u)/<Label> >/dev/null 2>&1 || break; sleep 1; done; R=~/Library/LaunchAgents.retired/$(date +%Y%m%d) && mkdir -p "$R" && B="$R/$(basename <plist>).$(date +%H%M%S)" && mv <plist> "$B" && echo "$(date '+%F %T') 挪走 <plist> 到 $B：<原因>；挪回 ~/Library/LaunchAgents/<原文件名> 再 bootstrap 即可恢复" >> "$R/说明.txt"
 ```
 
 ### 重新启用已停用的任务
@@ -117,9 +118,9 @@ launchctl bootstrap gui/$(id -u) <plist>
 
 ### 清理残留文件、多余的同名配置文件、断掉的软链接
 先列清单给常浩一次确认。同名配置文件：以体检报告里写的「系统正在用的」为准（来自 `launchctl print` 的 `path =`），挪走另外的。
+每个文件执行一次：
 ```bash
-D=~/Library/LaunchAgents.retired/$(date +%Y%m%d); mkdir -p "$D"
-mv ~/Library/LaunchAgents/<文件名> "$D"/ && echo "$(date '+%F %T') 挪走 <文件名>：<原因>" >> "$D/说明.txt"
+R=~/Library/LaunchAgents.retired/$(date +%Y%m%d) && mkdir -p "$R" && B="$R/<文件名>.$(date +%H%M%S)" && mv ~/Library/LaunchAgents/<文件名> "$B" && echo "$(date '+%F %T') 挪走 <文件名> 到 $B：<原因>；挪回 ~/Library/LaunchAgents/<文件名> 即可恢复" >> "$R/说明.txt"
 ```
 断掉的软链接，如果常浩说任务还要、知道配置文件的新位置：`ln -sfn <新位置> ~/Library/LaunchAgents/<文件名>`，再 bootstrap。
 
@@ -152,20 +153,21 @@ plutil -lint <plist>
 ### 日志太大
 默认留一份压缩备份再清空，不丢内容：
 ```bash
-D=~/Library/LaunchAgents.retired/$(date +%Y%m%d); mkdir -p "$D"
-cp <日志> "$D/" && gzip "$D/$(basename <日志>)" && : > <日志>
-echo "$(date '+%F %T') 清空 <日志>，原内容在 $(basename <日志>).gz；回退：gunzip -c 这个文件 > <日志>" >> "$D/说明.txt"
+R=~/Library/LaunchAgents.retired/$(date +%Y%m%d) && mkdir -p "$R" && B="$R/$(basename <日志>).$(date +%H%M%S)" && cp <日志> "$B" && gzip "$B" && : > <日志> && echo "$(date '+%F %T') 清空 <日志>，原内容在 $B.gz；回退：gunzip -c $B.gz > <日志>" >> "$R/说明.txt"
 ```
 
 ### crontab 某条失效
+`<要去掉的那一整行>` 必须从 `crontab -l` 的原样输出里复制，不要照抄体检报告：报告里的那一行脱过敏、家目录换成了 `~`、可能被截短，匹配不上。
+
+第一步，备份并生成去掉那一行的版本，给常浩看差异（应该只少这一行）：
 ```bash
-D=~/Library/LaunchAgents.retired/$(date +%Y%m%d); mkdir -p "$D"
-crontab -l > "$D/crontab.before"
-grep -vxF '<要去掉的那一整行>' "$D/crontab.before" > "$D/crontab.after"
-diff "$D/crontab.before" "$D/crontab.after"   # 应该只少这一行，给常浩看
-crontab "$D/crontab.after"
+R=~/Library/LaunchAgents.retired/$(date +%Y%m%d) && mkdir -p "$R" && T=$(date +%H%M%S) && crontab -l > "$R/crontab.$T.before" && grep -vxF '<要去掉的那一整行>' "$R/crontab.$T.before" > "$R/crontab.$T.after"; diff "$R/crontab.$T.before" "$R/crontab.$T.after"; echo "$R/crontab.$T"
 ```
-回退：`crontab "$D/crontab.before"`。
+第二步，常浩确认后生效（`<上一步打印的前缀>` 换成第一步最后一行打印出来的路径）：
+```bash
+crontab "<上一步打印的前缀>.after"
+```
+回退：`crontab "<上一步打印的前缀>.before"`。
 
 ### hermes 定时任务失败、暂停、过点没跑
 - **过点没跑**：多半是 hermes 网关没在运行。先处理报告里「飞书网关 Hermes」那一项。
