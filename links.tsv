@@ -15,3 +15,5 @@ hairline-page	~/.claude/skills
 hairline-page	~/.agents/skills
 ai-landing-method	~/.claude/skills
 ai-landing-method	~/.agents/skills
+vault-backup	~/.claude/skills
+vault-backup	~/.agents/skills

@@ -17,7 +17,7 @@
 | [skill-governance-audit](skills/skill-governance-audit/SKILL.md) | `~/.codex/skills` | Skill 启用前的治理审计 |
 | [excel-aura](skills/excel-aura/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「Excel-Aura」表格配色与版式标准：按表型给写法，10 套标准配色 +「底线 + 默认值」版式规则，带写入前预览和表格审查；新建、美化已有表都能用，飞书 / Excel 通用 |
 | [hairline-page](skills/hairline-page/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「Hairline 细线」网页风格：方法论、方案讲解做成有网站质感的单文件 HTML；细线分层、识别色串主线、动效只演示真实业务过程 |
-| [ai-landing-method](skills/ai-landing-method/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「AI 落地三步法」：访谈提纲 → 技术方案 → 执行规范；先几轮提问把情况和材料问清楚（使用者不用懂方法），再判断、填标准提示词槽位、执行出单页 HTML 报告、对照产出范本检查；Claude、Codex 通用 |
+| [ai-landing-method](skills/ai-landing-method/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「AI 落地三步法」：访谈提纲 → 技术方案 → 执行规范；先几轮提问把情况和材料问清楚（使用者不用懂方法），像 grill-me 那样把角色、新老、业务线、情境等差异问到底；再判断、填标准提示词槽位，按「从证据到决定」底层框架和数据本体论盘点材料、取证、按读者的论证逻辑排结构，出有网页质感的单页 HTML 报告（默认 hairline-page 风格），对照质量特征自检、机械核对并独立审查；Claude、Codex 通用 |
 
 链接关系以 [links.tsv](links.tsv) 为准。
 

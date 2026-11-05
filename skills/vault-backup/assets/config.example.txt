@@ -1,0 +1,41 @@
+# vault-backup 配置文件。复制到 ~/.config/vault-backup/config.txt 后按注释改。
+# 规则：一行一项，写成「名称 = 值」；# 开头的是注释。
+# 这里绝不写密码。密码放钥匙串（见 SKILL.md「第一次设置」）。
+
+# ── 要备份的目录（可以写多行）──────────────────────────────
+# 文件夹名字不能重复。路径里有空格、中文都照原样写，不用加引号。
+source = ~/Documents/Obsidian Vault
+# source = ~/Projects/某个只在本机的项目
+
+# ── 备份存到哪（可以写多行，「名字 | 位置」）────────────────
+# 建议至少一个本地（外置盘）+ 一个异地（iCloud 或云存储）。三种写法：
+#   外置盘：      target = 外置盘 | /Volumes/盘的名字/vault-backup
+#   iCloud 云盘： target = iCloud | ~/Library/Mobile Documents/com~apple~CloudDocs/vault-backup
+#   S3/B2 云存储：target = B2 | s3:https://s3.us-west-004.backblazeb2.com/桶名/vault-backup
+# 默认什么都没开，选好后去掉对应行前面的 #。各自利弊见 references/targets.md。
+# target = 外置盘 | /Volumes/Backup/vault-backup
+# target = iCloud | ~/Library/Mobile Documents/com~apple~CloudDocs/vault-backup
+
+# ── 不备份的东西（只写文件或文件夹的名字，可以用 *）────────
+exclude = .DS_Store
+exclude = node_modules
+exclude = .venv
+exclude = __pycache__
+
+# ── 其他（一般不用改）──────────────────────────────────────
+# 备份前是否自动在 git 目录里提交一次快照。默认 no：只报告未提交数。
+# 不提交也没关系：未提交的改动照样会被备份进去。
+git_commit_before_backup = no
+# 超过几天没成功备份就提醒
+warn_after_days = 3
+# 保留多少个历史版本（运行 prune 时按这个清理）
+keep_daily = 7
+keep_weekly = 8
+keep_monthly = 24
+keep_yearly = 5
+# 定时备份的时间（安装定时任务后才生效），可以写多个
+schedule = 12:30, 21:30
+# 备份里记录的电脑名。固定写一个，换电脑也别改，避免历史版本对不上
+host = mac
+# 钥匙串里存密码的服务名
+keychain_service = vault-backup
