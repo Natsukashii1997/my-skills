@@ -50,19 +50,33 @@
 | `response_item` | `type=message`（`role`，`content[]` 里的 `input_text` / `output_text`）；`function_call`（`name`、`arguments` 是 JSON 字符串、`call_id`）；`function_call_output`（`call_id`、`output`）；`custom_tool_call` / `custom_tool_call_output`（apply_patch）；`local_shell_call`；`reasoning` 不用 | agentsesh、本仓库 |
 | `compacted`、`token_count` 等 | 不用；`token_count` 和 `reasoning` 在解析 JSON 前就跳过，以提速 | 本仓库 |
 
-**用户原话取哪一份**：同一句话会同时出现在 `event_msg/user_message` 和 `response_item/message(role=user)` 里，后者还混着 `<environment_context>`、`<user_instructions>`、`# AGENTS.md instructions…` 等注入内容。脚本只要文件里有 `user_message` 事件，就只用事件那份；没有的（旧版本），才退回用 `response_item`，并去掉注入内容。
+**用户原话取哪一份**：同一句话会同时出现在 `event_msg/user_message` 和 `response_item/message(role=user)` 里，后者还混着 `<environment_context>`、`<user_instructions>`、`# AGENTS.md instructions…` 等注入内容。脚本只要文件里有 `user_message` 事件，就只用事件那份；没有的，才退回用 `response_item`，并去掉注入内容。
+
+**新版本没有 `user_message` 事件**（2026-11-05 在用户本机实测：最近两周的 Codex 记录里一条都没有），所以现在都走退回路线，注入内容必须滤干净，否则 AGENTS.md 里的「不要」「以后都」会冒成大量假信号。实测见到、并由 `codex_user_text()` 处理的几类：
+
+| 消息开头 | 是什么 | 处理 |
+|---|---|---|
+| `# AGENTS.md instructions`、`<environment_context` | 规则文件、环境信息 | 整条跳过 |
+| `<external_codex_apps…`（如 `_open_page`、`_writing_…`）、`<in-app-browser-context`、`<heartbeat`、`<skill`、`<recommended_plugins`、`<codex_delegation` | 应用页面状态、内置浏览器上下文、心跳、技能正文、插件推荐、别的 agent 派来的任务 | 整条跳过 |
+| `The following is the Codex agent history…`、`You are working inside Orca…`、`[数字] assistant:` / `[数字] tool …` | 父会话或别的 agent 的历史摘录 | 整条跳过 |
+| `PLEASE IMPLEMENT THIS PLAN:` | 计划模式里点「开始实施」时自动生成，不是用户打的字 | 整条跳过 |
+| `# Files mentioned by the user:`、`# Files pasted by the user:`、`# Context from my IDE setup:`、`## Referenced ChatGPT conversation:` | 前面是文件清单或对话摘录，用户的话在 `## My request:`（或 `## My request for Codex:`）之后 | 只取那一节之后；没有这一节的整条跳过 |
+| `<send_user_message_question_reply>…</…>` | 用户回答 agent 的提问，原话包在标签里 | 去掉标签，保留原话 |
 
 **命令行怎么取**：`shell` 的 `arguments.command` 是数组（如 `["bash","-lc","pytest -q"]`）；`exec_command` 是 `arguments.cmd` 字符串；`apply_patch` 从补丁里的 `*** Update File:` 取文件名。【agentsesh】
 
-**失败怎么判断**，三种写法都兼容：
+**失败怎么判断**，四种写法都兼容：
 
 1. `output` 是 JSON 字符串 `{"output": "...", "metadata": {"exit_code": 1}}`。【agentsesh、旧版本】
-2. 纯文本 `Exit code: 1\nWall time: …\nOutput: …`。【新版本，假设】
-3. 纯文本 `Process exited with code 1`。【agentsesh】
+2. 纯文本 `Exit code: 1\nWall time: …\nOutput: …`。【本机实测：apply_patch】
+3. 纯文本 `Process exited with code 1`。【agentsesh；本机实测：exec_command、write_stdin】
+4. `exec` 工具（`custom_tool_call_output`，`output` 是 `[{type: "input_text", text}]` 列表），首行 `Script completed` 算成功、`Script failed` 算失败；`Script running with cell ID …` 记为结果未知。这是新版 Codex 工具输出的大多数（本机一周约 2100 条）。首行优先：`Output:` 里内层命令打印的退出码不覆盖脚本级结论。【本机实测】
+
+仍记为「结果未知」的（本机一周约 1600 条，本来就没有成败可言，不算缺陷）：内置浏览器的 `js` 工具输出（只有 `Wall time` / `Output`）、`spawn_agent` / `send_message` / `followup_task` / `wait_agent` 这类多代理工具、还在运行的 `exec_command`（只有 `Chunk ID`，没有退出码）、`sleep`。`# lark-channel-bridge` 开头的消息是飞书转发进来的，可能是用户本人在飞书说的话，没有过滤。
 
 都没有时，以 `error` / `failed` / `fatal` 开头、或含 `verification failed` 的算失败，否则记为「结果未知」，不计入连续失败。
 
-**被拒绝**（假设）：输出里含 `rejected by user`、`denied by user`、`aborted by user` 等。实际文案随版本可能不同，首次在真实数据上运行后要核对。
+**被拒绝**（假设）：输出里含 `rejected by user`、`denied by user`、`aborted by user` 等。实际文案随版本可能不同，首次在真实数据上运行后要核对。2026-11-05 本机最近一周的 Codex 记录里，这类文案只出现在 2 行，脚本识别出 1 次拒绝；样本太少，具体文案仍需以后核对。
 
 **旧版格式**（假设）：首行是 `{id, timestamp, instructions}`，没有 `type`；之后每行直接是条目（`{type: "message", …}`），没有逐行时间戳。脚本用首行时间代替。更早的 `.json` 单文件格式不支持。
 

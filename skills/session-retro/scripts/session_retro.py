@@ -245,6 +245,39 @@ def is_system_text(text):
     return not head or head.startswith(SYSTEM_PREFIXES)
 
 
+# 新版 Codex（2026-11 本机实测）不再写 event_msg/user_message，用户的话只能从 role=user 的消息里取，
+# 而这类消息里混着大量注入：应用状态、心跳、技能正文、别的 agent 的历史、计划模式的「开始实施」等。
+# 整条以这些开头的都不算用户的话。依据见 references/session-formats.md。
+CODEX_INJECTED_PREFIXES = (
+    "<external_codex_apps", "<in-app-browser-context", "<heartbeat", "<skill", "<recommended_plugins",
+    "<codex_delegation",
+    "the following is the codex agent history", "you are working inside orca", "please implement this plan:",
+)
+CODEX_HISTORY_LINE = re.compile(r"^\[\d+\]\s+(?:assistant|user|tool|system)\b")
+# IDE / 引用对话附带的上下文：前面是文件清单或对话摘录，用户的话在「## My request:」之后
+CODEX_CONTEXT_HEADS = ("# files mentioned by the user", "# files pasted by the user", "# context from my ide",
+                       "## referenced chatgpt conversation")
+CODEX_REQUEST_HEAD = re.compile(r"(?m)^##\s*My request(?: for Codex)?:[ \t]*$")
+# 用户回答 agent 提问时，原话包在这个标签里
+CODEX_WRAPPED_REPLY = re.compile(
+    r"(?s)^<send_user_message_question_reply\b[^>]*>(.*)</send_user_message_question_reply>\s*$")
+
+
+def codex_user_text(text):
+    """从 Codex 的 user 消息里取出用户真正说的话；整条都是注入的返回空串。"""
+    t = (text or "").strip()
+    wrapped = CODEX_WRAPPED_REPLY.match(t)
+    if wrapped:
+        t = wrapped.group(1).strip()
+    head = t.lower()
+    if head.startswith(CODEX_CONTEXT_HEADS):
+        parts = CODEX_REQUEST_HEAD.split(t, maxsplit=1)
+        return parts[1].strip() if len(parts) == 2 else ""
+    if head.startswith(CODEX_INJECTED_PREFIXES) or CODEX_HISTORY_LINE.match(t) or is_system_text(t):
+        return ""
+    return t
+
+
 def _command_key(command):
     if isinstance(command, list):
         parts = [str(part) for part in command]
@@ -422,6 +455,13 @@ def _codex_output(output):
         text = flatten_content(output.get("output") if "output" in output else output.get("content"))
         return text, code if isinstance(code, int) else None, success
     text = output if isinstance(output, str) else flatten_content(output)
+    # 新版 Codex 的 exec 工具（2026-11 本机实测占工具输出的大多数）：首行是脚本本身的结果。
+    # 先看它，不让 Output 里内层命令的退出码盖过脚本级结论。
+    first = (text or "").lstrip().split("\n", 1)[0]
+    if first.startswith("Script failed"):
+        return text, None, False
+    if first.startswith("Script completed"):
+        return text, None, True
     found = re.search(r"(?m)^(?:Exit code:\s*|Process exited with code\s+)(-?\d+)", text or "")
     return text or "", int(found.group(1)) if found else None, success
 
@@ -461,9 +501,9 @@ def parse_codex(path, coverage):
             sub = payload.get("type")
             if sub == "user_message":
                 has_event_user = True
-                text = payload.get("message") if isinstance(payload.get("message"), str) else ""
-                if text.strip() and not is_system_text(text):
-                    events.append(Event("user", stamp, number, text.strip()))
+                text = codex_user_text(payload.get("message") if isinstance(payload.get("message"), str) else "")
+                if text:
+                    events.append(Event("user", stamp, number, text))
             elif sub == "turn_aborted":
                 events.append(Event("interrupt", stamp, number, "turn_aborted: %s" % payload.get("reason", "")))
             elif sub == "exec_command_end" and isinstance(payload.get("exit_code"), int):
@@ -480,8 +520,10 @@ def parse_codex(path, coverage):
             text = flatten_content(item.get("content")).strip()
             if item.get("role") == "assistant" and text:
                 events.append(Event("assistant", stamp, number, text))
-            elif item.get("role") == "user" and text and not is_system_text(text):
-                events.append(Event("user", stamp, number, text, fallback=True))
+            elif item.get("role") == "user":
+                text = codex_user_text(text)
+                if text:
+                    events.append(Event("user", stamp, number, text, fallback=True))
         elif item_type in ("function_call", "custom_tool_call", "local_shell_call"):
             name = item.get("name") or ("shell" if item_type == "local_shell_call" else "tool")
             args = item.get("arguments") if item_type == "function_call" else (

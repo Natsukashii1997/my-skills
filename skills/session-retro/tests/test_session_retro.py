@@ -107,6 +107,23 @@ class ParseTests(FixtureCase):
         self.assertEqual([e.kind for e in session["events"]].count("rejection"), 1)
         self.assertEqual(coverage["malformed_lines"], 1)
 
+    def test_codex_new_format_filters_injections_and_reads_script_status(self):
+        # 2026-11 本机实测的新版 Codex：没有 event_msg/user_message，用户的话混在大量注入里；
+        # exec 工具输出首行是 Script completed / Script failed，没有退出码
+        path = next((self.data / "codex_new").glob("*.jsonl"))
+        session = sr.parse_codex(path, sr.Counter())
+        users = [e.text for e in session["events"] if e.kind == "user"]
+        self.assertEqual(users, ["不对，重来。以后都先给计划再动手", "定了，就按方案 B", "别动线上数据，先在副本上试"])
+        results = [e.ok for e in session["events"] if e.kind == "tool_result"]
+        self.assertEqual(results, [False, False, False, True, None])
+
+    def test_codex_user_text_unit(self):
+        self.assertEqual(sr.codex_user_text("<codex_delegation>\n  <source>x</source>\n不对</codex_delegation>"), "")
+        self.assertEqual(sr.codex_user_text("<skill>\n以后都这样</skill>"), "")
+        self.assertEqual(sr.codex_user_text("You are working inside Orca, a multi-agent IDE"), "")
+        self.assertEqual(sr.codex_user_text("# Context from my IDE setup:\n\n## Open tabs:\n- a.py\n\n## My request for Codex:\n重来"), "重来")
+        self.assertEqual(sr.codex_user_text("  不是这个意思，按表格来  "), "不是这个意思，按表格来")
+
     def test_codex_subagent_and_legacy_files(self):
         sub = next(Path(self.codex_root).glob("2026/10/30/*beef.jsonl"))
         self.assertTrue(sr.parse_codex(sub, sr.Counter())["subagent"])
