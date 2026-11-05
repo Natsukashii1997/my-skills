@@ -167,7 +167,8 @@ def build_scenario(root: Path, now: dt.datetime = NOW, tools: dict | None = None
 
 if __name__ == "__main__":
     out = Path(sys.argv[1]) if len(sys.argv) > 1 else None
-    with tempfile.TemporaryDirectory() as d:
+    # 用 /tmp：macOS 默认临时目录路径很长，报告里截断后的路径就换不成 ~，会把本机临时路径写进示例报告
+    with tempfile.TemporaryDirectory(dir="/tmp" if os.path.isdir("/tmp") else None) as d:
         ctx = build_scenario(Path(d))
         md = checkup.render_markdown(checkup.run_checkup(ctx)).replace(str(ctx.home), "~")
     if out:

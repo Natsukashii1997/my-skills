@@ -121,7 +121,7 @@ health ok
 
 - **问题**：crontab 这条指向的文件不存在：`~/scripts/gone.sh`，每次到点都会失败。
   **建议**：确认这条还要不要；不要了就从 crontab 里删掉这一行，要就改成正确路径。
-- `0 3 * * * ~/scripts/backup.sh >> /var/folders/19/41dqp8kj55x991m3vjqpxthc0000gn/T/tmpbgbzlm7q/ho`
+- `0 3 * * * ~/scripts/backup.sh >> ~/logs/backup.log 2>&1`
 - `30 7 * * 1 ~/scripts/gone.sh`
 
 ### 10. `broken.plist`
