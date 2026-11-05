@@ -4,6 +4,13 @@
 
 > 注意：`excel-aura` 和 `ai-landing-method` 另有两个云端会话在改。下面涉及这两个 skill 的条目以 `370089e` 为准，合并前请对照它们的最新版本再看一遍。
 
+> **main@72028e4 复核附注（2026-11-05 晚）**：本报告是 `370089e` 时的快照。之后 main 合进了 #31（vault-backup）和 ai-landing-method 的 #27、#33、#35、#37、#39。下面几条在新 main 上要这样读：
+> - **H1 仍然成立，而且更重**：「写完直接开始做，不再等用户确认」移到了 `ai-landing-method/SKILL.md:57`，报告里的行号已经对不上；#27 给三步法的 description 加了「先像 grill-me 那样……问到底」，和 router 第一环重叠更多；router 那边仍然没有提到三步法。
+> - **M1 前半条仍然成立**（`hairline-page/SKILL.md:3` 的触发词里还有「按 AI 落地三步法那个风格」）。**后半条已过时**：#39 起 ai-landing-method 不再引用 hairline-page，在 `references/presentation.md` 里自带三套风格，没指定时默认细线，「第④步补一句」不用做了。
+> - **H2 的「4 个文件不同」应为 5 个**，漏了 `agents/openai.yaml`。
+> - **「已通过的检查」里「三方 12 个一一对应」已经不成立**：现在 `skills/` 和 `links.tsv` 都是 13 个，README 表格少了 vault-backup 一行。「12 个 skill」「125 个单元测试」这些数字也都是 `370089e` 时的。
+> - **vault-backup（#31）带进来的问题先挂起**：README 漏登记；`agents/openai.yaml` 没写 `policy`，触发词「备份一下」又太宽。常浩目前没有可用的备份存储，备份相关的事整体暂停，这两条等恢复备份时再处理。
+
 ## 结论先行
 
 - **结构层面基本健康**：12 个 skill 的 frontmatter 都齐全、`name` 都和目录名一致；`links.tsv`、`skills/` 目录、README 表格三方都是 12 个，一一对得上；所有相对链接都能找到文件；所有脚本都过了语法检查，自带的 125 个单元测试全部通过。
