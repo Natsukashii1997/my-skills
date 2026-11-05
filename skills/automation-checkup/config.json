@@ -1,5 +1,13 @@
 {
   "_说明": "自动化体检的配置。改完下次体检就生效。各项含义见 SKILL.md「配置」一节。",
+  "_tasks写法": {
+    "任务名（Label）": {
+      "名字": "中文名",
+      "做什么": "一句话说明这个任务干什么",
+      "坏了影响": "它停了，业务上会出什么事"
+    }
+  },
+  "tasks": {},
   "exclude_patterns": [
     "com.apple.*",
     "com.google.*",
@@ -50,12 +58,17 @@
     "local.digitalworld.*": "数字世界",
     "com.openai.codex-quota-guard": "Codex 额度守护"
   },
-  "tail_lines": 15,
+  "hermes_homes": [
+    "~/.hermes"
+  ],
+  "excerpt_lines": 6,
+  "scan_lines": 40,
   "grace_minutes": 15,
   "missed_runs_act": 3,
   "stale_hours_act": 24,
   "restart_runs_warn": 5,
   "restart_runs_act": 20,
   "log_size_warn_mb": 200,
-  "recent_error_hours": 24
+  "recent_error_hours": 24,
+  "hermes_overdue_minutes": 15
 }

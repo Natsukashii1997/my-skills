@@ -1,236 +1,195 @@
 # 自动化体检报告
 
-体检时间：2026-11-05 10:30（本机时间）　检查了 15 个自建后台任务，按配置跳过 1 个系统或第三方任务。
+体检时间：2026-11-05 10:30（本机时间）。共查 18 个后台任务，外加 hermes 定时任务、crontab；按配置跳过 1 个系统或第三方任务。
 
-**结论：需要处理 10 项，注意 5 项，正常 3 项。**
+**结论：需要处理 11 项，注意 5 项，其余 6 项正常。**
 
-最该先看的：
-- 飞书频道桥 `ai.lark-channel-bridge.server`：常驻服务现在正在等待重启（多半刚崩溃，被系统限速）；上次退出码 1（一般性错误，程序自己报错退出，具体原因要看日志）。本次登录以来已启动 3 次。
-- 路觅工作任务 `com.lumiedu.weekly-report`：上次运行失败：上次退出码 127（找不到命令：launchd 的 PATH 比终端里短，脚本里用到的命令可能找不到）。
-- 数字分身 `cn.digital-twin.healthcheck`：疑似该跑没跑：日志停在 11 月 2 日 10:30（3 天前），按计划这之后应该运行 143 次。
+要处理的：
+1. 飞书频道桥：停了，在反复重启（项目缺少依赖 `ws`，多半是更新后没重新安装）
+2. hermes 定时任务（默认，4 个）：「周报提醒」过点没跑；「数据回流」上次失败 等 3 个问题
+3. 路觅周报推送：上次运行失败（定时运行时找不到命令 `lark-cli`）
+4. 数字分身：3 天没跑
+5. GitHub 中心：没加载，不会运行
+6. 数字分身：路径写了 ~，跑不起来
+7. `cn.lumiedu.moved.plist`：链接断了，任务不会运行
+8. 数字世界：脚本已经不在了
+9. Codex 相关：日志文件夹不在了
+10. crontab 定时任务（4 条）：有一条指向的文件不在了
+11. `broken.plist`：配置文件坏了
 
 > 这份报告是只读生成的：没有启动、停止、重启或修改任何任务，也没有动任何文件。
-> 下面的「建议」都还没做；要处理哪一条，告诉 agent 条目编号，它会先跟你确认再动手。
+> 要处理哪一条，告诉 agent 编号；它会先说清楚要做什么、怎么回退，你同意了才动手。
 
-## 需要处理（10）
+## 需要处理（11）
 
-### 1. 飞书频道桥 `ai.lark-channel-bridge.server`
+### 1. 飞书频道桥 `ai.lark-channel-bridge.server` —— 停了，在反复重启
 
-- **问题**：常驻服务现在正在等待重启（多半刚崩溃，被系统限速）；上次退出码 1（一般性错误，程序自己报错退出，具体原因要看日志）。本次登录以来已启动 3 次。
-  **建议**：先看下面的日志末尾找原因；原因清楚后再重启它。
-- 计划：常驻：登录时启动，退出后自动重启
-- 运行状态：等待重启，本次登录以来启动 3 次
-- 上次退出码：1，一般性错误，程序自己报错退出，具体原因要看日志
-- 程序：`~/projects/lark-bridge/server.js` 存在
-- 日志最后更新：今天 10:28（2 分钟前）
+- **做什么**：把飞书群消息转给各个机器人
+- **坏了影响**：飞书群里 @ 机器人没反应
+- **问题**：常驻服务此刻停着，系统正在等着重新拉起它（多半刚崩溃）；上次退出码 1：一般性错误，具体原因要看日志。这次加载以来已启动 3 次。
+- **原因**：项目缺少依赖 `ws`，多半是更新后没重新安装。日志原文：`Error: Cannot find module 'ws'`
+- **怎么办**：原因清楚后再重启它（agent 可以处理）；原因在项目代码或依赖里的，要先到项目里修。
+- 详情：计划：常驻：登录时启动，退出后自动重启｜运行状态：等待重启，这次加载以来启动 3 次｜程序：~/projects/lark-bridge/server.js｜日志最后更新：今天 10:28（2 分钟前）
+- 日志摘录见文末附录 1。
 
-<details><summary>错误日志末尾 2 行：<code>~/logs/lark-bridge.err.log</code></summary>
+### 2. hermes 定时任务（默认，4 个） —— 「周报提醒」过点没跑；「数据回流」上次失败 等 3 个问题
 
-```text
-Error: Cannot find module 'ws'
-    at Module._resolveFilename (node:internal/modules/cjs/loader:1145:15)
-```
-</details>
+- **问题**：hermes 定时任务「周报提醒」本该在今天 09:00（1 小时前）运行，到现在还没跑。多半是负责调度的 hermes 网关没在运行。
+- **怎么办**：先看「飞书网关 Hermes」那一项是不是正常；网关恢复后会接着跑。
+- **问题**：hermes 定时任务「数据回流」上次运行失败：401 Unauthorized: token=[已隐藏] expired（已连续失败 3 次）。
+- **怎么办**：看失败原因；凭据过期、对方服务不通这类，要到对应项目或 hermes 配置里修。
+- **问题**［注意］：hermes 定时任务「旧群同步」已暂停，不会运行。
+- **怎么办**：需要你定：是故意暂停的吗？不是的话 agent 可以恢复。
+  - 早报汇总：计划：每天 08:00；上次运行：今天 08:00（2 小时前），成功；下次运行：明天 08:00（21 小时后）
+  - 旧群同步：计划：*/30 * * * *；已暂停
+  - 数据回流：计划：15 * * * *；上次运行：今天 10:15（14 分钟前），失败；下次运行：今天 11:15（45 分钟后）
+  - 周报提醒：计划：0 9 * * 4；上次运行：10 月 29 日 09:00（7 天前），成功；下次运行：今天 09:00（1 小时前）
 
-### 2. 路觅工作任务 `com.lumiedu.weekly-report`
+### 3. 路觅周报推送 `com.lumiedu.weekly-report` —— 上次运行失败
 
-- **问题**：上次运行失败：上次退出码 127（找不到命令：launchd 的 PATH 比终端里短，脚本里用到的命令可能找不到）。
-  **建议**：看下面的日志末尾找原因；修好后可以手动触发一次确认。
-- 计划：每周一 09:00
-- 运行状态：待命，到点才运行，本次登录以来启动 1 次
-- 上次退出码：127，找不到命令：launchd 的 PATH 比终端里短，脚本里用到的命令可能找不到
-- 命令：`cd ~/work/weekly && ./run.sh > ~/work/weekly/out.txt`
-- 日志最后更新：11 月 2 日 09:00（3 天前）
-- 按计划最近一次应运行：11 月 2 日 09:00（3 天前）
+- **做什么**：每周一把上周数据汇总发到飞书群
+- **坏了影响**：周一早会没有周报
+- **问题**：上次运行失败；上次退出码 127：找不到命令，定时运行时能找到的命令比终端里少，脚本里用到的命令可能找不到。
+- **原因**：定时运行时找不到命令 `lark-cli`。日志原文：`zsh:1: command not found: lark-cli`
+- **怎么办**：原因修好后，等下次按计划运行确认；要马上验证的话，agent 会先说清手动触发会对外做什么。
+- 详情：计划：每周一 09:00｜运行状态：待命，到点才运行，这次加载以来启动 1 次｜命令：cd ~/work/weekly && ./run.sh > ~/work/weekly/out.txt｜日志最后更新：11 月 2 日 09:00（3 天前）｜按计划最近一次应运行：11 月 2 日 09:00（3 天前）｜下次按计划运行：11 月 9 日 09:00（3 天后）
+- 日志摘录见文末附录 3。
 
-<details><summary>日志末尾 1 行：<code>~/work/weekly/weekly.log</code></summary>
+### 4. 数字分身 `cn.digital-twin.healthcheck` —— 3 天没跑
 
-```text
-zsh:1: command not found: lark-cli
-```
-</details>
+- **问题**：疑似该跑没跑：日志停在 11 月 2 日 10:30（3 天前），按计划这之后应该运行 143 次。每隔一段时间跑的任务，电脑睡眠（合盖）期间错过的点不会补跑；关机期间的也不补。
+- **怎么办**：agent 会先查那段时间电脑是不是在睡眠或关机；对得上就不用管，对不上再找原因。如果这个任务平时就不写日志，可以让 agent 把它记为「不按日志判断」。
+- 详情：计划：每 30 分钟；登录时运行一次｜运行状态：待命，到点才运行，这次加载以来启动 2 次｜上次退出码：0，正常结束｜程序：~/projects/digital-twin/healthcheck.sh｜日志最后更新：11 月 2 日 10:30（3 天前）
 
-### 3. 数字分身 `cn.digital-twin.healthcheck`
+### 5. GitHub 中心 `cn.github-center.pull` —— 没加载，不会运行
 
-- **问题**：疑似该跑没跑：日志停在 11 月 2 日 10:30（3 天前），按计划这之后应该运行 143 次。
-  **建议**：先确认电脑那段时间是不是关机了；不是的话看日志末尾和 launchd 状态找原因。如果这个任务平时就不写日志，把它加到 config.json 的 quiet_labels 里，以后不再按日志判断。
-- 计划：每 30 分钟；登录时运行一次
-- 运行状态：待命，到点才运行，本次登录以来启动 2 次
-- 上次退出码：0，正常结束
-- 程序：`~/projects/digital-twin/healthcheck.sh` 存在
-- 日志最后更新：11 月 2 日 10:30（3 天前）
+- **问题**：配置文件在，但系统里没有这个任务，它现在根本不会运行（可能被手动卸载过，或加载时出错）。
+- **怎么办**：需要你定：还要这个任务吗？要就重新加载（agent 可以处理），不要就挪走配置文件，否则下次登录它可能又回来。
+- 详情：计划：每 15 分钟｜运行状态：没有加载｜程序：~/scripts/backup.sh｜日志：没配置
 
-<details><summary>日志末尾 1 行：<code>~/logs/digital-twin.log</code></summary>
+### 6. 数字分身 `cn.digital-twin.report` —— 路径写了 ~，跑不起来
 
-```text
-health ok
-```
-</details>
+- **问题**：配置里的路径用了 `~` 开头：脚本参数 `~/projects/digital-twin/healthcheck.sh`。launchd 不会把 `~` 换成你的家目录，这些路径对它来说不存在，任务起不来。
+- **怎么办**：把 `~` 改成完整路径（例如 /Users/你的用户名/…）后重新加载。agent 可以处理。
+- 详情：计划：每 1 小时｜运行状态：待命，到点才运行，这次加载以来启动 4 次｜上次退出码：78，launchd 启动不了程序，常见于程序路径不对、没有执行权限、脚本第一行 #! 写错、日志或工作目录不存在｜程序：~/bin/bash｜日志：没配置
 
-### 4. GitHub 中心 `cn.github-center.pull`
-
-- **问题**：plist 文件在，但 launchd 里没有这个任务：它现在根本不会运行（可能被手动卸载过，或加载时出错）。
-  **建议**：确认还要不要这个任务：要就重新加载，不要就把 plist 挪走（否则下次登录它又会自己回来）。
-- 计划：每 15 分钟
-- 运行状态：没有加载到 launchd
-- 程序：`~/scripts/backup.sh` 存在
-- 日志：plist 里没配
-
-### 5. `cn.lumiedu.moved.plist`
+### 7. `cn.lumiedu.moved.plist` —— 链接断了，任务不会运行
 
 - **问题**：`cn.lumiedu.moved.plist` 是个链接，指向的 `~/projects/moved-away/cn.lumiedu.moved.plist` 已经不存在，launchd 加载不了它（多半是项目挪了位置或删了）。
-  **建议**：确认这个任务还要不要：要就把链接改到 plist 的新位置，不要就把这个链接挪出 LaunchAgents。
+- **怎么办**：需要你定：这个任务还要吗？要就把链接改到配置文件的新位置，不要就挪走这个链接。
 
-### 6. 数字世界 `local.digitalworld.sync`
+### 8. 数字世界 `local.digitalworld.sync` —— 脚本已经不在了
 
-- **问题**：僵尸任务：要运行的脚本 `~/projects/digitalworld/sync.sh` 已经不存在（多半是项目挪了位置或删了）。
-  **建议**：确认这个任务还要不要：不要了就停用并把 plist 挪出 LaunchAgents；还要的话把路径改到脚本的新位置。
-- **问题**：`local.digitalworld.sync.backup.plist`、`local.digitalworld.sync.plist` 用的是同一个 Label，launchd 只会加载其中一个，另一个等于没生效，改配置时很容易改错文件。
-  **建议**：确认哪个是在用的，把另一个挪出 LaunchAgents。
-- 计划：每 10 分钟
-- 运行状态：待命，到点才运行，本次登录以来启动 9 次
-- 上次退出码：127，找不到命令：launchd 的 PATH 比终端里短，脚本里用到的命令可能找不到
-- 程序：`~/projects/digitalworld/sync.sh` **不存在**
-- 日志：plist 里没配
+- **问题**：要运行的脚本 `~/projects/digitalworld/sync.sh` 已经不存在，多半是项目挪了位置或删了。这个任务每次触发都会失败。
+- **怎么办**：需要你定：这个任务还要吗？不要就挪走配置文件；要就把路径改到脚本的新位置。
+- **问题**：有 2 个配置文件用了同一个任务名：系统正在用的是 `local.digitalworld.sync.plist`，多出来的是 `local.digitalworld.sync.backup.plist`。launchd 只会加载其中一个，改配置时很容易改错文件。
+- **怎么办**：需要你定：确认多出来的是备份后挪走（agent 可以处理）。
+- 详情：计划：每 10 分钟｜运行状态：待命，到点才运行，这次加载以来启动 9 次｜上次退出码：127，找不到命令，定时运行时能找到的命令比终端里少，脚本里用到的命令可能找不到｜程序：~/projects/digitalworld/sync.sh｜日志：没配置
+- 配置文件：`local.digitalworld.sync.plist`、`local.digitalworld.sync.backup.plist`
 
-### 7. 数字世界 `local.digitalworld.sync`（文件 `local.digitalworld.sync.backup.plist`）
+### 9. Codex 相关 `ai.ops.codex` —— 日志文件夹不在了
 
-- **问题**：僵尸任务：要运行的脚本 `~/projects/digitalworld/sync.sh` 已经不存在（多半是项目挪了位置或删了）。
-  **建议**：确认这个任务还要不要：不要了就停用并把 plist 挪出 LaunchAgents；还要的话把路径改到脚本的新位置。
-- **问题**：`local.digitalworld.sync.backup.plist`、`local.digitalworld.sync.plist` 用的是同一个 Label，launchd 只会加载其中一个，另一个等于没生效，改配置时很容易改错文件。
-  **建议**：确认哪个是在用的，把另一个挪出 LaunchAgents。
-- **问题**［注意］：文件名 `local.digitalworld.sync.backup.plist` 像备份，但仍以 .plist 结尾，launchd 登录时会照样加载它。
-  **建议**：如果它是备份，把它挪出 LaunchAgents；如果在用，改个正经名字。
-- 计划：每 10 分钟
-- 运行状态：待命，到点才运行，本次登录以来启动 9 次
-- 上次退出码：127，找不到命令：launchd 的 PATH 比终端里短，脚本里用到的命令可能找不到
-- 程序：`~/projects/digitalworld/sync.sh` **不存在**
-- 日志：plist 里没配
+- **问题**：输出日志所在的文件夹 `~/no-such-dir` 不存在，launchd 常因此直接启动失败（退出码 78）。
+- **怎么办**：建好这个文件夹，或把日志路径改到存在的位置。agent 可以处理。
+- 详情：计划：每 5 分钟｜运行状态：待命，到点才运行，这次加载以来启动 30 次｜上次退出码：0，正常结束｜程序：~/scripts/ops.sh｜日志最后更新：日志文件不存在
 
-### 8. Codex 相关 `ai.ops.codex`
+### 10. crontab 定时任务（4 条） —— 有一条指向的文件不在了
 
-- **问题**：输出日志所在的文件夹 `~/no-such-dir` 不存在，launchd 常因此直接启动失败。
-  **建议**：建好这个文件夹，或把日志路径改到存在的位置。
-- 计划：每 5 分钟
-- 运行状态：待命，到点才运行，本次登录以来启动 30 次
-- 上次退出码：0，正常结束
-- 程序：`~/scripts/ops.sh` 存在
-- 日志最后更新：日志文件不存在
+- **问题**：crontab 这条要运行的 `~/scripts/gone.sh` 不存在，每次到点都会失败：`30 7 * * 1 ~/scripts/gone.sh`。
+- **怎么办**：需要你定：这条还要吗？不要就从 crontab 里去掉（agent 会先备份），要就改成正确路径。
+  - `0 3 * * * ~/scripts/backup.sh >> ~/logs/backup.log 2>&1`
+  - `30 7 * * 1 ~/scripts/gone.sh`
+  - `0 6 * * * "~/Library/Mobile Documents/sync/run.sh" --out ~/reports/today.csv`
+  - `15 6 * * * mkdir -p ~/out/new && cd ~/scripts && ./backup.sh`
 
-### 9. crontab 定时任务（2 条）
+### 11. `broken.plist` —— 配置文件坏了
 
-- **问题**：crontab 这条指向的文件不存在：`~/scripts/gone.sh`，每次到点都会失败。
-  **建议**：确认这条还要不要；不要了就从 crontab 里删掉这一行，要就改成正确路径。
-- `0 3 * * * ~/scripts/backup.sh >> ~/logs/backup.log 2>&1`
-- `30 7 * * 1 ~/scripts/gone.sh`
-
-### 10. `broken.plist`
-
-- **问题**：plist 文件读不出来（ExpatError），launchd 也加载不了它。
-  **建议**：让 agent 用 `plutil -lint` 查出具体哪里坏了再修；不用了就挪走。
+- **问题**：配置文件读不出来（ExpatError），launchd 也加载不了它，这个任务不会运行。
+- **怎么办**：agent 可以查出具体哪里坏了；不用了就挪走。
 
 ## 注意（5）
 
-### 11. 飞书网关 Hermes `ai.hermes.gateway`
+### 12. 飞书网关 Hermes `ai.hermes.gateway` —— 在跑，但崩溃重启过
 
-- **问题**：常驻服务现在在跑，但本次登录以来启动了 7 次，有过崩溃重启；上次退出码 75（EX_TEMPFAIL：临时失败，程序自己报告「暂时不行，稍后再试」，常见于网络或连接断开）。
-  **建议**：目前能用。看一下日志末尾，判断是偶发断线还是反复出错；反复出错再处理。
-- 计划：常驻：登录时启动，退出后自动重启
-- 运行状态：正在运行，PID 48211，本次登录以来启动 7 次
-- 上次退出码：75，EX_TEMPFAIL：临时失败，程序自己报告「暂时不行，稍后再试」，常见于网络或连接断开
-- 程序：`~/.local/bin/hermes` 存在
-- 日志最后更新：今天 10:20（10 分钟前）
+- **问题**：常驻服务现在在跑，但这次加载以来启动了 7 次，有过崩溃重启；上次退出码 75：临时失败，程序自己报告「暂时不行、稍后再试」，常见于网络或连接断开。
+- **怎么办**：目前能用。判断是偶发断线还是反复出错；反复出错再处理。
+- 详情：计划：常驻：登录时启动，退出后自动重启｜运行状态：正在运行，这次加载以来启动 7 次｜程序：~/.local/bin/hermes｜日志最后更新：今天 10:20（10 分钟前）
+- 日志摘录见文末附录 12。
 
-<details><summary>错误日志末尾 3 行：<code>~/.hermes/logs/gateway.err.log</code></summary>
+### 13. 牛马之家 `cn.niuma-home.worker` —— 2 小时没跑
 
-```text
-2026-11-05 07:28:01 WARNING reconnecting
-2026-11-05 07:29:12 ERROR websocket disconnected: app_secret=[已隐藏] Bearer [已隐藏]
-2026-11-05 07:29:13 exiting with EX_TEMPFAIL
-```
-</details>
+- **问题**：疑似该跑没跑：日志停在今天 08:30（2 小时前），按计划这之后应该运行 1 次。每隔一段时间跑的任务，电脑睡眠（合盖）期间错过的点不会补跑；关机期间的也不补。
+- **怎么办**：agent 会先查那段时间电脑是不是在睡眠或关机；对得上就不用管，对不上再找原因。如果这个任务平时就不写日志，可以让 agent 把它记为「不按日志判断」。
+- 详情：计划：每 1 小时｜运行状态：待命，到点才运行，这次加载以来启动 8 次｜上次退出码：0，正常结束｜程序：~/projects/niuma/worker.sh｜日志最后更新：今天 08:30（2 小时前）
 
-<details><summary>输出日志末尾 15 行：<code>~/.hermes/logs/gateway.log</code></summary>
+### 14. 数字世界 `local.digitalworld.old` —— 脚本已经不在了
 
-```text
-[info] heartbeat 15
-[info] heartbeat 16
-[info] heartbeat 17
-[info] heartbeat 18
-[info] heartbeat 19
-[info] heartbeat 20
-[info] heartbeat 21
-[info] heartbeat 22
-[info] heartbeat 23
-[info] heartbeat 24
-[info] heartbeat 25
-[info] heartbeat 26
-[info] heartbeat 27
-[info] heartbeat 28
-[info] heartbeat 29
-```
-</details>
+- **问题**：要运行的脚本 `~/projects/digitalworld/old.sh` 已经不存在，多半是项目挪了位置或删了。任务已停用，只是配置文件还留着。
+- **怎么办**：需要你定：这个任务还要吗？不要就挪走配置文件；要就把路径改到脚本的新位置。
+- 详情：计划：每 10 分钟｜运行状态：没有加载（已停用）｜程序：~/projects/digitalworld/old.sh｜日志：没配置
 
-### 12. 牛马之家 `cn.niuma-home.worker`
+### 15. 个人 AI 工作台 `cn.personal-ai-workbench.server` —— 已停用，文件还在
 
-- **问题**：疑似该跑没跑：日志停在 今天 08:30（2 小时前），按计划这之后应该运行 1 次。
-  **建议**：先确认电脑那段时间是不是关机了；不是的话看日志末尾和 launchd 状态找原因。如果这个任务平时就不写日志，把它加到 config.json 的 quiet_labels 里，以后不再按日志判断。
-- 计划：每 1 小时
-- 运行状态：待命，到点才运行，本次登录以来启动 8 次
-- 上次退出码：0，正常结束
-- 程序：`~/projects/niuma/worker.sh` 存在
-- 日志最后更新：今天 08:30（2 小时前）
+- **问题**：这个任务已被停用，不会自动运行，但配置文件还在。
+- **怎么办**：需要你定：不用了就把配置文件挪走；还要用就重新启用。
+- 详情：计划：常驻：登录时启动，退出后自动重启｜运行状态：没有加载（已停用）｜程序：~/projects/niuma/server.js｜日志：没配置
 
-<details><summary>输出日志末尾 1 行：<code>~/logs/niuma-worker.log</code></summary>
-
-```text
-worker done
-```
-</details>
-
-### 13. hermes 定时任务（hermes cron list）
-
-- **问题**：hermes 定时任务列表里有 2 行带失败、暂停或停用字样：`c-03      旧群同步             */30 * * * *    -                     paused`；`c-04      数据回流             15 * * * *      2026-11-05 11:15      error (last run failed: token=[已隐藏]`。
-  **建议**：让 agent 对照下面的原始输出逐条解释；确认是故意暂停的就不用管。
-
-```text
-ID        NAME                 SCHEDULE        NEXT RUN              STATUS
-c-01      早报汇总             0 8 * * *       2026-11-06 08:00      active
-c-02      周报提醒             0 17 * * 5      2026-11-06 17:00      active
-c-03      旧群同步             */30 * * * *    -                     paused
-c-04      数据回流             15 * * * *      2026-11-05 11:15      error (last run failed: token=[已隐藏]
-```
-
-### 14. 个人 AI 工作台 `cn.personal-ai-workbench.server`
-
-- **问题**：这个任务已被停用，不会自动运行，但 plist 文件还在。
-  **建议**：确认不用了就把 plist 挪出 LaunchAgents（先挪到备份文件夹，不要直接删）；还要用就重新启用。
-- 计划：常驻：登录时启动，退出后自动重启
-- 运行状态：没有加载到 launchd（已停用）
-- 程序：`~/projects/niuma/server.js` 存在
-- 日志：plist 里没配
-
-### 15. LaunchAgents 里的残留文件
+### 16. LaunchAgents 里的残留文件 —— 2 个残留文件
 
 - **问题**：有 2 个不以 .plist 结尾的残留文件。launchd 一般不会加载它们，但留着容易和在用的配置混淆，改错文件。
-  **建议**：确认没用后统一挪到一个备份文件夹（例如 ~/Library/LaunchAgents.retired/），不要直接删。
-- `ai.hermes.gateway.plist.bak`：是在用任务 `ai.hermes.gateway` 的旧版本或备份
-- `cn.old-thing.plist.disabled`：对应的任务 `cn.old-thing` 已经不在用
+- **怎么办**：可以一次性挪到备份文件夹（agent 列清单给你确认一次就行，不删）。
+  - ai.hermes.gateway.plist.bak：是在用任务 `ai.hermes.gateway` 的旧版本或备份
+  - cn.old-thing.plist.disabled：对应的任务 `cn.old-thing` 已经不在用
 
-## 正常（3）
+## 正常（6）
 
-| 任务 | 计划 | 状态 | 日志最后更新 |
+| 任务 | 计划 | 最近一次运行 | 下次运行 |
 |---|---|---|---|
-| Codex 额度守护 `com.openai.codex-quota-guard` | 每 10 分钟 | 待命，到点才运行，本次登录以来启动 12 次 | 没配日志 |
-| 牛马之家 `cn.niuma-home.web` | 常驻：登录时启动，退出后自动重启 | 正在运行，PID 1234，本次登录以来启动 1 次 | 今天 10:29（1 分钟前） |
-| 路觅工作任务 `cn.lumiedu.campaign-daily` | 每天 09:00 | 待命，到点才运行，本次登录以来启动 4 次 | 今天 09:00（1 小时前） |
+| Codex 额度守护（com.openai.codex-quota-guard） | 每 10 分钟 | 看不出（没配输出日志） | — |
+| 牛马之家（cn.niuma-home.web） | 常驻：登录时启动，退出后自动重启 | 今天 10:29（1 分钟前） | — |
+| 路觅工作任务（cn.lumiedu.campaign-daily） | 每天 09:00 | 今天 09:00（1 小时前） | 明天 09:00（22 小时后） |
+| 路觅工作任务（cn.lumiedu.campaign-retry） | 每天 09:00–09:55 之间 12 个时间点 | 今天 09:05（1 小时前） | 明天 09:00（22 小时后） |
+| 路觅工作任务（cn.lumiedu.openclaw） | 常驻：登录时启动，退出后自动重启 | 今天 10:27（3 分钟前） | — |
+
+**hermes 定时任务（work，1 个）**：没发现问题。
+
+- 课程表同步：计划：每天 07:30；上次运行：今天 07:30（2 小时前），成功；下次运行：明天 07:30（21 小时后）
 
 ## 说明与盲区
 
-- 1 个定时任务在 plist 里没配输出日志，没法判断它们有没有按时运行：Codex 额度守护 `com.openai.codex-quota-guard`。
-- hermes 定时任务：已读取
-- crontab：2 条
-- 检查的目录：`~/Library/LaunchAgents`
+- 1 个定时任务没配输出日志，看不出有没有按时运行：Codex 额度守护。
+- hermes 定时任务：读了 2 份任务文件（只读，没有运行 hermes）
+- crontab：4 条
 - 按配置跳过（系统或第三方）：`com.google.keystone.agent.plist`
-- 「该跑没跑」是用日志文件的最后修改时间推断的：任务平时不写日志、或电脑那段时间关机，都会让判断偏严。
-- 本次只执行了这些查看命令：`crontab -l`、`hermes cron list`、`launchctl print`、`launchctl print-disabled`
+- 「该跑没跑」是用输出日志的最后修改时间推断的：任务平时不写日志、电脑那段时间睡眠或关机，都会让判断偏严。
+- 本次只执行了这些查看命令：`crontab -l`、`launchctl print`、`launchctl print-disabled`
+- 名词：配置文件（plist）是每个后台任务的设置；launchd 是 Mac 负责按时启动这些任务的系统程序；任务名（Label）是任务在系统里的名字；退出码是程序结束时留下的数字，0 表示正常。
+
+## 附录：日志摘录
+
+**1. 飞书频道桥**
+
+错误日志 `~/logs/lark-bridge.err.log`：
+
+````text
+Error: Cannot find module 'ws'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1145:15)
+````
+
+**3. 路觅周报推送**
+
+日志 `~/work/weekly/weekly.log`：
+
+````text
+zsh:1: command not found: lark-cli
+````
+
+**12. 飞书网关 Hermes**
+
+错误日志 `~/.hermes/logs/gateway.err.log`：
+
+````text
+2026-11-05 07:28:01 WARNING reconnecting
+2026-11-05 07:29:12 ERROR websocket disconnected: app_secret=[已隐藏] Bearer [已隐藏]
+2026-11-05 07:29:13 exiting with EX_TEMPFAIL
+````
