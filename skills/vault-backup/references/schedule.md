@@ -26,7 +26,7 @@ tail -40 ~/Library/Logs/vault-backup.log                                  # 看�
 
 1. **日志里有 `operation not permitted` 或「有些文件没读到」**：macOS 没让后台任务读「文稿」（知识库就在里面）。按从窄到宽处理，能用窄的就别用宽的：
    - **先只开「文稿」**：第一次 `kickstart` 时留意有没有弹窗「python3 想访问“文稿”文件夹中的文件」，点「允许」。这只开放文稿，不开放整个硬盘；之后在 系统设置 → 隐私与安全性 → 文件和文件夹 里能看到这一项。没注意到弹窗，就再 `kickstart` 一次。
-   - **没有弹窗、仍然读不到，才考虑「完全磁盘访问权限」**。先把代价讲给用户、等他同意：这个权限是给 python3 这个程序的，以后**任何**由它运行的脚本（不只是备份）都能读整个硬盘，包括邮件、聊天记录、其他应用的数据。用户同意后：系统设置 → 隐私与安全性 → 完全磁盘访问权限，点 +，加入 plist 里 `ProgramArguments` 第一行的那个 python3（`grep -A1 ProgramArguments ~/Library/LaunchAgents/local.vault-backup.plist` 可看到路径；在「前往文件夹」里粘贴路径即可选中）。仍不行，再把 `which restic` 显示的 restic 也加进去。改完再 `kickstart` 一次。
+   - **没有弹窗、仍然读不到，才考虑「完全磁盘访问权限」**。先把代价讲给用户、等他同意：这个权限是给 python3 这个程序的，以后**任何**由它运行的脚本（不只是备份）都能读整个硬盘，包括邮件、聊天记录、其他应用的数据。用户同意后：系统设置 → 隐私与安全性 → 完全磁盘访问权限，点 +，加入 plist 里 `ProgramArguments` 第一行的那个 python3（`grep -A1 ProgramArguments ~/Library/LaunchAgents/local.vault-backup.plist` 可看到路径；在「前往文件夹」里粘贴路径即可选中）。restic 是由这个 python3 启动的，macOS 按启动它的 python3 判断权限，所以不用另给 restic 加。改完再 `kickstart` 一次。
    - 不要为此给「终端」开完全磁盘访问：那等于给终端里运行的所有东西开权限。
 2. **日志里有「没找到备份密码」或「密码不对」**：后台任务读的是同一个登录钥匙串，正常登录状态下可以读到。如果弹出「security 想要访问钥匙串」，点「始终允许」。
 
