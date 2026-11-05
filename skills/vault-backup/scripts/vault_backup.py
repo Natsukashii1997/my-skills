@@ -574,6 +574,19 @@ def notify(message: str) -> None:
 
 # ---------------------------------------------------------------- 命令：status
 
+def schedule_state(plist: Path) -> str:
+    """plist 文件在不等于任务在跑：卸下后没装回时文件还在。macOS 上再问一次 launchd。"""
+    if not plist.exists():
+        return "未安装（见 references/schedule.md）"
+    if sys.platform != "darwin" or not shutil.which("launchctl"):
+        return f"定时文件在（{plist}），这台电脑上没法确认是否已启用"
+    r = subprocess.run(["launchctl", "print", f"gui/{os.getuid()}/{PLIST_LABEL}"], capture_output=True, text=True)
+    if r.returncode == 0:
+        return f"已安装并已启用（{plist}）"
+    return (f"定时文件在，但没有启用（{plist}）。运行："
+            f"launchctl bootstrap gui/{os.getuid()} \"{plist}\"")
+
+
 def cmd_status(cfg: Config, state: State, args) -> int:
     problems = []
     say(f"配置文件：{cfg.path}")
@@ -627,7 +640,7 @@ def cmd_status(cfg: Config, state: State, args) -> int:
             problems.append(f"「{t.name}」上次恢复演练超过 90 天")
 
     plist = Path.home() / "Library" / "LaunchAgents" / f"{PLIST_LABEL}.plist"
-    say(f"\n定时备份：{'已安装（' + str(plist) + '）' if plist.exists() else '未安装（见 references/schedule.md）'}")
+    say(f"\n定时备份：{schedule_state(plist)}")
 
     say("")
     if problems:

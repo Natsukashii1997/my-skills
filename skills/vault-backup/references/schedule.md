@@ -54,7 +54,7 @@ for i in 1 2 3; do launchctl bootstrap gui/$(id -u) "$P" && break; sleep 3; done
 launchctl print "$L" | grep -E "state|path"   # 能看到这几行才算装回去了
 ```
 
-最后一行什么都没显示，说明任务没装回去：plist 已经写好，再单独运行一次 `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/local.vault-backup.plist`，然后用 `status` 确认「定时备份：已安装」。
+最后一行什么都没显示，说明任务没装回去：plist 已经写好，再单独运行一次 `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/local.vault-backup.plist`，然后用 `status` 确认「定时备份：已安装并已启用」（`status` 会实际问一次 launchd，不只看文件在不在）。
 
 ## 卸载
 

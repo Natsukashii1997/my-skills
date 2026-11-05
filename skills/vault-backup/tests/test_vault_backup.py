@@ -19,6 +19,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "vault_backup.py"
@@ -105,6 +106,42 @@ class ConfigTests(unittest.TestCase):
         self.assertIn(str(SCRIPT), data["ProgramArguments"])
         self.assertEqual(data["ProgramArguments"][-2:], ["backup", "--notify"])
         self.assertEqual(data["StartCalendarInterval"], [{"Hour": 9, "Minute": 5}, {"Hour": 21, "Minute": 30}])
+
+
+class ScheduleStateTests(unittest.TestCase):
+    """status 里的「定时备份」：文件在不等于已启用，要实际问 launchd。"""
+
+    def setUp(self):
+        td = tempfile.TemporaryDirectory(prefix="vb-sch-")
+        self.addCleanup(td.cleanup)
+        self.plist = Path(td.name) / "local.vault-backup.plist"
+
+    def fake_launchctl(self, code):
+        result = subprocess.CompletedProcess([], code, "", "")
+        return [mock.patch.object(VB.sys, "platform", "darwin"),
+                mock.patch.object(VB.shutil, "which", return_value="/bin/launchctl"),
+                mock.patch.object(VB.subprocess, "run", return_value=result)]
+
+    def test_missing_file(self):
+        self.assertIn("未安装", VB.schedule_state(self.plist))
+
+    def test_file_present_and_loaded(self):
+        self.plist.write_text("x", encoding="utf-8")
+        patches = self.fake_launchctl(0)
+        for p in patches:
+            p.start()
+            self.addCleanup(p.stop)
+        self.assertIn("已安装并已启用", VB.schedule_state(self.plist))
+
+    def test_file_present_but_not_loaded(self):
+        self.plist.write_text("x", encoding="utf-8")
+        patches = self.fake_launchctl(113)
+        for p in patches:
+            p.start()
+            self.addCleanup(p.stop)
+        state = VB.schedule_state(self.plist)
+        self.assertIn("没有启用", state)
+        self.assertIn("launchctl bootstrap", state)
 
 
 class CompareTests(unittest.TestCase):
