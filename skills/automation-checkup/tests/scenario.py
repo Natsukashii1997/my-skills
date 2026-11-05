@@ -154,6 +154,7 @@ def build_scenario(root: Path, now: dt.datetime = NOW, tools: dict | None = None
         "Label": "com.google.keystone.agent", "Program": "/nonexistent/google", "StartInterval": 3600})
     _plist(agents, "ai.hermes.gateway.plist.bak", {"Label": "ai.hermes.gateway", "Program": "/old/hermes"})
     _plist(agents, "cn.old-thing.plist.disabled", {"Label": "cn.old-thing", "Program": "/old/thing"})
+    (agents / "cn.lumiedu.moved.plist").symlink_to(home / "projects/moved-away/cn.lumiedu.moved.plist")
     (agents / "broken.plist").write_bytes(b"<?xml version='1.0'?><plist><dict><key>Label</key>")
     (agents / ".DS_Store").write_bytes(b"\0\0")
 

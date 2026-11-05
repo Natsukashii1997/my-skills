@@ -252,6 +252,7 @@ class ScenarioTests(unittest.TestCase):
             "local.digitalworld.sync.backup.plist": checkup.ACT,  # 同 Label 的第二个 plist
             "ai.ops.codex.plist": checkup.ACT,                    # 日志目录不存在
             "broken.plist": checkup.ACT,                          # plist 坏了
+            "cn.lumiedu.moved.plist": checkup.ACT,                # 链接指向的 plist 已不存在
             "ai.hermes.gateway.plist": checkup.WARN,              # 在跑，但重启 7 次、上次退出码 75
             "cn.niuma-home.worker.plist": checkup.WARN,           # 每小时，漏了 1 次
             "cn.personal-ai-workbench.server.plist": checkup.WARN,  # 已停用
@@ -292,6 +293,12 @@ class ScenarioTests(unittest.TestCase):
         self.assertIn("cn.old-thing.plist.disabled", text)
         self.assertNotIn(".DS_Store", text)
 
+    def test_broken_symlink_explained(self):
+        p = self.problems("cn.lumiedu.moved.plist")
+        self.assertIn("是个链接", p)
+        self.assertIn("moved-away", p)
+        self.assertNotIn("读不出来", p)
+
     def test_duplicate_label_and_backup_name(self):
         p = self.problems("local.digitalworld.sync.backup.plist")
         self.assertIn("同一个 Label", p)
@@ -316,7 +323,7 @@ class ScenarioTests(unittest.TestCase):
         i_act, i_warn, i_ok = md.index("## 需要处理（"), md.index("## 注意（"), md.index("## 正常（")
         self.assertLess(i_act, i_warn)
         self.assertLess(i_warn, i_ok)
-        self.assertIn("**结论：需要处理 9 项，注意 5 项，正常 3 项。**", md)
+        self.assertIn("**结论：需要处理 10 项，注意 5 项，正常 3 项。**", md)
         self.assertIn("没有启动、停止、重启或修改任何任务", md)
         # 最急的排第一：常驻服务挂了
         first = re.search(r"^### 1\. (.+)$", md, re.M).group(1)

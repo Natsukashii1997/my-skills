@@ -1037,6 +1037,12 @@ def run_checkup(ctx: Context) -> Report:
     items: dict[str, Item] = {}
     jobs: list[Job] = []
     for p in live:
+        if p.is_symlink() and not p.exists():
+            it = Item(key=str(p), title=f"`{p.name}`", kind="job")
+            it.add(ACT, f"`{p.name}` 是个链接，指向的 `{os.readlink(p)}` 已经不存在，launchd 加载不了它（多半是项目挪了位置或删了）。",
+                   "确认这个任务还要不要：要就把链接改到 plist 的新位置，不要就把这个链接挪出 LaunchAgents。", 45)
+            items[str(p)] = it
+            continue
         try:
             pl = read_plist(p)
         except Exception as e:
