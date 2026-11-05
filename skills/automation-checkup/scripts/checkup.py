@@ -438,9 +438,10 @@ def max_fires_per_day(entries: list[dict], around: dt.datetime) -> int:
 
 
 def calendar_window_start(entries: list[dict], around: dt.datetime) -> int | None:
-    """一天里的多个时间点（至少 3 个，相邻不超过 60 分钟）集中在一段窗口里（跨度不超过 12 小时，常见于「当天补跑窗口」）时，
-    返回窗口起点距 0 点的分钟数；时间点铺满全天（每小时、每 15 分钟一次）时返回 None。
-    窗口可以跨午夜：取相邻时间点之间最大的空档作为一天的分界。"""
+    """一天里的多个时间点密集地排在一段窗口里（至少 3 个点、相邻不超过 60 分钟，一天里另有一段更长的空档，
+    常见于「当天补跑窗口」：例如每天 09:00 起每 15 分钟一个点）时，返回窗口起点距 0 点的分钟数；
+    一天一两次、或时间点全天均匀铺开（每小时、每 15 分钟一次）时返回 None，逐次计数。
+    窗口可以跨午夜：取最大的空档作为一天的分界。"""
     if max_fires_per_day(entries, around) < 3:
         return None  # 一天一两次（例如早晚各一次）是各自独立的运行，逐次计数
     mins = sorted({t.hour * 60 + t.minute for i in range(7) for e in entries
@@ -449,7 +450,8 @@ def calendar_window_start(entries: list[dict], around: dt.datetime) -> int | Non
     gaps = sorted(((mins[(i + 1) % n] - mins[i]) % 1440 or 1440, mins[(i + 1) % n]) for i in range(n))
     largest, start = gaps[-1]
     inner = max(g for g, _ in gaps[:-1])
-    return start if 1440 - largest <= 720 and inner <= 60 else None
+    # 点排得密（相邻不超过 60 分钟），而且一天里有一段明显更长的空档（不是全天均匀铺开）
+    return start if inner <= 60 and largest > inner else None
 
 
 def count_missed_windows(entries: list[dict], start_min: int, last_ok: dt.datetime, cutoff: dt.datetime,
@@ -464,8 +466,11 @@ def count_missed_windows(entries: list[dict], start_min: int, last_ok: dt.dateti
         k = key(t)
         if k <= key(last_ok) or len(days) >= cap:
             break
-        if k != ongoing:
-            days.add(k)
+        days.add(k)
+    if ongoing in days:
+        days.discard(ongoing)
+        if days:  # 之前已经有整段漏掉：今天还没做成也算一天；否则今天还在补跑，不算
+            days.add(ongoing)
     return len(days)
 
 
@@ -1697,7 +1702,14 @@ def check_hermes(ctx: Context) -> tuple[list[Item], str]:
         if isinstance(jobs, dict):
             jobs = [dict(v, id=v.get("id", k)) for k, v in jobs.items() if isinstance(v, dict)]
         if not isinstance(jobs, list):
-            jobs = []
+            # 认不出来就明说，不能当成「一个任务都没有」悄悄跳过：hermes 是最关键的链路
+            shape = f"最外层的键：{'、'.join(map(str, list(data)[:5]))}" if isinstance(data, dict) else type(data).__name__
+            it.add(WARN, "hermes_format", "任务文件格式认不出来",
+                   f"hermes 的定时任务文件 `{path}` 格式认不出来（{shape}），这次没法检查里面的任务。"
+                   "hermes 升级后格式可能变了。",
+                   "让 agent 按新格式更新体检脚本；或者先用 hermes 自己的命令看一下（会触发 hermes 的启动维护，先征得你同意）。", 50)
+            items.append(it)
+            continue
         live = 0
         for j in jobs:
             if not isinstance(j, dict):
@@ -2204,6 +2216,18 @@ def report_to_json(rep: Report) -> str:
 # 入口
 # ---------------------------------------------------------------------------
 
+def _is_our_output(path: Path) -> bool:
+    """已有的文件是不是体检报告（.md 第一行、.json 的字段），不是就不覆盖。"""
+    try:
+        if path.suffix == ".md":
+            with open(path, encoding="utf-8") as f:
+                return f.readline().strip() == "# 自动化体检报告"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return isinstance(data, dict) and {"items", "now", "agents_dir"} <= set(data)
+    except Exception:
+        return False
+
+
 def _write_private(path: Path, text: str) -> None:
     """报告可能含任务和日志信息：只给自己读写。"""
     fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
@@ -2238,8 +2262,12 @@ def main(argv: list[str] | None = None) -> int:
         out = out / default_name
     if out.suffix.lower() != ".md":
         out = out.with_suffix(".md") if out.suffix.lower() == ".json" else out.with_name(out.name + ".md")
-    out.parent.mkdir(parents=True, exist_ok=True)
     js = out.with_suffix(".json")
+    for p in (out, js):
+        if p.exists() and not _is_our_output(p):
+            print(f"没有写报告：{p} 已经存在，而且不是体检报告，不覆盖。换一个 --out 路径再试。", file=sys.stderr)
+            return 2
+    out.parent.mkdir(parents=True, exist_ok=True)
     apply_history(rep, find_previous(out.parent, js))
     _write_private(out, render_markdown(rep))
     _write_private(js, report_to_json(rep))

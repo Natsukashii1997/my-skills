@@ -171,6 +171,13 @@ class ScheduleTests(unittest.TestCase):
         self.assertEqual(checkup.count_missed_windows(midnight, start, dt.datetime(2026, 11, 4, 23, 0, 5), now), 0)
         self.assertEqual(checkup.count_missed_windows(midnight, start, dt.datetime(2026, 11, 1, 23, 0, 5), now), 3)
 
+    def test_window_still_open_is_counted_only_after_missed_days(self):
+        retry = [{"Hour": 9, "Minute": m} for m in range(0, 60, 5)]
+        start = checkup.calendar_window_start(retry, NOW)
+        # 前几天已经整段漏掉时，今天还没做成也算一天
+        self.assertEqual(checkup.count_missed_windows(retry, start, dt.datetime(2026, 11, 2, 9, 0, 3),
+                                                      dt.datetime(2026, 11, 5, 9, 20)), 3)
+
     def test_window_still_open_is_not_counted(self):
         retry = [{"Hour": 9, "Minute": m} for m in range(0, 60, 5)]
         start = checkup.calendar_window_start(retry, NOW)
@@ -760,6 +767,50 @@ class AssessEdgeCaseTests(unittest.TestCase):
         self.assertEqual(it.tier, ACT)
         self.assertNotIn("崩溃", it.findings[0].problem + it.findings[0].headline)
 
+    # 以下 4 个来自 b47426b（常浩本机实测后加的回归测试），原样保留
+    def test_keepalive_restarted_by_sigterm_is_not_crash(self):
+        # 本机实测：数字世界悬浮窗启动 25 次，上次是 Terminated: 15（发版时主动重启），进程已稳定跑了 7 天
+        it = self.assess({"KeepAlive": True},
+                         checkup.LaunchdState(loaded=True, state="running", pid=9, runs=25,
+                                              last_signal="Terminated: 15"))
+        self.assertEqual(it.tier, checkup.WARN)
+        self.assertIn("不像崩溃", it.findings[0].problem + it.findings[0].headline)
+        self.assertNotIn("反复崩溃", it.findings[0].problem)
+
+    def retry_window(self) -> list:
+        return [{"Hour": h, "Minute": m} for h in range(6, 23) for m in (0, 30)]
+
+    def test_same_day_retry_window_is_not_missed(self):
+        # 本机实测：GitHub 中心每天 09:00 起每 15 分钟一个点，当天成功后后面的点不写日志
+        it = self.assess({"StartCalendarInterval": self.retry_window(),
+                          "StandardOutPath": self.log("out.log", 4.3)},
+                         checkup.LaunchdState(loaded=True, state="not running", last_exit=0))
+        self.assertEqual(it.tier, checkup.OK)
+
+    def test_retry_window_counts_missed_days(self):
+        it = self.assess({"StartCalendarInterval": self.retry_window(),
+                          "StandardOutPath": self.log("out.log", 72)},
+                         checkup.LaunchdState(loaded=True, state="not running", last_exit=0))
+        self.assertEqual(it.tier, checkup.ACT)
+        self.assertIn("3 天按计划该运行", it.findings[0].problem)
+
+    def test_once_a_day_still_counts_runs(self):
+        it = self.assess({"StartCalendarInterval": {"Hour": 9, "Minute": 0},
+                          "StandardOutPath": self.log("out.log", 25.5)},
+                         checkup.LaunchdState(loaded=True, state="not running", last_exit=0))
+        self.assertEqual(it.tier, checkup.WARN)
+        self.assertIn("应该运行 1 次", it.findings[0].problem)
+
+    def test_real_github_center_window_over_12_hours(self):
+        # b47426b 记的真实形态：09:00 起每 15 分钟一个点、共 60 个点（09:00–23:45，跨度约 15 小时）
+        sched = [{"Hour": 9 + i // 4, "Minute": (i % 4) * 15} for i in range(60)]
+        self.assertEqual(checkup.calendar_window_start(sched, NOW), 9 * 60)
+        # 25 小时前：昨天做成了，今天的窗口要到 23:45 才结束 → 正常；49 小时前：昨天整段漏了 → 注意；72 小时前 → 需要处理
+        for hours_ago, tier in ((1.4, OK), (13, OK), (25, OK), (49, WARN), (72, ACT)):
+            it = self.assess({"StartCalendarInterval": sched, "StandardOutPath": self.log("gh.log", hours_ago)},
+                             checkup.LaunchdState(loaded=True, state="not running", last_exit=0))
+            self.assertEqual(it.tier, tier, hours_ago)
+
     def test_sigterm_is_only_warning(self):
         self.assertEqual(self.assess({"StartInterval": 600}, self.S(state="not running", last_exit=143)).tier, WARN)
 
@@ -967,6 +1018,34 @@ class FlowTests(unittest.TestCase):
             self.assertEqual(rc, 0)
             self.assertIn("# 自动化体检报告", buf.getvalue())
             self.assertEqual(list(Path(d).iterdir()), [])
+
+    def test_unrecognized_hermes_format_is_reported_not_silent(self):
+        with tempfile.TemporaryDirectory() as d:
+            ctx = scenario.build_scenario(Path(d))
+            (ctx.home / ".hermes/cron/jobs.json").write_text(
+                json.dumps({"version": 2, "items": [{"state": "error"}]}), encoding="utf-8")
+            rep = checkup.run_checkup(ctx)
+        h = next(i for i in rep.items if i.key == "hermes:默认")
+        self.assertEqual([f.code for f in h.findings], ["hermes_format"])
+        self.assertIn("items", h.findings[0].problem)
+
+    def test_out_refuses_to_overwrite_other_files(self):
+        with tempfile.TemporaryDirectory() as d:
+            precious = Path(d) / "notes.md"
+            precious.write_text("我的笔记\n", encoding="utf-8")
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+                rc = checkup.main(["--agents-dir", str(Path(d) / "none"), "--out", str(precious),
+                                   "--no-hermes", "--no-crontab"])
+            self.assertEqual(rc, 2)
+            self.assertEqual(precious.read_text(encoding="utf-8"), "我的笔记\n")
+            self.assertIn("不覆盖", err.getvalue())
+            ok = Path(d) / "r.md"
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(checkup.main(["--agents-dir", str(Path(d) / "none"), "--out", str(ok),
+                                               "--no-hermes", "--no-crontab"]), 0)
+                self.assertEqual(checkup.main(["--agents-dir", str(Path(d) / "none"), "--out", str(ok),
+                                               "--no-hermes", "--no-crontab"]), 0)  # 覆盖自己的报告可以
 
     def test_bad_config_falls_back_and_is_reported(self):
         with tempfile.TemporaryDirectory() as d:
