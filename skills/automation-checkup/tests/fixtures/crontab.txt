@@ -1,0 +1,6 @@
+# m h dom mon dow command
+PATH=/usr/bin:/bin
+0 3 * * * /Users/nat/scripts/backup.sh >> /Users/nat/logs/backup.log 2>&1
+30 7 * * 1 /Users/nat/scripts/gone.sh
+0 6 * * * "/Users/nat/Library/Mobile Documents/sync/run.sh" --out /Users/nat/reports/today.csv
+15 6 * * * mkdir -p /Users/nat/out/new && cd /Users/nat/scripts && ./backup.sh

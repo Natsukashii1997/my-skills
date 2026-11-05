@@ -1,0 +1,12 @@
+gui/501/ai.ops.codex = {
+	active count = 0
+	path = /Users/nat/Library/LaunchAgents/ai.ops.codex.plist
+	type = LaunchAgent
+	state = not running
+
+	program = /bin/bash
+	domain = gui/501 [100005]
+	runs = 30
+	last exit code = 0
+	run interval = 300 seconds
+}

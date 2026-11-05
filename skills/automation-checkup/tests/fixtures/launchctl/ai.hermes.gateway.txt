@@ -1,0 +1,50 @@
+gui/501/ai.hermes.gateway = {
+	active count = 1
+	path = /Users/nat/Library/LaunchAgents/ai.hermes.gateway.plist
+	type = LaunchAgent
+	state = running
+
+	program = /Users/nat/.local/bin/hermes
+	arguments = {
+		/Users/nat/.local/bin/hermes
+		gateway
+		run
+	}
+
+	stdout path = /Users/nat/.hermes/logs/gateway.log
+	stderr path = /Users/nat/.hermes/logs/gateway.err.log
+	inherited environment = {
+		SSH_AUTH_SOCK => /private/tmp/com.apple.launchd.x/Listeners
+	}
+
+	default environment = {
+		PATH => /usr/bin:/bin:/usr/sbin:/sbin
+	}
+
+	environment = {
+		XPC_SERVICE_NAME => ai.hermes.gateway
+	}
+
+	domain = gui/501 [100005]
+	asid = 100005
+	minimum runtime = 10
+	exit timeout = 5
+	runs = 7
+	pid = 48211
+	immediate reason = inefficient
+	forks = 3
+	execs = 1
+	initialized = 1
+	trampolined = 1
+	started suspended = 0
+	proxy started suspended = 0
+	last exit code = 75: EX_TEMPFAIL
+
+	event triggers = {
+		state = 1
+	}
+
+	spawn type = daemon (3)
+	jetsam priority = 40
+	properties = keepalive | runatload | inferred program
+}

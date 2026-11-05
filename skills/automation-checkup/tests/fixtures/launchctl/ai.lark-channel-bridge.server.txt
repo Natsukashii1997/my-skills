@@ -1,0 +1,21 @@
+gui/501/ai.lark-channel-bridge.server = {
+	active count = 0
+	path = /Users/nat/Library/LaunchAgents/ai.lark-channel-bridge.server.plist
+	type = LaunchAgent
+	state = spawn scheduled
+
+	program = /usr/local/bin/node
+	arguments = {
+		/usr/local/bin/node
+		/Users/nat/projects/lark-bridge/server.js
+	}
+
+	domain = gui/501 [100005]
+	minimum runtime = 10
+	exit timeout = 5
+	runs = 3
+	last exit code = 1
+
+	spawn type = daemon (3)
+	properties = keepalive | runatload
+}
