@@ -1,0 +1,31 @@
+gui/501/cn.lumiedu.campaign-daily = {
+	active count = 0
+	path = /Users/nat/Library/LaunchAgents/cn.lumiedu.campaign-daily.plist
+	type = LaunchAgent
+	state = not running
+
+	program = /usr/bin/python3
+	arguments = {
+		/usr/bin/python3
+		/Users/nat/work/campaign/daily.py
+	}
+
+	domain = gui/501 [100005]
+	runs = 4
+	last exit code = 0
+
+	event triggers = {
+		com.apple.launchd.calendarinterval.501 = {
+			keepalive = 0
+			service = cn.lumiedu.campaign-daily
+			stream = com.apple.launchd.calendarinterval
+			monitor = 1
+			descriptor = {
+				"Minute" => 0
+				"Hour" => 9
+			}
+		}
+	}
+
+	properties = 
+}

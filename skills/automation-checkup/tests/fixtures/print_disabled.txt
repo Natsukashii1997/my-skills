@@ -1,0 +1,9 @@
+disabled services = {
+	"com.apple.ScreenReaderUIServer" => disabled
+	"cn.personal-ai-workbench.server" => disabled
+	"com.openai.codex-quota-guard" => enabled
+	"ai.old.thing" => true
+}
+
+login item associations = {
+}

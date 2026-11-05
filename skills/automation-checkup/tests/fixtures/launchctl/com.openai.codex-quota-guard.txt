@@ -1,0 +1,12 @@
+gui/501/com.openai.codex-quota-guard = {
+	active count = 0
+	path = /Users/nat/Library/LaunchAgents/com.openai.codex-quota-guard.plist
+	type = LaunchAgent
+	state = not running
+
+	program = /usr/bin/python3
+	domain = gui/501 [100005]
+	runs = 12
+	last exit code = 0
+	run interval = 600 seconds
+}

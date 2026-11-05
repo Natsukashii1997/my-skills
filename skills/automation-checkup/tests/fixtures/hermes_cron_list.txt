@@ -1,0 +1,5 @@
+ID        NAME                 SCHEDULE        NEXT RUN              STATUS
+c-01      早报汇总             0 8 * * *       2026-11-06 08:00      active
+c-02      周报提醒             0 17 * * 5      2026-11-06 17:00      active
+c-03      旧群同步             */30 * * * *    -                     paused
+c-04      数据回流             15 * * * *      2026-11-05 11:15      error (last run failed: token=abcd1234efgh5678)
