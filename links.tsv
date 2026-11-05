@@ -19,3 +19,5 @@ vault-backup	~/.claude/skills
 vault-backup	~/.agents/skills
 session-retro	~/.claude/skills
 session-retro	~/.agents/skills
+automation-checkup	~/.claude/skills
+automation-checkup	~/.agents/skills

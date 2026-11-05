@@ -19,6 +19,7 @@
 | [hairline-page](skills/hairline-page/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「Hairline 细线」网页风格：方法论、方案讲解做成有网站质感的单文件 HTML；细线分层、识别色串主线、动效只演示真实业务过程 |
 | [ai-landing-method](skills/ai-landing-method/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「AI 落地三步法」：访谈提纲 → 技术方案 → 执行规范；先几轮提问把情况和材料问清楚（使用者不用懂方法），像 grill-me 那样把角色、新老、业务线、情境等差异问到底；再判断、填标准提示词槽位，按「从证据到决定」底层框架和数据本体论盘点材料、取证、按读者的论证逻辑排结构，出有网页质感的单页 HTML 报告（默认 hairline-page 风格），对照质量特征自检、机械核对并独立审查；Claude、Codex 通用 |
 | [session-retro](skills/session-retro/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「会话复盘」：读本机 Claude Code、Codex 会话记录，筛出纠正、连续失败、被拒绝的调用和明确决定，整理成规则 / 坑 / 决定三类提案；只出提案，不写规则文件和知识库 |
+| [automation-checkup](skills/automation-checkup/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「自动化体检」：只读检查本机自建的定时任务和常驻服务（launchd、hermes 定时任务、crontab），出一页报告，分「需要处理 / 注意 / 正常」三档，写清原因和怎么办，并和上次对比；体检本身不动任何任务，点名「处理 N」才动手 |
 
 链接关系以 [links.tsv](links.tsv) 为准。
 
