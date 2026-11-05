@@ -21,3 +21,5 @@ session-retro	~/.claude/skills
 session-retro	~/.agents/skills
 automation-checkup	~/.claude/skills
 automation-checkup	~/.agents/skills
+worktree-sweep	~/.claude/skills
+worktree-sweep	~/.agents/skills
