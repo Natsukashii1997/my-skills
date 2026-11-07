@@ -62,6 +62,7 @@
 | 2026-11-07 | 0.8.0 | 新开子 agent（Claude Opus 5.5），只拿 skill 目录；另一个子 agent 打分 | 过 | 过 | 不过 | — | 未过闸 2 | #46 的 PR；产出在 `~/Library/Application Support/my-skills/evidence/2026-11-07-skill-assets/blind/ai-landing-method/` |
 | 2026-11-07 | 0.9.0（第二轮） | 新开子 agent（Claude Opus 5.5），只拿 skill 目录；另一个子 agent 打分 | 不过 | 过 | 过 | 过 | 未过闸 2 | 产出在 `~/Library/Application Support/my-skills/evidence/2026-11-07-skill-assets/blind-r2/ai-landing-method/` |
 | 2026-11-07 | 0.9.0（第三轮，修过材料题后） | 同上，新开子 agent 执行、另一个子 agent 打分 | 不过（临界） | 不过（临界） | 过 | 过 | 未过闸 2 | 产出在 `~/Library/Application Support/my-skills/evidence/2026-11-07-skill-assets/blind-r3/ai-landing-method/` |
+| 2026-11-07 | 0.9.0（第四轮，判定标准先改清再跑） | 同上 | 不过 | 不过 | 过 | 过 | 未过闸 2 | 产出在 `~/Library/Application Support/my-skills/evidence/2026-11-07-skill-assets/blind-r4/ai-landing-method/` |
 
 **不过的条目**
 
@@ -102,3 +103,15 @@
 2. E1 第 3 条：材料范围写死为「会议纪要，以及聊天记录、工单两者之一」。
 3. E1 第 7 条：示例不加引号、用括号占位；不给选项的附带追问算开放题。
 4. E2 新增第 5 条通用检查（单选多选标注、三个禁用词、问事实的题不给推荐）。
+
+**0.9.0 第四轮不过的条目**
+
+- E1 第 7 条：第 8 题把「交给谁」（事实）和「要不要访」（决定）放在同一个编号，「（单选）」标在子问句后，题目末尾没标。根源：step1 表第 7、8 题本身就把事实和决定写在一起。
+- E2 第 5 条：第 3 题「这次为什么要出执行规范」是事实题，却带了「推荐 A：你说方案上周刚定」。根源：SKILL.md 列举的事实题没覆盖「为什么做、现在怎样」，「做选择的题」容易被读成题型。
+- 两处已在 0.9.1 修（见 CHANGELOG），**改后没有重跑**。
+
+**第四轮打分人的判定标准修订建议**（这一轮不改）
+
+1. E1 第 7 条：写明复合题要拆开，或标在选择子问句末尾也算。
+2. 写明推荐只给决定题，事实题即使能从用户原话推出也不给推荐（skill 已在 0.9.1 写明）。
+3. E1、E2、E4 的通用检查（单选多选、禁用词、推荐依据、示例写法）统一写成一份，各题引用。
