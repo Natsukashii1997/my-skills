@@ -1,6 +1,6 @@
 ---
 name: automation-checkup
-description: 「自动化体检」：只读检查常浩 Mac 本机自建的定时任务和常驻服务（~/Library/LaunchAgents 里的 launchd 任务、hermes 定时任务、crontab），出一页报告，分「需要处理 / 注意 / 正常」三档，用人话说明出了什么事、原因和怎么办。用户说「体检一下自动化」「看看定时任务 / 后台服务有没有挂」「Hermes 网关是不是又挂了」「飞书机器人 / 数字分身没反应了」「周报 / 早报今天没发」「哪些自动化该跑没跑」「LaunchAgents 里有没有僵尸任务」时使用。不适用：电脑卡、磁盘满、电池这类整机体检；飞书多维表格、飞书工作流等云端自动化的设计或诊断（用 lumiedu-automation-advisor）。体检本身不加载、不停止、不重启任何任务，也不改文件；用户点名处理某一条时，按 references/actions.md 逐条确认后再动手。
+description: 「自动化体检」：只读检查常浩 Mac 本机自建的定时任务和常驻服务（~/Library/LaunchAgents 里的 launchd 任务、hermes 定时任务、crontab），出一页报告，分「需要处理 / 注意 / 正常」三档，用人话说明出了什么事、原因和怎么办。用户说「体检一下自动化」「看看定时任务 / 后台服务有没有挂」「Hermes 网关是不是又挂了」「飞书机器人 / 数字分身没反应了」「周报 / 早报今天没发」「哪些自动化该跑没跑」「LaunchAgents 里有没有僵尸任务」时使用。不适用：电脑卡、磁盘满、电池这类整机体检；飞书多维表格、飞书工作流等云端自动化的设计或诊断（用 ai-landing-method）。体检本身不加载、不停止、不重启任何任务，也不改文件；用户点名处理某一条时，按 references/actions.md 逐条确认后再动手。
 metadata:
   governance:
     network: none
