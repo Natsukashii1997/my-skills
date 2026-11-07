@@ -21,3 +21,4 @@ automation-checkup	~/.claude/skills
 automation-checkup	~/.agents/skills
 worktree-sweep	~/.claude/skills
 worktree-sweep	~/.agents/skills
+thinking-review	~/.claude/skills
