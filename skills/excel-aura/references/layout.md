@@ -45,7 +45,7 @@
   "sheets": [{
     "name": "明细",         // 真实子表名
     "gutter": true,        // 默认 true：A 列 20px 页边距 + 第 1 行 12px 顶边距；已有表写 false
-    "reset": "A1:U47",     // 已有表：先把这片区域洗成白底常规字、无边框，再上新样式（数字格式不动）
+    "reset": "A1:U47",     // 已有表：先把这片区域洗成白底常规字、无边框，再上新样式（数字格式不动）；也可写一组范围 ["A1:B47", "D1:U47"]
     "unmerge": ["A1:U1"],  // 已有表：要换范围的旧合并；aura.py feishu 会打印取消合并的命令
     "density": "normal",   // compact / normal / airy：正文行高 28 / 34 / 38，表头、合计跟着变
     "rows": {"body": 32},  // 逐项覆盖行高默认值（top title subtitle gap section header body compact total note）
