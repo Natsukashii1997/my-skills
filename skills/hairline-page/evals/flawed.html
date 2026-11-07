@@ -1,0 +1,40 @@
+<title>周报自动化流程</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap">
+<style>
+body{margin:0;background:#F3F4F6;font-family:"Noto Sans SC",sans-serif;color:#101318}
+.wrap{max-width:1240px;margin:0 auto;padding:40px}
+h1{font-size:64px;font-weight:900;margin:0 0 12px}
+.sub{color:#9CA3AF;font-size:13px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:48px}
+.card{background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.12);padding:28px}
+.card h3{margin:0 0 8px;color:#2D53D2;font-size:13px}
+.dot{width:10px;height:10px;border-radius:50%;background:#DD5129;animation:pulse 1.6s infinite}
+@keyframes pulse{0%{transform:scale(1);opacity:1}50%{transform:scale(1.8);opacity:.3}100%{transform:scale(1);opacity:1}}
+.bg-flow{background:linear-gradient(90deg,#E6ECFB,#FBE8E1,#DBF0EA);background-size:300% 100%;animation:flow 8s linear infinite;padding:60px 40px;margin-top:48px}
+@keyframes flow{to{background-position:300% 0}}
+.num{font-size:40px;font-weight:900}
+table{width:100%;border-collapse:collapse;margin-top:48px;background:#fff}
+td,th{border:1px solid #D7DAE0;padding:10px}
+</style>
+<div class="wrap">
+  <h1>周报自动化流程</h1>
+  <p class="sub">采集 → 汇总 → 推送，三段把每周一的手工周报变成自动推送（示意）</p>
+  <div class="cards">
+    <div class="card"><div class="dot"></div><h3>第 1 段 · 采集</h3><p>每周日 22:00 从三个系统拉取上周数据。读者：运营。输入：系统导出。产出：原始数据表。</p></div>
+    <div class="card"><div class="dot"></div><h3>第 2 段 · 汇总</h3><p>按业务线汇总，算环比。读者：运营。输入：原始数据表。产出：汇总表。</p></div>
+    <div class="card"><div class="dot"></div><h3>第 3 段 · 推送</h3><p>周一 9:00 推送到群里。读者：管理层。输入：汇总表。产出：群消息。</p></div>
+  </div>
+  <div class="bg-flow">
+    <span class="num" data-to="128">0</span> 份周报已自动推送
+  </div>
+  <h2>回顾一下</h2>
+  <table>
+    <tr><th>段</th><th>读者</th><th>输入</th><th>产出</th></tr>
+    <tr><td>采集</td><td>运营</td><td>系统导出</td><td>原始数据表</td></tr>
+    <tr><td>汇总</td><td>运营</td><td>原始数据表</td><td>汇总表</td></tr>
+    <tr><td>推送</td><td>管理层</td><td>汇总表</td><td>群消息</td></tr>
+  </table>
+</div>
+<script>
+document.querySelectorAll('.num').forEach(el=>{let n=0;const to=+el.dataset.to;const t=setInterval(()=>{n+=2;el.textContent=n;if(n>=to)clearInterval(t)},16)});
+</script>
