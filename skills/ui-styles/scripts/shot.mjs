@@ -28,18 +28,22 @@ const preview = join(work, 'preview.html');
 writeFileSync(preview, page);
 mkdirSync(outDir, { recursive: true });
 
-const port = 9300 + Math.floor(Math.random() * 500);
+// 端口交给 Chrome 自己挑（=0），再从配置目录的 DevToolsActivePort 读出来：几个截图同时跑也不会撞端口
+const profile = join(work, 'profile');
 const chrome = spawn(CHROME, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--no-first-run',
-  `--user-data-dir=${join(work, 'profile')}`, `--remote-debugging-port=${port}`, 'about:blank'], { stdio: 'ignore' });
+  `--user-data-dir=${profile}`, '--remote-debugging-port=0', 'about:blank'], { stdio: 'ignore' });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const killTimer = setTimeout(() => { console.error('超时：120 秒内没截完'); chrome.kill('SIGKILL'); process.exit(3); }, 120000);
 
 let wsUrl;
-for (let i = 0; i < 50 && !wsUrl; i++) {
+for (let i = 0; i < 150 && !wsUrl; i++) { // 最多等 30 秒：机器忙时 Chrome 起得慢
   await sleep(200);
-  try { wsUrl = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find((t) => t.type === 'page')?.webSocketDebuggerUrl; } catch {}
+  try {
+    const port = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0].trim();
+    wsUrl = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find((t) => t.type === 'page')?.webSocketDebuggerUrl;
+  } catch {}
 }
-if (!wsUrl) { console.error('连不上无头 Chrome'); chrome.kill(); process.exit(3); }
+if (!wsUrl) { console.error('连不上无头 Chrome（等了 30 秒）'); chrome.kill(); process.exit(3); }
 
 const ws = new WebSocket(wsUrl);
 await new Promise((r) => ws.addEventListener('open', r, { once: true }));
