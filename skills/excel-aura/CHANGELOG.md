@@ -2,6 +2,24 @@
 
 版本号写在 SKILL.md frontmatter 的 `metadata.version`，和这里最上面一条一致。升版本的规则见仓库 `templates/CHANGELOG.md`：改措辞升修订号，加步骤或判断点升次版本，改触发范围、输入或产出格式升主版本。改了 `scripts/aura.py` 的，除了重跑 [evals.md](evals.md)，还要用 `scripts/demo.py` 的 layout 跑一遍 `feishu`，和改前的产出对比。
 
+## 1.0.0 - 2026-11-07
+
+首次通过准入（闸 2）：`skill-governance-audit` pre-install 0 错误（1 条 warning `RISK_SIGNAL_EXTERNAL_WRITE` 已确认：只写用户指定的输出文件和预览图）；0.4.0 第 2 轮盲测 3 条全过（记录见 [evals.md](evals.md)）；第三件由常浩在 PR 上批准，批准后才合并。
+
+- 内容与 0.4.0 第 2 轮盲测时的版本相同，只改了版本号。
+- 留给下一版的 2 个临界点和 3 个小问题见 evals.md「0.4.0 第 2 轮」。
+
+## 0.4.0 - 2026-11-07
+
+补第一轮盲测暴露的 5 个缺口（#61）。判定标准的修订在跑第二轮之前单独提交（0081a2f）。
+
+- 新增：`preview --cells`、`audit` 和 `--before` 直接读本地 `.xlsx`：值、公式、样式、合并、隐藏行列、行高列宽一次读出，不用自己转 cells.json，也不用 `--info`。`audit` 加 `--sheet`。
+- 新增：`reset` 可以写一组范围。原来写单个字符串的不变，demo 的 `feishu` 产出和改前逐字节一致。
+- 改：隐藏格子里的旧样式也要洗。`reset` 和区块可以跨过隐藏列（只改样式、不设列宽）；隐藏列颜色有业务含义时先问用户。`preview` 在隐藏格子的斜体、删除线没盖到时报风险，盖到了提示写进说明；`audit` 报隐藏格子里的斜体、删除线，也报看得见的删除线。retrofit.md 去掉「拆两份 layout」的做法，补本地 xlsx 的完整命令。
+- 改：`preview` 把不换行、靠左、右边是空格子的文字画成溢出；`audit` 估列宽时不再把这类文字算作截断（数字和公式照算）。问题清单里的格子范围上下相邻的会并成一块（如 `C3:C8`）。
+- SKILL.md：新增「先看这件事归不归本 skill 管」一节，写明只管样式、不适用时对用户说什么；「最重要的是……」要写进回复；预览说明里色数写具体数字；命令示例补本地 xlsx 的写法。
+- 新增 `tests/test_aura.py`（7 条，`python3 -m unittest discover -s skills/excel-aura/tests`）。
+
 ## 0.3.0 - 2026-11-07
 
 补齐资产化材料。首次盲测 0/3 过，**还没过闸 2**，所以不定 1.0.0。盲测记录和要补的缺口见 [evals.md](evals.md)。

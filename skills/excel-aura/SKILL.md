@@ -2,7 +2,7 @@
 name: excel-aura
 description: 「Excel-Aura」表格配色与版式标准：新建、美化或审查任何给人看的表格（本地 Excel / xlsx，或飞书电子表格）时，先判断表型和读者要做什么，再用 10 套标准配色和一套「底线 + 默认值」的版式规则，让表格层次清楚、舒适、不拥挤不刺眼。带写入前预览（preview）和表格审查（audit）。用户说「用 Excel-Aura」「按 aura 配色」「把表格做好看 / 美化表格 / 配色舒服点」「看看这张表美化得怎么样」，或新建一张要给人看的表格时使用。数据和公式怎么写仍按 lark-sheets / xlsx skill；本 skill 只管长什么样。
 metadata:
-  version: "0.3.0"
+  version: "1.0.0"
   governance:
     network: none
     external-writes: required
@@ -22,15 +22,29 @@ metadata:
 A=~/.claude/skills/excel-aura/scripts      # Codex 用 ~/.agents/skills/excel-aura/scripts
 python3 $A/aura.py list                    # 10 套配色
 python3 $A/aura.py tokens S02 --colors 3   # 某套的派生色，不要自己调色
-python3 $A/aura.py preview layout.json --cells cells.json --info info.json --png preview.png   # 写入前预览 + 风险检查
+python3 $A/aura.py preview layout.json --cells 原表.xlsx --png preview.png                    # 写入前预览 + 风险检查（本地表）
+python3 $A/aura.py preview layout.json --cells cells.json --info info.json --png preview.png   # 同上（飞书表回读）
 python3 $A/aura.py feishu layout.json --out-dir ./aura-styles                                 # 飞书样式分片
 python3 $A/aura.py xlsx layout.json in.xlsx out.xlsx                                          # 本地 Excel
-python3 $A/aura.py audit cells.json --info info.json [--before 原表cells.json]                # 审查一张表
+python3 $A/aura.py audit out.xlsx [--before 原表.xlsx]                                          # 审查一张本地表
+python3 $A/aura.py audit cells.json --info info.json [--before 原表cells.json]                # 审查一张飞书表
 ```
+
+本地 xlsx 直接给文件路径：值、公式、样式、合并、隐藏行列、行高列宽都从文件里读，不用自己转 cells.json，也不用 `--info`。
+
+## 先看这件事归不归本 skill 管
+
+本 skill **只管表格长什么样**：配色、字体字号、对齐、数字显示格式、行高列宽、边框、合并、冻结。
+
+不管的事：加行加列、写或改公式、改值、排序筛选、透视、图表、清洗数据。这些按 xlsx skill（本地表）或 lark-sheets（飞书表）的做法来。
+
+- **请求只涉及数据或公式**（例如「最后加一列把两周销售额加起来」）：不走本 skill 的流程，不借机给整张表重新配色、改版式。回复里先说一句，例如：「加列、写公式不归 excel-aura 管，它只管表格长什么样；这次按 xlsx 的做法加列，原表样式不动。」新加的行列照抄相邻列的样式，不套套组色。
+- **数据和样式都要改**（例如「加一列再美化一下」）：先按 xlsx 或 lark-sheets 把数据写对，再按本 skill 美化，回复里把两步分开说。
+- 只有样式要改，或新建一张给人看的表：往下走。
 
 ## 一、动手前先想清楚三件事
 
-1. **谁读，用来做什么**。查一个数、横向比较、看趋势、照着填、拿去汇报，各要不同的层次。先说出「这张表最重要的是哪几个数或哪几列」，配色就是把它们托出来，其余退后。
+1. **谁读，用来做什么**。查一个数、横向比较、看趋势、照着填、拿去汇报，各要不同的层次。先说出「这张表最重要的是哪几个数或哪几列」，配色就是把它们托出来，其余退后。这句话要写进给用户的回复，点名具体的数或列（如「最重要的是合计行的销售额和各线成交数」），不要只说「一眼看到总量」。
 2. **这是什么表型**。按下表认，详细写法见 [references/table-types.md](references/table-types.md)。一页里有好几种时，每块各按自己的表型处理，但全页共用一个套组、颜色在全页只代表同一种意思。
 
    | 表型 | 一眼认法 |
@@ -53,14 +67,14 @@ python3 $A/aura.py audit cells.json --info info.json [--before 原表cells.json]
 1. **先把数据写对**：飞书用 lark-sheets，本地用 openpyxl / xlsx skill；数字写成数字，合计写成公式。飞书新建时先建空页，不在 `+workbook-create` 里预写内容（预写的会带上文本格式）；值和公式用 `+cells-set` 写，只写非空的连续段。
 2. **定表型、套组、色数**，按第三到五节。
 3. **写 layout.json**：字段见 [references/layout.md](references/layout.md)，各表型的写法片段见 table-types.md。
-4. **预览**：`aura.py preview`（新建表可用 `--cells` 指向要写的值）。自己先看一遍，要给人看的表把预览图发给用户。
+4. **预览**：`aura.py preview`（新建表可用 `--cells` 指向已经写好数据的 xlsx，或飞书要写的值）。自己先看一遍，要给人看的表把预览图发给用户。
 5. **应用**：飞书对每个 `aura-styles/styles-NN.json` 跑 `lark-cli sheets +styles-put --url <表> --styles @./aura-styles/styles-NN.json`。lark-cli 的 `@文件` 只认当前目录下的相对路径；一次最多 100 项操作，脚本已按 70 项分片。不要先生成 xlsx 再导入飞书：导入会把行高列宽放大约 1.25–1.35 倍。
-6. **核对**：回读后跑 `audit`，在浏览器里看一眼整页；Excel 打开查有没有 `####` 和截断。
+6. **核对**：本地表跑 `audit out.xlsx`，飞书表回读后跑 `audit cells.json --info info.json`，在浏览器里看一眼整页；Excel 打开查有没有 `####` 和截断。
 
 ## 三、底线（什么表都不能碰）
 
 1. **不改值、不改公式**。只动样式、行高列宽、合并、冻结；已有表改完要用 `audit --before` 核对。为了版式要插行插列，先问用户。
-2. **写入前给用户看预览**，写明套组、色数、改了哪些合并和尺寸、数字显示有没有变。真实业务表等用户确认再写。
+2. **写入前给用户看预览**，写明套组、色数（写出具体数字，如「S02，2 色」）、改了哪些合并和尺寸、数字显示有没有变。真实业务表等用户确认再写。
 3. **看得清**：深色带配白字对比度 ≥ 4.8，浅底配深字 ≥ 5（脚本已算好）；不用纯黑字，不铺纯红、纯绿大底。
 4. **一页只有一个深色**。标题带、分区带、重点值都用 ① 的深色；别的颜色只出现浅色级。
 5. **颜色有含义，全页一致**。一种底色只代表一种意思（例如奶油底 = 人填的假设），不能这块表示「输入」、那块又表示「双11 分组」。表头分组色和角色色撞了，让分组退回 ① 的深浅。
