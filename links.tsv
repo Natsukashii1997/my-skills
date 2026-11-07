@@ -9,8 +9,8 @@ thinking-model-capture	~/.codex/skills
 skill-governance-audit	~/.codex/skills
 excel-aura	~/.claude/skills
 excel-aura	~/.agents/skills
-hairline-page	~/.claude/skills
-hairline-page	~/.agents/skills
+ui-styles	~/.claude/skills
+ui-styles	~/.agents/skills
 ai-landing-method	~/.claude/skills
 ai-landing-method	~/.agents/skills
 vault-backup	~/.claude/skills

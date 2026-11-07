@@ -14,8 +14,8 @@
 | [thinking-model-capture](skills/thinking-model-capture/SKILL.md) | `~/.codex/skills` | 沉淀思维模型候选 |
 | [skill-governance-audit](skills/skill-governance-audit/SKILL.md) | `~/.codex/skills` | Skill 启用前的治理审计 |
 | [excel-aura](skills/excel-aura/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「Excel-Aura」表格配色与版式标准：按表型给写法，10 套标准配色 +「底线 + 默认值」版式规则，带写入前预览和表格审查；新建、美化已有表都能用，飞书 / Excel 通用 |
-| [hairline-page](skills/hairline-page/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「Hairline 细线」网页风格：方法论、方案讲解做成有网站质感的单文件 HTML；细线分层、识别色串主线、动效只演示真实业务过程 |
-| [ai-landing-method](skills/ai-landing-method/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「AI 落地三步法」：访谈提纲 → 技术方案 → 执行规范；先几轮提问把情况和材料问清楚（使用者不用懂方法），像 grill-me 那样把角色、新老、业务线、情境等差异问到底；再判断、填标准提示词槽位，按「从证据到决定」底层框架和数据本体论盘点材料、取证、按读者的论证逻辑排结构，出有网页质感的单页 HTML 报告（默认 hairline-page 风格），对照质量特征自检、机械核对并独立审查；Claude、Codex 通用 |
+| [ui-styles](skills/ui-styles/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「UI 风格库」：做任何给人看的网页或界面时优先用；12 种定稿风格（细线默认，另有终端、柔光、精密暗色、文档站、瑞士网格、便当卡片、数据表格、玻璃拟态、Material 层级、色块拼接、大字动效），每种一份 STYLE.md 加单文件参考页面；共用底线、动效只演示真实业务过程、自带截图自检脚本（原 hairline-page） |
+| [ai-landing-method](skills/ai-landing-method/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「AI 落地三步法」：访谈提纲 → 技术方案 → 执行规范；先几轮提问把情况和材料问清楚（使用者不用懂方法），像 grill-me 那样把角色、新老、业务线、情境等差异问到底；再判断、填标准提示词槽位，按「从证据到决定」底层框架和数据本体论盘点材料、取证、按读者的论证逻辑排结构，出有网页质感的单页 HTML 报告（页面风格以 ui-styles 为准），对照质量特征自检、机械核对并独立审查；Claude、Codex 通用 |
 | [session-retro](skills/session-retro/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「会话复盘」：读本机 Claude Code、Codex 会话记录，筛出纠正、连续失败、被拒绝的调用和明确决定，整理成规则 / 坑 / 决定三类提案；只出提案，不写规则文件和知识库 |
 | [automation-checkup](skills/automation-checkup/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「自动化体检」：只读检查本机自建的定时任务和常驻服务（launchd、hermes 定时任务、crontab），出一页报告，分「需要处理 / 注意 / 正常」三档，写清原因和怎么办，并和上次对比；体检本身不动任何任务，点名「处理 N」才动手 |
 | [worktree-sweep](skills/worktree-sweep/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「worktree 清理」：扫描各项目堆积的 git worktree，按合并状态、未提交/未推送内容、闲置时长等分成「可安全删除 / 需要看一眼 / 保留」三档并算可回收空间；默认只列清单，确认后才删「可安全删除」档，从不碰远端 |
