@@ -1,0 +1,18 @@
+gui/501/cn.niuma-home.web = {
+	active count = 1
+	path = /Users/nat/Library/LaunchAgents/cn.niuma-home.web.plist
+	type = LaunchAgent
+	state = running
+
+	program = /usr/local/bin/node
+	arguments = {
+		/usr/local/bin/node
+		server.js
+	}
+
+	domain = gui/501 [100005]
+	runs = 1
+	pid = 1234
+	last exit code = (never exited)
+	properties = keepalive | runatload
+}

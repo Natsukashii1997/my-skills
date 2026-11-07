@@ -1,0 +1,18 @@
+gui/501/cn.digital-twin.healthcheck = {
+	active count = 0
+	path = /Users/nat/Library/LaunchAgents/cn.digital-twin.healthcheck.plist
+	type = LaunchAgent
+	state = not running
+
+	program = /bin/bash
+	arguments = {
+		/bin/bash
+		/Users/nat/projects/digital-twin/healthcheck.sh
+	}
+
+	domain = gui/501 [100005]
+	runs = 2
+	last exit code = 0
+	run interval = 1800 seconds
+	properties = runatload
+}

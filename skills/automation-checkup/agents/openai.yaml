@@ -1,0 +1,4 @@
+interface:
+  display_name: "自动化体检"
+  short_description: "只读检查本机自建的定时任务和常驻服务，出一页分「需要处理 / 注意 / 正常」三档的报告"
+  default_prompt: "Use $automation-checkup to 体检一下自动化。"

@@ -1,0 +1,18 @@
+{
+  "jobs": [
+    {"id": "c01", "name": "早报汇总", "enabled": true, "state": "scheduled",
+     "schedule": {"kind": "cron", "value": "0 8 * * *"}, "schedule_display": "每天 08:00",
+     "last_run_at": "2026-11-05T08:00:12", "last_status": "ok", "next_run_at": "2026-11-06T08:00:00"},
+    {"id": "c02", "name": "旧群同步", "enabled": false, "state": "paused", "paused_at": "2026-10-20T10:00:00",
+     "schedule": {"kind": "cron", "value": "*/30 * * * *"}, "next_run_at": null},
+    {"id": "c03", "name": "数据回流", "enabled": true, "state": "scheduled",
+     "schedule": {"kind": "cron", "value": "15 * * * *"}, "last_run_at": "2026-11-05T10:15:03",
+     "last_status": "error", "last_error": "401 Unauthorized: token=abcd1234efgh5678ijkl expired\nTraceback ...",
+     "failure_streak": 3, "next_run_at": "2026-11-05T11:15:00"},
+    {"id": "c04", "name": "周报提醒", "enabled": true, "state": "scheduled",
+     "schedule": {"kind": "cron", "value": "0 9 * * 4"}, "last_run_at": "2026-10-29T09:00:05",
+     "last_status": "ok", "next_run_at": "2026-11-05T09:00:00"},
+    {"id": "c05", "name": "一次性提醒", "enabled": false, "state": "completed", "next_run_at": null}
+  ],
+  "updated_at": "2026-11-05T10:15:04"
+}

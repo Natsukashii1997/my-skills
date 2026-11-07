@@ -1,0 +1,11 @@
+gui/501/local.digitalworld.sync = {
+	active count = 0
+	path = /Users/nat/Library/LaunchAgents/local.digitalworld.sync.plist
+	type = LaunchAgent
+	state = not running
+
+	program = /bin/bash
+	domain = gui/501 [100005]
+	runs = 9
+	last exit code = 127
+}

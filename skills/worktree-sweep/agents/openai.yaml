@@ -1,0 +1,4 @@
+interface:
+  display_name: "worktree 清理"
+  short_description: "扫描堆积的 git worktree，分三档给清理建议；确认后只删已合并且干净的"
+  default_prompt: "Use $worktree-sweep to list my git worktrees and tell me which ones are safe to delete."

@@ -1,0 +1,7 @@
+{
+  "_说明": "各项目里 git 忽略、但重新构建就能生成的目录。worktree 已合并时，这些目录不算「本地独有文件」，不会挡住清理。names 对所有仓库生效（只写目录或文件名）；paths 按仓库名（仓库文件夹名）写仓库里的相对路径。只加确认能重新生成的；拿不准就别加。",
+  "names": [],
+  "paths": {
+    "postpane": ["src/apps/desktop/src-tauri/resources"]
+  }
+}

@@ -1,6 +1,0 @@
-interface:
-  display_name: "路觅 AI 自动化诊断"
-  short_description: "依赖式追问与业务诊断，适配可复用机制，交付可见流转图和可接续施工的项目启动文档"
-  default_prompt: "请使用 $lumiedu-ai-collaboration，从我的业务困扰和现有材料开始诊断，比较适合的自动化路径，并交付业务流转图与项目启动说明文档。"
-policy:
-  allow_implicit_invocation: false

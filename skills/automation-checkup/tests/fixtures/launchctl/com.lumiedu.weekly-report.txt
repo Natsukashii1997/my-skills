@@ -1,0 +1,17 @@
+gui/501/com.lumiedu.weekly-report = {
+	active count = 0
+	path = /Users/nat/Library/LaunchAgents/com.lumiedu.weekly-report.plist
+	type = LaunchAgent
+	state = not running
+
+	program = /bin/zsh
+	arguments = {
+		/bin/zsh
+		-lc
+		cd /Users/nat/work/weekly && ./run.sh > /Users/nat/work/weekly/out.txt
+	}
+
+	domain = gui/501 [100005]
+	runs = 1
+	last exit code = 127
+}
