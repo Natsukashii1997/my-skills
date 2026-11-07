@@ -5,8 +5,6 @@ get-notes-retrieval	~/.agents/skills
 business-project-router	~/.codex/skills
 codex-usage-retrospective	~/.codex/skills
 lark-doc-refine	~/.codex/skills
-lumiedu-ai-collaboration	~/.codex/skills
-lumiedu-automation-advisor	~/.codex/skills
 thinking-model-capture	~/.codex/skills
 skill-governance-audit	~/.codex/skills
 excel-aura	~/.claude/skills
