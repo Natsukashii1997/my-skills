@@ -2,7 +2,7 @@
 name: excel-aura
 description: 「Excel-Aura」表格配色与版式标准：新建、美化或审查任何给人看的表格（本地 Excel / xlsx，或飞书电子表格）时，先判断表型和读者要做什么，再用 10 套标准配色和一套「底线 + 默认值」的版式规则，让表格层次清楚、舒适、不拥挤不刺眼。带写入前预览（preview）和表格审查（audit）。用户说「用 Excel-Aura」「按 aura 配色」「把表格做好看 / 美化表格 / 配色舒服点」「看看这张表美化得怎么样」，或新建一张要给人看的表格时使用。数据和公式怎么写仍按 lark-sheets / xlsx skill；本 skill 只管长什么样。
 metadata:
-  version: "0.4.0"
+  version: "1.0.0"
   governance:
     network: none
     external-writes: required

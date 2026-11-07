@@ -2,6 +2,13 @@
 
 版本号写在 SKILL.md frontmatter 的 `metadata.version`，和这里最上面一条一致。升版本的规则见仓库 `templates/CHANGELOG.md`：改措辞升修订号，加步骤或判断点升次版本，改触发范围、输入或产出格式升主版本。改了 `scripts/aura.py` 的，除了重跑 [evals.md](evals.md)，还要用 `scripts/demo.py` 的 layout 跑一遍 `feishu`，和改前的产出对比。
 
+## 1.0.0 - 2026-11-07
+
+首次通过准入（闸 2）：`skill-governance-audit` pre-install 0 错误（1 条 warning `RISK_SIGNAL_EXTERNAL_WRITE` 已确认：只写用户指定的输出文件和预览图）；0.4.0 第 2 轮盲测 3 条全过（记录见 [evals.md](evals.md)）；第三件由常浩在 PR 上批准，批准后才合并。
+
+- 内容与 0.4.0 第 2 轮盲测时的版本相同，只改了版本号。
+- 留给下一版的 2 个临界点和 3 个小问题见 evals.md「0.4.0 第 2 轮」。
+
 ## 0.4.0 - 2026-11-07
 
 补第一轮盲测暴露的 5 个缺口（#61）。判定标准的修订在跑第二轮之前单独提交（0081a2f）。
