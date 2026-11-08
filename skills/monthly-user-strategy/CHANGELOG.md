@@ -6,7 +6,7 @@
 
 按 GPT 独立深度验收（结论「需修改」，P1-01～05、P2-01/02/04）修订，对应 my-skills#75。
 
-- 新增：`assemble.mjs` 拦截购买判断（障碍、购买准备度）没有行为证据却超过 inferred + weak、管理判断或校历把购买判断提上去、observed 痛点没引用用户观察、unknown 的强度不是 none、每个情境缺四类需求 Claim 或缺某一人群的 readiness、弱证据主障碍没标「暂定研究重点」。
+- 新增：`assemble.mjs` 拦截购买判断（障碍、购买准备度）没有行为证据却超过 inferred + weak、管理判断或校历把购买判断提上去、observed 痛点没引用用户观察、unknown 的强度不是 none、每个情境缺四类需求 Claim 或缺某一人群的 readiness、弱证据主障碍没标「暂定研究重点」、自检「事实与来源核验」缺某个有情境地区的 `regionCheck`（逐校核过哪些学校、例外是哪几所）。
 - 新增：研判稿必填 `basedOnFingerprint`；与当前底稿不同又没给 `--prev-facts` 时拦截，不再静默换 refVersions。
 - 修复：组装每次先删旧的 document.json、submit-args.json，全部通过才写，失败只写 assemble-errors.txt。
 - 改动：SKILL.md 第 3–6 步：行为证据只有事实记录、业务观察、Voice；地区概括逐校核对例外；`brief.external` 只写时间、注意力、排课影响；自检判法统一（有遗留疑点就判待确认）。

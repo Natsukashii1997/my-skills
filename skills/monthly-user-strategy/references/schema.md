@@ -85,7 +85,8 @@
   "claims": [ /* 第 3 节的对象，不含 refVersions、origin */ ],
   "research": {
     "rejected": [], "assumptions": [], "notes": [],
-    "selfCheck": [ { "item": "事实与来源核验", "result": "通过" },
+    "selfCheck": [ { "item": "事实与来源核验", "result": "通过",
+                     "regionCheck": { "uk": "逐校核过 6 所，无例外", "us": "逐校核过 12 所；NYU、UR 考到 12-23，diff 与判断已写「部分持续至下旬」" } },
                    { "item": "购买障碍论证", "result": "待确认", "at": "CLM-2026-12-031", "category": "证据不足", "fix": "已写 unknown + route，待背景卡补充" } ]
   }
 }

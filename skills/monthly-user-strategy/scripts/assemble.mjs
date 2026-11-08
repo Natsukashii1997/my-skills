@@ -219,7 +219,14 @@ export function assemble(facts, draft, { version = skillVersion(), prevFacts = n
     else if (['待确认', '失败'].includes(r.result) && !(r.at && r.category && r.fix)) err('research.selfCheck', `「${item}」判为${r.result}，须写 at（对象 ID）、category、fix`);
     else if (r.result === '失败') err('research.selfCheck', `「${item}」失败：按 08 §3 须返修后再提交`);
   }
-  const selfCheckNotes = selfCheck.map(r => `自检｜${r.item}｜${r.result}${r.at ? `｜位置 ${r.at}` : ''}${r.category ? `｜${r.category}` : ''}${r.fix ? `｜处理：${r.fix}` : ''}${r.review ? `｜复审：${r.review}` : ''}`);
+  // 地区概括逐校核对例外（SKILL.md 第 5 步）：每个有情境的地区在 regionCheck 里写一句核过什么、例外是哪几所（没有就写无例外）。
+  const factCheck = selfCheck.find(x => x.item === '事实与来源核验');
+  if (factCheck) for (const key of REGION_KEYS) {
+    if (scenarios.some(s => s.region === key) && !String(factCheck.regionCheck?.[key] || '').trim())
+      err('research.selfCheck', `「事实与来源核验」缺 regionCheck.${key}：写明 ${key} 的地区概括逐校核过哪些学校、例外是哪几所（没有就写无例外）`);
+  }
+  const regionCheckText = r => r.regionCheck ? `｜地区概括核对：${Object.entries(r.regionCheck).map(([k, v]) => `${k}：${v}`).join('；')}` : '';
+  const selfCheckNotes = selfCheck.map(r => `自检｜${r.item}｜${r.result}${r.at ? `｜位置 ${r.at}` : ''}${r.category ? `｜${r.category}` : ''}${r.fix ? `｜处理：${r.fix}` : ''}${regionCheckText(r)}${r.review ? `｜复审：${r.review}` : ''}`);
   const document = {
     schemaVersion: facts.schemaVersion || '2.1',
     month,

@@ -23,6 +23,7 @@ const facts = (extra = {}) => ({
 });
 const SELF = ['事实与来源核验', '地区与人群覆盖', '任务与需求推导', '购买障碍论证', '机会排序合理性', '章节一致性与反例检查', '跨部门发布完整性'].map(item => ({ item, result: '通过' }))
   .concat({ item: '促销匹配及适用性（批 2 起）', result: '不适用（批 2 起）' });
+SELF[0].regionCheck = { uk: '逐校核过 2 所，无例外' };
 const empty = { priority: undefined, emptyReason: '当前没有足够证据形成独立情境（测试）' };
 const unknownRenew = { status: 'unknown', evidenceStrength: 'none', evidenceRefs: [], gap: '缺少存量学员下一阶段任务与续报信息', route: { status: 'available', source: 'SRC-bizcard' } };
 const draft = (patch = {}) => ({
@@ -222,4 +223,17 @@ test('国家代码：须在归一化表或底稿里，并属于情境所在地�
 test('学业需求、痛点只有时间线证据时最高 weak；有业务观察可以到 partial', () => {
   assert.ok(hasError(assemble(facts(), withClaim(4, { evidenceStrength: 'partial' })), '最高 inferred + weak'));
   assert.deepEqual(assemble(bizFacts(), withClaim(4, { evidenceStrength: 'partial', evidenceRefs: ['EV-src', 'EV-obs'] })).errors, []);
+});
+
+test('自检「事实与来源核验」须逐个有情境的地区写明核过的例外（GPT P1-05，盲测 E6 第 2 轮）', () => {
+  const noCheck = draft({ research: { selfCheck: SELF.map(r => r.item === '事实与来源核验' ? { item: r.item, result: '通过' } : r) } });
+  const r1 = assemble(facts(), noCheck);
+  assert.ok(hasError(r1, 'regionCheck'), r1.errors.join('\n'));
+  assert.ok(hasError(r1, 'uk'), r1.errors.join('\n'));
+  const blank = draft({ research: { selfCheck: SELF.map(r => r.item === '事实与来源核验' ? { ...r, regionCheck: { uk: '  ' } } : r) } });
+  assert.ok(hasError(assemble(facts(), blank), 'regionCheck'));
+  // 正例：写了就过，并转进 notes；没有情境的地区不用写
+  const ok = assemble(facts(), draft());
+  assert.deepEqual(ok.errors, []);
+  assert.ok(ok.document.research.notes.some(n => n.includes('地区概括核对') && n.includes('uk：逐校核过 2 所，无例外')));
 });

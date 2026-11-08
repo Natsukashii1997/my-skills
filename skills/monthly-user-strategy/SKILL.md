@@ -104,10 +104,10 @@ metadata:
 ### 第 6 步 · 组装与自检（阶段 08 前半）
 
 1. 按 `references/schema.md` 第 5 节写 `draft.json`：`basedOnFingerprint` 写研判时底稿的 `inputFingerprint`（digest.md 顶部），`declared.executor` 写当前执行方（Claude 或 Codex），`model` 写当前模型。
-2. 按 `references/quality.md` 第 1 节逐项自检，结论写进 `research.selfCheck`；逐条对照第 3 节的四个反例。
+2. 按 `references/quality.md` 第 1 节逐项自检，结论写进 `research.selfCheck`；逐条对照第 3 节的四个反例。「事实与来源核验」带上 `regionCheck`：每个有情境的地区一句，写核过哪些学校、例外是哪几所、落到了哪句话里（没有例外就写「逐校核过 N 所，无例外」），脚本缺了会拦截。
 3. `node scripts/assemble.mjs facts.json draft.json --out-dir <工作目录>`。
    - 脚本每次先删掉目录里旧的 `document.json`、`submit-args.json`；全部通过才写新的，失败只写 `assemble-errors.txt`。所以目录里有 `submit-args.json`，就一定是最近一次通过的那份。
-   - 退出码 2：按「拦截」逐条改研判稿，重跑，直到通过。「提示」逐条看，能改就改。拦截项包括：每个情境缺四类需求 Claim 之一、缺该人群的 readiness（判断不了写 unknown）、购买判断没有行为证据却超过 inferred + weak、observed 痛点没引用用户观察、弱证据主障碍没标「暂定研究重点」。
+   - 退出码 2：按「拦截」逐条改研判稿，重跑，直到通过。「提示」逐条看，能改就改。拦截项包括：每个情境缺四类需求 Claim 之一、缺该人群的 readiness（判断不了写 unknown）、购买判断没有行为证据却超过 inferred + weak、observed 痛点没引用用户观察、弱证据主障碍没标「暂定研究重点」、自检缺某个有情境地区的 `regionCheck`。
    - 通过后得到 `document.json`、`submit-args.json` 和 `idempotencyKey`（由月份、输入指纹和内容哈希决定：内容不变，键就不变）。
 4. 组装通过后、提交前，**重取一次底稿**（`strategy_facts` → `facts-check.json`）比 `inputFingerprint`。没变就提交；变了就按下面「底稿变了」处理。
 
