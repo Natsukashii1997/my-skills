@@ -21,6 +21,8 @@ const regionOf = country => OWN.has(country) ? country : 'other';
 const dateText = d => d.precision === 'day' ? (d.from === d.to ? d.from : `${d.from}～${d.to}`) : d.precision === 'month' ? `仅月份 ${d.months?.join('、')}` : '无日期';
 const span = w => w ? `${w.from}～${w.to}` : '—';
 const cell = s => String(s ?? '').replace(/\|/g, '／').replace(/\n/g, ' ');
+// 原格原文（截 40 字）：用来发现同一格多个日期、跨年日期段被解析成月份等疑点；换行显示为「⏎」。
+const raw = e => { const t = String(e.source?.raw ?? '').replace(/\|/g, '／').replace(/\n/g, '⏎'); return t.length > 40 ? `${t.slice(0, 40)}…` : t; };
 
 const windows = new Map(f.windows.map(w => [w.evidenceId, w]));
 const timeline = f.evidence.filter(e => e.kind === 'timeline');
@@ -63,15 +65,15 @@ for (const [key, name] of REGIONS) {
     .sort((a, b) => (a.dates.from || a.dates.months?.[0] || '').localeCompare(b.dates.from || b.dates.months?.[0] || '') || a.school.localeCompare(b.school));
   p('');
   if (!events.length) { p('（本月没有相关时间线事件）'); p(''); continue; }
-  p('| evidenceId | 国家 | 学校 | 事件（原列名） | 日期 | 核验 → 强度上限 | 锚点 | 适用 | 行动窗口 | 窗口状态 / 不计算原因 |');
-  p('|---|---|---|---|---|---|---|---|---|---|');
+  p('| evidenceId | 国家 | 学校 | 事件（原列名） | 日期 | 核验 → 强度上限 | 锚点 | 适用 | 行动窗口 | 窗口状态 / 不计算原因 | 原格原文 |');
+  p('|---|---|---|---|---|---|---|---|---|---|---|');
   // 只作情境信息的（八类以外、假期）按「事件 + 日期」归并成一行，节省篇幅；其余逐条列表。
   const context = events.filter(e => /不属于八类|假期/.test(windows.get(e.evidenceId)?.skipped || ''));
   for (const e of events.filter(x => !context.includes(x))) {
     const w = windows.get(e.evidenceId) || {};
     const flags = [e.ambiguous && 'ambiguous'].filter(Boolean).join(' ');
     const state = w.skipped ? `不计算：${w.skipped}` : `${w.status}（${w.ruleVersion}${w.limitations?.length ? `；${w.limitations.join('；')}` : ''}）`;
-    p(`| ${e.evidenceId} | ${e.country} | ${cell(e.school)} | ${e.eventType}（${cell(e.header)}） | ${dateText(e.dates)} | ${e.verification} → ${STRENGTH[e.verification] ?? '?'}${flags ? ` ${flags}` : ''} | ${e.anchorType} | ${cell(e.scope ?? '')} | ${span(w.action)} | ${cell(state)} |`);
+    p(`| ${e.evidenceId} | ${e.country} | ${cell(e.school)} | ${e.eventType}（${cell(e.header)}） | ${dateText(e.dates)} | ${e.verification} → ${STRENGTH[e.verification] ?? '?'}${flags ? ` ${flags}` : ''} | ${e.anchorType} | ${cell(e.scope ?? '')} | ${span(w.action)} | ${cell(state)} | ${raw(e)} |`);
   }
   if (context.length) {
     p('');
@@ -82,6 +84,19 @@ for (const [key, name] of REGIONS) {
       groups.set(k, [...(groups.get(k) || []), `${e.school}·${e.country}·${e.verification} ${e.evidenceId}`]);
     }
     for (const [k, list] of groups) p(`- ${cell(k)}：${list.map(cell).join('；')}`);
+  }
+  // 结束日分旬：写「上旬 / 中旬 / 下旬考完」之前对照这里（GPT 1.1.0 定向验收 P1-05）。只算本月精确到日、生成窗口的事件。
+  const xunGroups = new Map();
+  for (const e of events.filter(x => !context.includes(x) && x.dates.precision === 'day' && (x.dates.to || x.dates.from || '').startsWith(f.month))) {
+    const end = e.dates.to || e.dates.from, d = Number(end.slice(8, 10));
+    const g = xunGroups.get(e.eventType) || [[], [], []];
+    g[d <= 10 ? 0 : d <= 20 ? 1 : 2].push(`${e.school} ${end.slice(5)}`);
+    xunGroups.set(e.eventType, g);
+  }
+  if (xunGroups.size) {
+    p('');
+    p('结束日分旬（本月精确到日的事件；写「上旬 / 中旬 / 下旬」前逐校对照）：');
+    for (const [type, g] of xunGroups) p(`- ${type}：${['上旬（1–10 日）', '中旬（11–20 日）', '下旬（21 日起）'].map((n, i) => `${n}${g[i].length} 所${g[i].length ? `：${g[i].map(cell).join('、')}` : ''}`).join('｜')}`);
   }
   const doubts = events.filter(e => e.dates.precision !== 'day' || ['guess', 'conflict'].includes(e.verification) || e.anchorType === 'anchor_unknown' || e.ambiguous);
   p('');

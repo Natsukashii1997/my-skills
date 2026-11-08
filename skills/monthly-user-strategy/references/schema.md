@@ -72,6 +72,7 @@
 ```jsonc
 {
   "month": "2026-12",
+  "basedOnFingerprint": "<研判时底稿的 inputFingerprint>",   // 必填；与当前底稿不同时须给 --prev-facts
   "declared": { "executor": "Claude", "model": "<当前模型 ID>" },   // Codex 会话写 Codex；skillVersion 由脚本从 SKILL.md 读
   "judgement": { "text": "…", "claims": ["CLM-2026-12-001"] },
   "brief": { "common": [], "diff": [], "external": [] },
@@ -84,7 +85,8 @@
   "claims": [ /* 第 3 节的对象，不含 refVersions、origin */ ],
   "research": {
     "rejected": [], "assumptions": [], "notes": [],
-    "selfCheck": [ { "item": "事实与来源核验", "result": "通过" },
+    "selfCheck": [ { "item": "事实与来源核验", "result": "通过",
+                     "regionCheck": { "uk": "逐校核过 6 所，无例外", "us": "逐校核过 12 所；NYU、UR 考到 12-23，diff 与判断已写「部分持续至下旬」" } },
                    { "item": "购买障碍论证", "result": "待确认", "at": "CLM-2026-12-031", "category": "证据不足", "fix": "已写 unknown + route，待背景卡补充" } ]
   }
 }
@@ -92,7 +94,8 @@
 
 ## 6. 批 1 里服务端拦截的其他规则（生成时就要避开）
 
-- I-06：Claim 引用的 Evidence 版本必须是当前版本（脚本按底稿填，底稿取完后不要隔太久再提交；`inputFingerprint` 变了要重取底稿重组装）。
+- I-06：Claim 引用的 Evidence 版本必须是当前版本（脚本按底稿填；研判稿用 `basedOnFingerprint` 绑定研判时的底稿，换了底稿必须带旧底稿比对，见 SKILL.md「底稿变了」）。
+- `inputs`（时间线快照、背景卡指纹、引用的 Evidence 版本）在常浩确认时由服务端按当时的事实重写，skill 填的值只是占位；`timelineSnapshot` 写 null 是正常的。
 - I-17：引用的每个 ID 都必须存在于本稿或当前快照；**Evidence ID 只能从底稿里抄，不能编**。
 - 07 §3：没有「存量用户情况」时，续费的 barrier、readiness 必须 `unknown`，route `{ status: available, source: SRC-bizcard }`；续费情境 `observedRelation=unknown`。没有「用户观察」时，痛点只能 `typical`。
 - 02 §2.3：没有 business / voice 证据的障碍，`BR-M2`、`BR-M5` 只能 `unknown`，其他最高 `inferred + weak`。

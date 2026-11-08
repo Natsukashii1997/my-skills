@@ -1,0 +1,1044 @@
+{
+ "month": "2026-12",
+ "schemaVersion": "2.1",
+ "inputFingerprint": "e6f1x7u2e0000006",
+ "baseRevision": null,
+ "rules": {
+  "versions": {
+   "sources": "sources-v1.1",
+   "barrier": "barrier-v2.1",
+   "lifecycle": "lifecycle-v0.2",
+   "scout": "scout-v1.1",
+   "quality": "quality-v1",
+   "baseline": "baseline-v1"
+  },
+  "sources": [
+   "SRC-timeline",
+   "SRC-official",
+   "SRC-ruling",
+   "SRC-bizcard",
+   "SRC-playbook",
+   "SRC-voice",
+   "SRC-crm",
+   "SRC-service"
+  ],
+  "barriers": {
+   "BR-M1": [
+    "新签"
+   ],
+   "BR-M2": [
+    "新签",
+    "续费"
+   ],
+   "BR-M3": [
+    "新签",
+    "续费"
+   ],
+   "BR-M4": [
+    "新签",
+    "续费"
+   ],
+   "BR-M5": [
+    "新签",
+    "续费"
+   ],
+   "BR-C1": [
+    "新签",
+    "续费"
+   ],
+   "BR-C2": [
+    "新签",
+    "续费"
+   ],
+   "BR-C3": [
+    "新签",
+    "续费"
+   ],
+   "BR-C4": [
+    "新签",
+    "续费"
+   ],
+   "BR-O1": [
+    "新签"
+   ],
+   "BR-F1": [
+    "新签",
+    "续费"
+   ],
+   "BR-R1": [
+    "续费"
+   ],
+   "BR-R2": [
+    "续费"
+   ],
+   "BR-R3": [
+    "续费"
+   ],
+   "BR-R4": [
+    "续费"
+   ],
+   "BR-R5": [
+    "续费"
+   ]
+  }
+ },
+ "coverage": {
+  "uk": {
+   "value": "unknown",
+   "status": "unknown",
+   "ratio": null,
+   "dateQuality": {
+    "verified": 0,
+    "ruled": 0,
+    "source": 0,
+    "guess": 0
+   },
+   "coverage": {
+    "schools": 0,
+    "calculable": 0,
+    "active": 0,
+    "notCovered": 0,
+    "insufficient": 0
+   },
+   "range": {
+    "from": "2026-12-01",
+    "to": "2027-01-14"
+   },
+   "ruleVersion": "lifecycle-v0.2",
+   "byCountry": null
+  },
+  "us": {
+   "value": "高",
+   "status": "inferred",
+   "ratio": 0.75,
+   "dateQuality": {
+    "verified": 1,
+    "ruled": 0,
+    "source": 10,
+    "guess": 1
+   },
+   "coverage": {
+    "schools": 12,
+    "calculable": 12,
+    "active": 9,
+    "notCovered": 3,
+    "insufficient": 0
+   },
+   "range": {
+    "from": "2026-12-01",
+    "to": "2027-01-14"
+   },
+   "ruleVersion": "lifecycle-v0.2",
+   "byCountry": null
+  },
+  "hk": {
+   "value": "unknown",
+   "status": "unknown",
+   "ratio": null,
+   "dateQuality": {
+    "verified": 0,
+    "ruled": 0,
+    "source": 0,
+    "guess": 0
+   },
+   "coverage": {
+    "schools": 0,
+    "calculable": 0,
+    "active": 0,
+    "notCovered": 0,
+    "insufficient": 0
+   },
+   "range": {
+    "from": "2026-12-01",
+    "to": "2027-01-14"
+   },
+   "ruleVersion": "lifecycle-v0.2",
+   "byCountry": null
+  },
+  "au": {
+   "value": "高",
+   "status": "inferred",
+   "ratio": 1,
+   "dateQuality": {
+    "verified": 0,
+    "ruled": 0,
+    "source": 8,
+    "guess": 0
+   },
+   "coverage": {
+    "schools": 5,
+    "calculable": 5,
+    "active": 5,
+    "notCovered": 0,
+    "insufficient": 0
+   },
+   "range": {
+    "from": "2026-12-01",
+    "to": "2027-01-14"
+   },
+   "ruleVersion": "lifecycle-v0.2",
+   "byCountry": null
+  },
+  "ca": {
+   "value": "unknown",
+   "status": "unknown",
+   "ratio": null,
+   "dateQuality": {
+    "verified": 0,
+    "ruled": 0,
+    "source": 0,
+    "guess": 0
+   },
+   "coverage": {
+    "schools": 0,
+    "calculable": 0,
+    "active": 0,
+    "notCovered": 0,
+    "insufficient": 0
+   },
+   "range": {
+    "from": "2026-12-01",
+    "to": "2027-01-14"
+   },
+   "ruleVersion": "lifecycle-v0.2",
+   "byCountry": null
+  },
+  "other": {
+   "value": "unknown",
+   "status": "unknown",
+   "ratio": null,
+   "dateQuality": {
+    "verified": 0,
+    "ruled": 0,
+    "source": 0,
+    "guess": 0
+   },
+   "coverage": {
+    "schools": 0,
+    "calculable": 0,
+    "active": 0,
+    "notCovered": 0,
+    "insufficient": 0
+   },
+   "range": {
+    "from": "2026-12-01",
+    "to": "2027-01-14"
+   },
+   "ruleVersion": "lifecycle-v0.2",
+   "byCountry": {}
+  }
+ },
+ "evidence": [
+  {
+   "evidenceId": "EV-7a7f753008f21821",
+   "evidenceVersion": "9e0f4a9f2d8a43f5",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "us",
+   "school": "加州大学欧文分校 UCI",
+   "header": "Final时间",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-12-05",
+    "to": "2026-12-11",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "美东 美西 加拿大!Y6",
+    "raw": "12.5-12.11",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-b484f770e373d36e",
+   "evidenceVersion": "e8e7e0adeaf1408e",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "us",
+   "school": "加州大学圣地亚哥分校 UCSD",
+   "header": "Final时间",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-12-05",
+    "to": "2026-12-12",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "美东 美西 加拿大!Y5",
+    "raw": "12.5-12.12",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-eabd5d792aad8441",
+   "evidenceVersion": "9e0f4a9f2d8a43f5",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "us",
+   "school": "加州大学洛杉矶分校 UCLA",
+   "header": "Final时间",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-12-05",
+    "to": "2026-12-11",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "美东 美西 加拿大!Y4",
+    "raw": "12.5-12.11",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-dcb6089f66d03920",
+   "evidenceVersion": "23022dcd2d58d7ae",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "us",
+   "school": "加州大学戴维斯分校 UCD",
+   "header": "Final时间",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-12-07",
+    "to": "2026-12-11",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "美东 美西 加拿大!Y7",
+    "raw": "12.7-12.11",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-692f019a29677ad5",
+   "evidenceVersion": "337e03c56d016f7c",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "us",
+   "school": "南加州大学 USC",
+   "header": "Final时间",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-12-09",
+    "to": "2026-12-16",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "美东 美西 加拿大!Y8",
+    "raw": "12.9-12.16",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-1e4d4b90421589bd",
+   "evidenceVersion": "127b8edc0382192b",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "us",
+   "school": "伊利诺伊大学厄巴纳-香槟分校 UIUC",
+   "header": "Final时间",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-12-11",
+    "to": "2026-12-17",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "美东 美西 加拿大!Y18",
+    "raw": "12.11-12.17",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-0e2c5deb095efe2a",
+   "evidenceVersion": "83b357ce120c4b64",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "us",
+   "school": "俄亥俄州立大学 OSU",
+   "header": "Final时间",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-12-12",
+    "to": "2026-12-18",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "美东 美西 加拿大!Y13",
+    "raw": "12.12-12.18",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-2350b87dce24090c",
+   "evidenceVersion": "c470a8074b5a9e60",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "us",
+   "school": "波士顿大学 BU",
+   "header": "Final时间",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-12-14",
+    "to": "2026-12-18",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "美东 美西 加拿大!Y12",
+    "raw": "12.14-12.18",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-7e44ebcb56701d65",
+   "evidenceVersion": "12a8e1b58d479592",
+   "kind": "timeline",
+   "sourceId": "SRC-official",
+   "year": 2026,
+   "country": "us",
+   "school": "加州大学伯克利分校 UCB",
+   "header": "Final时间",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-12-14",
+    "to": "2026-12-18",
+    "precision": "day"
+   },
+   "verification": "verified",
+   "ambiguous": false,
+   "source": {
+    "ref": "美东 美西 加拿大!Y9",
+    "raw": "12.14-12.18",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-88688613fc1ed1a0",
+   "evidenceVersion": "7c1fdb7b93b1dfaa",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "us",
+   "school": "埃默里大学 EMORY",
+   "header": "Final时间",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-12-09",
+    "to": "2026-12-19",
+    "precision": "day"
+   },
+   "verification": "guess",
+   "ambiguous": false,
+   "source": {
+    "ref": "美东 美西 加拿大!Y15",
+    "raw": "law：12.2-12.11\nother：12.9-12.19",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-c962932417d5a3bf",
+   "evidenceVersion": "8addcc72b82ec6bd",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "us",
+   "school": "纽约大学 NYU",
+   "header": "Final时间",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-12-17",
+    "to": "2026-12-23",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "美东 美西 加拿大!Y11",
+    "raw": "12.17-12.23",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-0a832b553ed99a3b",
+   "evidenceVersion": "bc18393cc573bb6a",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "us",
+   "school": "罗切斯特大学 UR",
+   "header": "Final时间",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-12-18",
+    "to": "2026-12-23",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "美东 美西 加拿大!Y14",
+    "raw": "12.18-12.23",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-1f987513cc16fe29",
+   "evidenceVersion": "4d32fee96e40e709",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "au",
+   "school": "新南威尔士大学 UNSW",
+   "header": "Final Period",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-11-27",
+    "to": "2026-12-10",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "澳大利亚 新西兰!T13",
+    "raw": "11.27-12.10",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-89bc84fe17690cb2",
+   "evidenceVersion": "7573f578f5c6dead",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "au",
+   "school": "昆士兰大学 UQ",
+   "header": "出分时间",
+   "eventType": "出分",
+   "anchorType": "release",
+   "dates": {
+    "from": "2026-12-02",
+    "to": "2026-12-02",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "澳大利亚 新西兰!U7",
+    "raw": "12.2",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-2440b25a422d7496",
+   "evidenceVersion": "fe5ad88352e1129c",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "au",
+   "school": "莫纳什大学 Monash",
+   "header": "出分时间",
+   "eventType": "出分",
+   "anchorType": "release",
+   "dates": {
+    "from": "2026-12-03",
+    "to": "2026-12-03",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "澳大利亚 新西兰!U3",
+    "raw": "12.3",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-2ba088d9cc7d7a6a",
+   "evidenceVersion": "6555041a10e5ed0d",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "au",
+   "school": "墨尔本大学 UniMelb",
+   "header": "出分时间",
+   "eventType": "出分",
+   "anchorType": "release",
+   "dates": {
+    "from": "2026-12-04",
+    "to": "2026-12-04",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "澳大利亚 新西兰!U2",
+    "raw": "12.4",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-d78da421bb01261d",
+   "evidenceVersion": "6da0920b146e851a",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "au",
+   "school": "墨尔本大学 UniMelb",
+   "header": "Final补考",
+   "eventType": "补考",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-12-10",
+    "to": "2026-12-17",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "澳大利亚 新西兰!V2",
+    "raw": "12.10-12.17",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-f7a3cdeb71715020",
+   "evidenceVersion": "affe029f1464e17d",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "au",
+   "school": "悉尼大学 USYD",
+   "header": "Final补考",
+   "eventType": "补考",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-12-14",
+    "to": "2026-12-17",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "澳大利亚 新西兰!V5",
+    "raw": "12.14-12.17",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-2631c65523a9a4e1",
+   "evidenceVersion": "08a57258804b93d4",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "au",
+   "school": "悉尼大学 USYD",
+   "header": "出分时间",
+   "eventType": "出分",
+   "anchorType": "release",
+   "dates": {
+    "from": "2026-12-16",
+    "to": "2026-12-16",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "澳大利亚 新西兰!U5",
+    "raw": "12.16",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-c3b6520dd790ef01",
+   "evidenceVersion": "97d05eb348195065",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "au",
+   "school": "新南威尔士大学 UNSW",
+   "header": "出分时间",
+   "eventType": "出分",
+   "anchorType": "release",
+   "dates": {
+    "from": "2026-12-17",
+    "to": "2026-12-17",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "澳大利亚 新西兰!U13",
+    "raw": "12.17",
+    "snapshot": "9669531abe84337b"
+   }
+  }
+ ],
+ "windows": [
+  {
+   "evidenceId": "EV-7a7f753008f21821",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-10-24",
+    "to": "2026-12-04"
+   },
+   "action": {
+    "from": "2026-11-07",
+    "to": "2026-11-30"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-b484f770e373d36e",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-10-24",
+    "to": "2026-12-04"
+   },
+   "action": {
+    "from": "2026-11-07",
+    "to": "2026-11-30"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-eabd5d792aad8441",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-10-24",
+    "to": "2026-12-04"
+   },
+   "action": {
+    "from": "2026-11-07",
+    "to": "2026-11-30"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-dcb6089f66d03920",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-10-26",
+    "to": "2026-12-06"
+   },
+   "action": {
+    "from": "2026-11-09",
+    "to": "2026-12-02"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-692f019a29677ad5",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-10-28",
+    "to": "2026-12-08"
+   },
+   "action": {
+    "from": "2026-11-11",
+    "to": "2026-12-04"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-1e4d4b90421589bd",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-10-30",
+    "to": "2026-12-10"
+   },
+   "action": {
+    "from": "2026-11-13",
+    "to": "2026-12-06"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-0e2c5deb095efe2a",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-10-31",
+    "to": "2026-12-11"
+   },
+   "action": {
+    "from": "2026-11-14",
+    "to": "2026-12-07"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-2350b87dce24090c",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-11-02",
+    "to": "2026-12-13"
+   },
+   "action": {
+    "from": "2026-11-16",
+    "to": "2026-12-09"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-7e44ebcb56701d65",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-11-02",
+    "to": "2026-12-13"
+   },
+   "action": {
+    "from": "2026-11-16",
+    "to": "2026-12-09"
+   },
+   "status": "known"
+  },
+  {
+   "evidenceId": "EV-88688613fc1ed1a0",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [
+    "假设：日期来源标为推测"
+   ],
+   "need": {
+    "from": "2026-10-28",
+    "to": "2026-12-08"
+   },
+   "action": {
+    "from": "2026-11-11",
+    "to": "2026-12-04"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-c962932417d5a3bf",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-11-05",
+    "to": "2026-12-16"
+   },
+   "action": {
+    "from": "2026-11-19",
+    "to": "2026-12-12"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-0a832b553ed99a3b",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-11-06",
+    "to": "2026-12-17"
+   },
+   "action": {
+    "from": "2026-11-20",
+    "to": "2026-12-13"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-1f987513cc16fe29",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-10-16",
+    "to": "2026-11-26"
+   },
+   "action": {
+    "from": "2026-10-30",
+    "to": "2026-11-22"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-89bc84fe17690cb2",
+   "category": "出分",
+   "next": "复盘、补考或新学期规划",
+   "ruleVersion": "lifecycle-v0.2/出分",
+   "limitations": [],
+   "need": {
+    "from": "2026-12-02",
+    "to": "2026-12-16"
+   },
+   "action": {
+    "from": "2026-12-02",
+    "to": "2026-12-12"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-2440b25a422d7496",
+   "category": "出分",
+   "next": "复盘、补考或新学期规划",
+   "ruleVersion": "lifecycle-v0.2/出分",
+   "limitations": [],
+   "need": {
+    "from": "2026-12-03",
+    "to": "2026-12-17"
+   },
+   "action": {
+    "from": "2026-12-03",
+    "to": "2026-12-13"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-2ba088d9cc7d7a6a",
+   "category": "出分",
+   "next": "复盘、补考或新学期规划",
+   "ruleVersion": "lifecycle-v0.2/出分",
+   "limitations": [],
+   "need": {
+    "from": "2026-12-04",
+    "to": "2026-12-18"
+   },
+   "action": {
+    "from": "2026-12-04",
+    "to": "2026-12-14"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-d78da421bb01261d",
+   "category": "补考",
+   "next": "出分、后续修课",
+   "ruleVersion": "lifecycle-v0.2/补考",
+   "limitations": [
+    "公告日未知，以出分日作为替代锚点"
+   ],
+   "need": {
+    "from": "2026-12-04",
+    "to": "2026-12-09"
+   },
+   "action": {
+    "from": "2026-12-04",
+    "to": "2026-12-07"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-f7a3cdeb71715020",
+   "category": "补考",
+   "next": "出分、后续修课",
+   "ruleVersion": "lifecycle-v0.2/补考",
+   "limitations": [
+    "公告日未知，以 T-28 作为起点"
+   ],
+   "need": {
+    "from": "2026-11-16",
+    "to": "2026-12-13"
+   },
+   "action": {
+    "from": "2026-11-16",
+    "to": "2026-12-11"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-2631c65523a9a4e1",
+   "category": "出分",
+   "next": "复盘、补考或新学期规划",
+   "ruleVersion": "lifecycle-v0.2/出分",
+   "limitations": [],
+   "need": {
+    "from": "2026-12-16",
+    "to": "2026-12-30"
+   },
+   "action": {
+    "from": "2026-12-16",
+    "to": "2026-12-26"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-c3b6520dd790ef01",
+   "category": "出分",
+   "next": "复盘、补考或新学期规划",
+   "ruleVersion": "lifecycle-v0.2/出分",
+   "limitations": [],
+   "need": {
+    "from": "2026-12-17",
+    "to": "2026-12-31"
+   },
+   "action": {
+    "from": "2026-12-17",
+    "to": "2026-12-27"
+   },
+   "status": "inferred"
+  }
+ ],
+ "anomalies": [],
+ "bizcard": null,
+ "revision": null
+}
