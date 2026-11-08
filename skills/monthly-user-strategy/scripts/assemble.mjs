@@ -26,6 +26,8 @@ const BIZ_CAP = { 事实记录: 'strong', 业务观察: 'partial', 管理判断:
 const RANK = { none: 0, weak: 1, partial: 2, strong: 3 };
 const SELF_CHECK = ['事实与来源核验', '地区与人群覆盖', '任务与需求推导', '购买障碍论证', '机会排序合理性', '促销匹配及适用性（批 2 起）', '章节一致性与反例检查', '跨部门发布完整性'];
 const KNOWN_COUNTRIES = ['us', 'uk', 'hk', 'au', 'ca', 'sg', 'my', 'nz', 'mo', 'ie'];
+// 业务证据原文里的国家名（推适用范围用）
+const COUNTRY_NAMES = { uk: /英国|英格兰|苏格兰|威尔士|(?<![A-Za-z])UK(?![A-Za-z])/, us: /美国|(?<![A-Za-z])USA?(?![A-Za-z])/, hk: /香港/, au: /澳洲|澳大利亚/, ca: /加拿大/, sg: /新加坡/, my: /马来西亚/, nz: /新西兰/, mo: /澳门/, ie: /爱尔兰/ };
 const SOURCE_IDS = ['SRC-timeline', 'SRC-official', 'SRC-ruling', 'SRC-bizcard', 'SRC-playbook', 'SRC-voice', 'SRC-crm', 'SRC-service'];
 const ONLY_NEW = ['BR-M1', 'BR-O1'], ONLY_RENEW = ['BR-R1', 'BR-R2', 'BR-R3', 'BR-R4', 'BR-R5'];
 const ALL_BARRIERS = ['BR-M1', 'BR-M2', 'BR-M3', 'BR-M4', 'BR-M5', 'BR-C1', 'BR-C2', 'BR-C3', 'BR-C4', 'BR-O1', 'BR-F1', ...ONLY_RENEW];
@@ -47,6 +49,25 @@ export function assemble(facts, draft, { version = skillVersion(), prevFacts = n
   // 用户决策行为证据（02 §2.3）：背景卡的事实记录、业务观察，或 Voice。管理判断只是待检验的假设，学校日历只是情境依据，都不算。
   const isBehavioral = id => { const e = ev.get(id); return e?.kind === 'voice' || (e?.kind === 'business' && ['事实记录', '业务观察'].includes(e.bizType)); };
   const cap = id => { const e = ev.get(id); return !e ? 'none' : e.kind === 'business' ? BIZ_CAP[e.bizType] ?? 'weak' : STRENGTH_CAP[e.verification] ?? 'weak'; };
+  // 业务证据的适用范围（GPT 1.1.0 定向验收 P1-01）：底稿里业务 Evidence 只有原文，没有结构化的国家、人群字段，所以从原文推，不让研判稿自己声明。
+  // 国家：原文里的国家名，或时间线里出现过的学校名。人群：「存量用户情况」一栏，或写到老学员 / 在读 / 续费 → 续费；写到新签 / 咨询 / 报名 → 新签；都写到或都没写 → 不限。
+  // 推不出国家就是范围不明：不能把购买判断、学业需求、痛点提到 weak 以上，也不能撑 observed 痛点或实际商业关系。
+  const schoolCountry = new Map(facts.evidence.filter(e => e.kind === 'timeline' && e.school && e.country).map(e => [e.school, e.country]));
+  const scopeOf = e => {
+    const t = String(e.text ?? e.source?.raw ?? '');
+    const countries = new Set(Object.keys(COUNTRY_NAMES).filter(c => COUNTRY_NAMES[c].test(t)));
+    for (const [school, c] of schoolCountry) if (school.length >= 2 && t.includes(school)) countries.add(c);
+    const renew = /老学员|在读学员|存量|续费|续报|续课/.test(t), fresh = /新签|新生|咨询|报名/.test(t);
+    return { countries, relation: e.field === '存量用户情况' ? '续费' : renew && !fresh ? '续费' : fresh && !renew ? '新签' : null };
+  };
+  // relation 为 新签 / 续费 时，人群推得出的证据须同一人群；通用的 Claim 只接受不限人群的证据。
+  const applies = (id, scenario, relation = null) => {
+    const e = ev.get(id); if (e?.kind !== 'business') return true;
+    const sc = scopeOf(e);
+    return (scenario?.countries || []).some(c => sc.countries.has(c)) && (!relation || !sc.relation || sc.relation === relation);
+  };
+  const misfitText = (ids, scenario, relation) => ids.map(id => { const sc = scopeOf(ev.get(id));
+    return `${id}（原文推出：${sc.countries.size ? [...sc.countries].join('、') : '看不出国家'}${sc.relation ? `、${sc.relation}` : ''}；本处：${(scenario?.countries || []).join('、') || '无情境'}${relation ? `、${relation}` : ''}）`; }).join('；');
 
   // 研判稿绑定底稿（I-06）：draft.basedOnFingerprint 是研判时底稿的 inputFingerprint。和当前底稿不同，就必须给出那份旧底稿逐条比对；
   // 研判稿引用的 Evidence 版本变了或不见了，对应对象须重新研判，不能静默换成新版本。
@@ -152,7 +173,11 @@ export function assemble(facts, draft, { version = skillVersion(), prevFacts = n
     const obs = s.observedRelation || {};
     if (!['新签', '续费', 'unknown'].includes(obs.value)) err(at, 'observedRelation.value 须为 新签 / 续费 / unknown');
     refsOk(obs.evidenceRefs, `${at}.observedRelation`);
-    if (obs.value && obs.value !== 'unknown' && !(obs.evidenceRefs || []).some(id => ev.get(id)?.kind === 'business')) err(at, '实际商业关系须有 business 类 Evidence（I-05）');
+    if (obs.value && obs.value !== 'unknown') {
+      const biz = (obs.evidenceRefs || []).filter(id => ev.get(id)?.kind === 'business');
+      if (!biz.length) err(at, '实际商业关系须有 business 类 Evidence（I-05）');
+      else if (!biz.some(id => applies(id, s, obs.value))) err(at, `实际商业关系引用的业务证据适用范围对不上：${misfitText(biz, s, obs.value)}`);
+    }
     if (s.targetRelation === '续费' && !hasField('存量用户情况') && obs.value !== 'unknown') err(at, '没有存量用户情况时，续费情境的 observedRelation 须为 unknown（07 §3）');
   }
 
@@ -166,12 +191,21 @@ export function assemble(facts, draft, { version = skillVersion(), prevFacts = n
     judged(c, at);
     for (const id of c.dependsOn || []) if (!claimIds.has(id)) err(at, `依赖的 Claim ${id} 不存在`);
     // 学业需求、痛点只有时间线证据时最高 inferred + weak：考试存在只证明有任务，不证明需求或困难（06 阶段 03）。
+    const sc = scenarios.find(s => s.id === c.scenario);
+    const bizRefs = (c.evidenceRefs || []).filter(id => ev.get(id)?.kind === 'business');
     if (['academic_need', 'pain'].includes(c.claimType) && ['known', 'inferred'].includes(c.status) && c.evidenceStrength !== 'weak'
-      && !(c.evidenceRefs || []).some(id => ['business', 'voice'].includes(ev.get(id)?.kind))) err(at, `${c.claimType} 只有时间线证据时最高 inferred + weak`);
+      && !(c.evidenceRefs || []).some(id => ev.get(id)?.kind === 'voice' || (ev.get(id)?.kind === 'business' && applies(id, sc)))) {
+      if (bizRefs.length) err(at, `${c.claimType} 引用的业务证据适用范围对不上，不能提到 weak 以上：${misfitText(bizRefs, sc)}`);
+      else err(at, `${c.claimType} 只有时间线证据时最高 inferred + weak`);
+    }
     if (c.claimType === 'pain') {
       if (!['typical', 'observed'].includes(c.painKind)) err(at, 'pain 须写 painKind');
+      const obsRefs = bizRefs.filter(id => ev.get(id).field === '用户观察');
       if (c.painKind === 'observed' && !hasField('用户观察')) err(at, '没有用户观察时痛点只能是 typical（07 §3）');
-      else if (c.painKind === 'observed' && !(c.evidenceRefs || []).some(id => ev.get(id)?.kind === 'voice' || (ev.get(id)?.kind === 'business' && ev.get(id).field === '用户观察'))) err(at, 'observed 痛点须引用对应的用户观察条目（或 Voice），否则只能 typical');
+      else if (c.painKind === 'observed' && !(c.evidenceRefs || []).some(id => ev.get(id)?.kind === 'voice' || obsRefs.includes(id) && applies(id, sc))) {
+        if (obsRefs.length) err(at, `observed 痛点引用的用户观察适用范围对不上，只能 typical：${misfitText(obsRefs, sc)}`);
+        else err(at, 'observed 痛点须引用对应的用户观察条目（或 Voice），否则只能 typical');
+      }
     }
     if (['need_strength', 'readiness'].includes(c.claimType) && (c.status === 'unknown' ? c.level != null : !['高', '中', '低'].includes(c.level))) err(at, 'level 须为 高 / 中 / 低，unknown 时为 null');
     if (['barrier', 'readiness'].includes(c.claimType)) {
@@ -183,8 +217,13 @@ export function assemble(facts, draft, { version = skillVersion(), prevFacts = n
     }
     // 购买判断（障碍、购买准备度）的强度只由行为证据决定：校历再强也不能证明购买行为，管理判断也不能把它往上提（02 §2.3）。
     if (['barrier', 'readiness'].includes(c.claimType) && !['unknown', 'not_applicable'].includes(c.status)) {
-      const behavior = (c.evidenceRefs || []).filter(isBehavioral).reduce((m, id) => Math.max(m, RANK[cap(id)]), 0);
-      if (!behavior) {
+      const behavioral = (c.evidenceRefs || []).filter(isBehavioral);
+      const usable = behavioral.filter(id => applies(id, sc, c.targetRelation)), misfit = behavioral.filter(id => !usable.includes(id));
+      const behavior = usable.reduce((m, id) => Math.max(m, RANK[cap(id)]), 0);
+      const need = c.status === 'known' || c.evidenceStrength === 'strong' ? 3 : c.evidenceStrength === 'partial' ? 2 : 1;
+      if (misfit.length && behavior < need && !(c.status === 'inferred' && c.evidenceStrength === 'weak'))
+        err(at, `引用的业务证据适用范围对不上，不能撑这条${c.claimType === 'barrier' ? '障碍' : '购买准备度'}（范围不明或不符的证据最高 inferred + weak）：${misfitText(misfit, sc, c.targetRelation)}`);
+      else if (!behavior) {
         if (c.claimType === 'barrier' && ['BR-M2', 'BR-M5'].includes(c.barrierCode)) err(at, `${c.barrierCode} 没有用户决策行为证据时须为 unknown（02 §2.3）`);
         else if (!(c.status === 'inferred' && c.evidenceStrength === 'weak')) err(at, `没有用户决策行为证据（事实记录、业务观察、Voice）时，${c.claimType === 'barrier' ? '障碍' : '购买准备度'}最高 inferred + weak；校历和管理判断都不算（02 §2.3）`);
       } else if (c.status === 'known' && behavior < 3) err(at, '购买判断 known 须有 strong 的行为证据（事实记录）；业务观察最高 inferred + partial');
@@ -249,10 +288,20 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const take = name => { const i = args.indexOf(name); return i >= 0 ? args.splice(i, 2)[1] : null; };
   const dir = take('--out-dir'), prev = take('--prev-facts');
   if (args.length < 2 || !dir) { console.error('用法：node assemble.mjs <facts.json> <draft.json> --out-dir <目录> [--prev-facts <研判时用的旧底稿>]'); process.exit(1); }
-  const [facts, draft] = args.map(f => JSON.parse(readFileSync(f, 'utf8')));
-  const { document, submitArgs, errors, warnings } = assemble(facts, draft, { prevFacts: prev ? JSON.parse(readFileSync(prev, 'utf8')) : null });
+  // 先让旧产出失效，再读输入：输入读不了、不是合法 JSON、组装抛错，目录里都不会留下可误用的旧参数（GPT 1.1.0 定向验收 P1-03）。
   mkdirSync(dir, { recursive: true });
   for (const f of ['document.json', 'submit-args.json', 'assemble-errors.txt']) rmSync(join(dir, f), { force: true });
+  let result;
+  try {
+    const read = f => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch (e) { throw new Error(`读不了输入 ${f}：${e.message}`); } };
+    const [facts, draft] = args.map(read);
+    result = assemble(facts, draft, { prevFacts: prev ? read(prev) : null });
+  } catch (e) {
+    writeFileSync(join(dir, 'assemble-errors.txt'), `失败 ${e.message}\n`);
+    console.log(`失败 ${e.message}\n\n组装没有完成：没有写 document.json 和 submit-args.json（旧的已删除）。修好输入后重跑。`);
+    process.exit(1);
+  }
+  const { document, submitArgs, errors, warnings } = result;
   for (const w of warnings) console.log(`提示 ${w}`);
   if (errors.length) {
     for (const e of errors) console.log(`拦截 ${e}`);

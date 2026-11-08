@@ -149,11 +149,16 @@ test('换新底稿重组装：依据版本变化或消失时拦截，不静默�
 
 // —— GPT 验收（2026-11-08）P1-01～04、P2-01 的反例与正例 ——
 const BIZ = [
-  { evidenceId: 'EV-obs', evidenceVersion: 'o1', kind: 'business', field: '用户观察', bizType: '业务观察', ambiguous: false },
-  { evidenceId: 'EV-fact', evidenceVersion: 'f1', kind: 'business', field: '用户观察', bizType: '事实记录', ambiguous: false },
-  { evidenceId: 'EV-mgmt', evidenceVersion: 'g1', kind: 'business', field: '负责人特别判断', bizType: '管理判断', ambiguous: false },
+  { evidenceId: 'EV-obs', evidenceVersion: 'o1', kind: 'business', field: '用户观察', bizType: '业务观察', text: '英国学生 11 月下旬咨询集中在 Final 复习规划，多数问能不能只约考前几次课', ambiguous: false },
+  { evidenceId: 'EV-fact', evidenceVersion: 'f1', kind: 'business', field: '用户观察', bizType: '事实记录', text: '11 月英国新签咨询 46 条，其中 19 条明确说想等 1 月 Final 考完再决定报不报', ambiguous: false },
+  { evidenceId: 'EV-mgmt', evidenceVersion: 'g1', kind: 'business', field: '负责人特别判断', bizType: '管理判断', text: '我觉得英国学生今年对价格更敏感', ambiguous: false },
+  { evidenceId: 'EV-nowhere', evidenceVersion: 'n1', kind: 'business', field: '用户观察', bizType: '事实记录', text: '11 月咨询 46 条，其中 19 条明确说想等考完再决定报不报', ambiguous: false },
+  { evidenceId: 'EV-school', evidenceVersion: 's1', kind: 'business', field: '用户观察', bizType: '业务观察', text: '爱丁堡大学的学生多数问能不能只约考前几次课', ambiguous: false },
+  { evidenceId: 'EV-renew', evidenceVersion: 'r1', kind: 'business', field: '存量用户情况', bizType: '业务观察', text: '英国在读老学员多数 1 月考完，还没想好下学期要不要继续', ambiguous: false },
 ];
-const bizFacts = () => { const f = facts({ bizcard: { 用户观察: [{ id: 'B-00000001' }, { id: 'B-00000002' }], 负责人特别判断: [{ id: 'B-00000003' }] } }); f.evidence = [...f.evidence, ...BIZ]; return f; };
+const bizFacts = () => { const f = facts({ bizcard: { 用户观察: [{ id: 'B-00000001' }, { id: 'B-00000002' }], 负责人特别判断: [{ id: 'B-00000003' }], 存量用户情况: [{ id: 'B-00000004' }] } }); f.evidence = [...f.evidence, ...BIZ]; return f; };
+// 把唯一的情境改成美国（GPT 1.1.0 定向验收的跨地区误用测试用）
+const toUS = d => { d.scenarios[0] = { ...d.scenarios[0], id: 'SCN-2026-12-us-01', region: 'us', countries: ['us'], schools: ['加州大学洛杉矶分校'] }; d.claims.forEach(c => { c.scenario = 'SCN-2026-12-us-01'; }); return d; };
 const newSign = { claimType: 'readiness', targetRelation: '新签', level: '高', text: '新签准备度' };
 
 test('E6 已核实考试日期不能冒充购买准备度证据；有事实记录时可以 known', () => {
@@ -236,4 +241,48 @@ test('自检「事实与来源核验」须逐个有情境的地区写明核过�
   const ok = assemble(facts(), draft());
   assert.deepEqual(ok.errors, []);
   assert.ok(ok.document.research.notes.some(n => n.includes('地区概括核对') && n.includes('uk：逐校核过 2 所，无例外')));
+});
+
+test('P1-01 业务证据的适用范围：国家要对得上情境，人群要对得上 Claim（GPT 1.1.0 定向验收 测试 A、B）', () => {
+  // 测试 A：英国新签的事实记录不能当美国新签准备度的依据
+  const a = assemble(bizFacts(), toUS(withClaim(7, { ...newSign, status: 'known', evidenceStrength: 'strong', evidenceRefs: ['EV-fact'] })));
+  assert.ok(hasError(a, '适用范围'), a.errors.join('\n'));
+  // 测试 B：英国的用户观察不能撑美国的 observed 痛点
+  const b = assemble(bizFacts(), toUS(withClaim(5, { text: '美国学生普遍反映辅导时间冲突', painKind: 'observed', evidenceRefs: ['EV-obs'], evidenceStrength: 'partial' })));
+  assert.ok(hasError(b, '适用范围'), b.errors.join('\n'));
+  // 原文看不出国家：范围不明，购买判断最高 inferred + weak，也不能撑 observed
+  assert.ok(hasError(assemble(bizFacts(), withClaim(7, { ...newSign, level: '中', status: 'inferred', evidenceStrength: 'partial', evidenceRefs: ['EV-nowhere'] })), '适用范围'));
+  assert.ok(hasError(assemble(bizFacts(), withClaim(5, { painKind: 'observed', evidenceRefs: ['EV-nowhere'], evidenceStrength: 'partial' })), '适用范围'));
+  assert.deepEqual(assemble(bizFacts(), withClaim(7, { ...newSign, level: '中', status: 'inferred', evidenceStrength: 'weak', evidenceRefs: ['EV-nowhere'], limitations: '原文没写国家' })).errors, []);
+  // 人群：存量用户情况只适用续费，不能撑新签
+  assert.ok(hasError(assemble(bizFacts(), withClaim(7, { ...newSign, level: '中', status: 'inferred', evidenceStrength: 'partial', evidenceRefs: ['EV-renew'] })), '适用范围'));
+  assert.deepEqual(assemble(bizFacts(), withClaim(2, { status: 'inferred', evidenceStrength: 'partial', evidenceRefs: ['EV-renew'], gap: undefined, route: undefined, limitations: '一条顾问观察', rule: '证据最强' })).errors, []);
+  // 情境的实际商业关系也要对得上
+  const obs = withClaim(0, {}); obs.scenarios[0].observedRelation = { value: '新签', evidenceRefs: ['EV-renew'] };
+  assert.ok(hasError(assemble(bizFacts(), obs), '适用范围'));
+  // 正例：英国证据用于英国情境；原文写的是学校名也算
+  assert.deepEqual(assemble(bizFacts(), withClaim(7, { ...newSign, status: 'known', evidenceStrength: 'strong', evidenceRefs: ['EV-fact'] })).errors, []);
+  assert.deepEqual(assemble(bizFacts(), withClaim(5, { painKind: 'observed', evidenceRefs: ['EV-school'], evidenceStrength: 'partial' })).errors, []);
+});
+
+test('P1-03 输入不是合法 JSON：先清掉旧产出，写错误文件，非零退出（GPT 1.1.0 定向验收）', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mus-json-'));
+  writeFileSync(join(dir, 'facts.json'), JSON.stringify(facts()));
+  writeFileSync(join(dir, 'good.json'), JSON.stringify(draft()));
+  writeFileSync(join(dir, 'broken.json'), '{ "month": "2026-12", ');
+  const script = join(here, '..', 'scripts', 'assemble.mjs');
+  execFileSync('node', [script, join(dir, 'facts.json'), join(dir, 'good.json'), '--out-dir', join(dir, 'out')], { stdio: 'pipe' });
+  assert.ok(existsSync(join(dir, 'out', 'submit-args.json')));
+  assert.throws(() => execFileSync('node', [script, join(dir, 'facts.json'), join(dir, 'broken.json'), '--out-dir', join(dir, 'out')], { stdio: 'pipe' }), e => e.status !== 0);
+  assert.ok(!existsSync(join(dir, 'out', 'submit-args.json')));
+  assert.ok(!existsSync(join(dir, 'out', 'document.json')));
+  assert.match(readFileSync(join(dir, 'out', 'assemble-errors.txt'), 'utf8'), /broken\.json/);
+});
+
+test('P1-05 digest 按事件列出各校结束日落在上 / 中 / 下旬（GPT 1.1.0 定向验收：「UC 四校上旬考完」）', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mus-xun-'));
+  writeFileSync(join(dir, 'facts.json'), JSON.stringify(facts()));
+  const md = execFileSync('node', [join(here, '..', 'scripts', 'digest.mjs'), join(dir, 'facts.json')], { encoding: 'utf8' });
+  assert.match(md, /结束日分旬/);
+  assert.match(md, /- Final：上旬（1–10 日）0 所｜中旬（11–20 日）1 所：格拉斯哥大学 12-18｜下旬（21 日起）1 所：爱丁堡大学 12-21/);
 });
