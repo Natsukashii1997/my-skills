@@ -1,0 +1,4 @@
+interface:
+  display_name: "月度用户策略"
+  short_description: "生成牛马之家某个月的月度用户策略（generate 模式），经 workdesk 工具取事实、提交待确认 submission，常浩在页面确认"
+  default_prompt: "Use $monthly-user-strategy to 生成下个月的用户策略。"

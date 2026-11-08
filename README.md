@@ -21,6 +21,7 @@
 | [worktree-sweep](skills/worktree-sweep/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「worktree 清理」：扫描各项目堆积的 git worktree，按合并状态、未提交/未推送内容、闲置时长等分成「可安全删除 / 需要看一眼 / 保留」三档并算可回收空间；默认只列清单，确认后才删「可安全删除」档，从不碰远端 |
 | [thinking-review](skills/thinking-review/SKILL.md) | `~/.claude/skills` | 「思维评审」：Claude 在任务的关键节点（接手别人的方案、方案成形要动工、前提被证伪、反复返工）判断当前问题是 A 思维评审、B 工程审查、A+B 还是 C 直接执行；A 类按准入判断决定要不要经驿窗交 ChatGPT High，按「全景 → 深化 → 收敛」递进，想清楚就按四种退出交回执行；只对接驿窗现有接力协议，不改驿窗 |
 | [vault-backup](skills/vault-backup/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「知识库备份」：给 Obsidian 知识库和只在本机的 Git 项目做加密、增量、可异地的备份（restic），检查完整性、演练恢复 |
+| [monthly-user-strategy](skills/monthly-user-strategy/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「月度用户策略」generate 模式：替常浩生成牛马之家某个月的月度用户策略，经 workdesk 工具取事实底稿、按 SCOUT 阶段 01–05 研判、组装 schema 2.1 文档并自检，提交为待确认 submission，常浩在工作台页面确认；缺背景卡按规则降级，提交结果不明不自动重试；Claude、Codex 通用 |
 
 链接关系以 [links.tsv](links.tsv) 为准。
 
