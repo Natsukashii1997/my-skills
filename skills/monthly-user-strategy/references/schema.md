@@ -20,6 +20,8 @@
 | 时间线 `guess`（标推测）/ `conflict`（冲突未决） | weak |
 | 背景卡 事实记录 / 业务观察 / 管理判断 | strong / partial / weak |
 
+背景卡证据还要**适用**：Evidence 上的 `countries`、`relation`（bizcard-v1.1，常浩在背景卡填）和本处情境、人群对得上，才按上表算行为证据；没填或对不上按「范围不明」，最高撑 `inferred + weak`（判法见 `lifecycle-bizcard.md` 第 5 节）。Voice 按自带的 `strength` 算，没有时按 partial。
+
 多条**独立**证据互相印证可以升一级，最高 strong。同一事件的原表日期、官网核验、人工裁定是一条 Evidence，不能叠加；同一张背景卡里同一出处的多条也算一条来源。
 
 **来源登记表 ID**（`route.source` 只能填这些）：`SRC-timeline`、`SRC-official`、`SRC-ruling`、`SRC-bizcard`（可用，可选）、`SRC-playbook`（规则资料）、`SRC-voice`、`SRC-crm`、`SRC-service`（三者不可用）。不可用来源作 route 时 `route.status=unavailable`；确实需要表外的新来源时 `route.status=research`、`source` 留空。
@@ -98,5 +100,5 @@
 - `inputs`（时间线快照、背景卡指纹、引用的 Evidence 版本）在常浩确认时由服务端按当时的事实重写，skill 填的值只是占位；`timelineSnapshot` 写 null 是正常的。
 - I-17：引用的每个 ID 都必须存在于本稿或当前快照；**Evidence ID 只能从底稿里抄，不能编**。
 - 07 §3：没有「存量用户情况」时，续费的 barrier、readiness 必须 `unknown`，route `{ status: available, source: SRC-bizcard }`；续费情境 `observedRelation=unknown`。没有「用户观察」时，痛点只能 `typical`。
-- 02 §2.3：没有 business / voice 证据的障碍，`BR-M2`、`BR-M5` 只能 `unknown`，其他最高 `inferred + weak`。
+- 02 §2.3 + 07 bizcard-v1.1：没有**适用的**用户决策行为证据（适用范围对得上的事实记录、业务观察，或 Voice）的障碍、购买准备度，`BR-M2`、`BR-M5` 只能 `unknown`，其他最高 `inferred + weak`；known 须有对得上的事实记录，`inferred + partial` 须有对得上的业务观察以上。
 - `opportunities`、`strategies` 只能是空数组（批 2 实现）。

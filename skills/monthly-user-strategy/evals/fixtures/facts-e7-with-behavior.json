@@ -1,7 +1,7 @@
 {
  "month": "2026-12",
  "schemaVersion": "2.1",
- "inputFingerprint": "e7f1x7u2e0000007",
+ "inputFingerprint": "e7f1x7u2e0000008",
  "baseRevision": null,
  "rules": {
   "versions": {
@@ -614,7 +614,7 @@
   },
   {
    "evidenceId": "EV-e7b0000000000001",
-   "evidenceVersion": "e7v0000000000001",
+   "evidenceVersion": "e7v0000000000011",
    "kind": "business",
    "sourceId": "SRC-bizcard",
    "field": "用户观察",
@@ -622,6 +622,10 @@
    "bizType": "事实记录",
    "strength": "strong",
    "basis": "咨询台账 2026-11",
+   "countries": [
+    "uk"
+   ],
+   "relation": "新签",
    "ambiguous": false,
    "source": {
     "ref": "2026-12·用户观察·B-7c1d2e3f",
@@ -631,7 +635,7 @@
   },
   {
    "evidenceId": "EV-e7b0000000000002",
-   "evidenceVersion": "e7v0000000000002",
+   "evidenceVersion": "e7v0000000000012",
    "kind": "business",
    "sourceId": "SRC-bizcard",
    "field": "存量用户情况",
@@ -639,6 +643,10 @@
    "bizType": "业务观察",
    "strength": "partial",
    "basis": "顾问周会反馈",
+   "countries": [
+    "uk"
+   ],
+   "relation": "续费",
    "ambiguous": false,
    "source": {
     "ref": "2026-12·存量用户情况·B-8d2e3f4a",
@@ -867,7 +875,11 @@
     "id": "B-7c1d2e3f",
     "text": "11 月英国新签咨询 46 条，其中 19 条明确说想等 1 月 Final 考完再决定报不报",
     "type": "事实记录",
-    "basis": "咨询台账 2026-11"
+    "basis": "咨询台账 2026-11",
+    "countries": [
+     "uk"
+    ],
+    "relation": "新签"
    }
   ],
   "存量用户情况": [
@@ -875,7 +887,11 @@
     "id": "B-8d2e3f4a",
     "text": "英国在读老学员多数 1 月考完，顾问反馈他们还没想好下学期要不要继续、下学期课表未定",
     "type": "业务观察",
-    "basis": "顾问周会反馈"
+    "basis": "顾问周会反馈",
+    "countries": [
+     "uk"
+    ],
+    "relation": "续费"
    }
   ]
  },

@@ -26,8 +26,6 @@ const BIZ_CAP = { 事实记录: 'strong', 业务观察: 'partial', 管理判断:
 const RANK = { none: 0, weak: 1, partial: 2, strong: 3 };
 const SELF_CHECK = ['事实与来源核验', '地区与人群覆盖', '任务与需求推导', '购买障碍论证', '机会排序合理性', '促销匹配及适用性（批 2 起）', '章节一致性与反例检查', '跨部门发布完整性'];
 const KNOWN_COUNTRIES = ['us', 'uk', 'hk', 'au', 'ca', 'sg', 'my', 'nz', 'mo', 'ie'];
-// 业务证据原文里的国家名（推适用范围用）
-const COUNTRY_NAMES = { uk: /英国|英格兰|苏格兰|威尔士|(?<![A-Za-z])UK(?![A-Za-z])/, us: /美国|(?<![A-Za-z])USA?(?![A-Za-z])/, hk: /香港/, au: /澳洲|澳大利亚/, ca: /加拿大/, sg: /新加坡/, my: /马来西亚/, nz: /新西兰/, mo: /澳门/, ie: /爱尔兰/ };
 const SOURCE_IDS = ['SRC-timeline', 'SRC-official', 'SRC-ruling', 'SRC-bizcard', 'SRC-playbook', 'SRC-voice', 'SRC-crm', 'SRC-service'];
 const ONLY_NEW = ['BR-M1', 'BR-O1'], ONLY_RENEW = ['BR-R1', 'BR-R2', 'BR-R3', 'BR-R4', 'BR-R5'];
 const ALL_BARRIERS = ['BR-M1', 'BR-M2', 'BR-M3', 'BR-M4', 'BR-M5', 'BR-C1', 'BR-C2', 'BR-C3', 'BR-C4', 'BR-O1', 'BR-F1', ...ONLY_RENEW];
@@ -37,7 +35,7 @@ export function skillVersion() {
   return (readFileSync(join(here, '..', 'SKILL.md'), 'utf8').match(/^\s*version:\s*"([^"]+)"/m) || [])[1] ?? 'unknown';
 }
 
-/** @returns {{ document, submitArgs, errors: string[], warnings: string[] }} */
+/** @returns {{ document, submitArgs, errors: string[], warnings: string[], scopeGaps: string[] }} */
 export function assemble(facts, draft, { version = skillVersion(), prevFacts = null } = {}) {
   const errors = [], warnings = [];
   const err = (at, m) => errors.push(`${at}：${m}`), warn = (at, m) => warnings.push(`${at}：${m}`);
@@ -48,26 +46,25 @@ export function assemble(facts, draft, { version = skillVersion(), prevFacts = n
   const hasField = k => (card[k] || []).length > 0;
   // 用户决策行为证据（02 §2.3）：背景卡的事实记录、业务观察，或 Voice。管理判断只是待检验的假设，学校日历只是情境依据，都不算。
   const isBehavioral = id => { const e = ev.get(id); return e?.kind === 'voice' || (e?.kind === 'business' && ['事实记录', '业务观察'].includes(e.bizType)); };
-  const cap = id => { const e = ev.get(id); return !e ? 'none' : e.kind === 'business' ? BIZ_CAP[e.bizType] ?? 'weak' : STRENGTH_CAP[e.verification] ?? 'weak'; };
-  // 业务证据的适用范围（GPT 1.1.0 定向验收 P1-01）：底稿里业务 Evidence 只有原文，没有结构化的国家、人群字段，所以从原文推，不让研判稿自己声明。
-  // 国家：原文里的国家名，或时间线里出现过的学校名。人群：「存量用户情况」一栏，或写到老学员 / 在读 / 续费 → 续费；写到新签 / 咨询 / 报名 → 新签；都写到或都没写 → 不限。
-  // 推不出国家就是范围不明：不能把购买判断、学业需求、痛点提到 weak 以上，也不能撑 observed 痛点或实际商业关系。
-  const schoolCountry = new Map(facts.evidence.filter(e => e.kind === 'timeline' && e.school && e.country).map(e => [e.school, e.country]));
-  const scopeOf = e => {
-    const t = String(e.text ?? e.source?.raw ?? '');
-    const countries = new Set(Object.keys(COUNTRY_NAMES).filter(c => COUNTRY_NAMES[c].test(t)));
-    for (const [school, c] of schoolCountry) if (school.length >= 2 && t.includes(school)) countries.add(c);
-    const renew = /老学员|在读学员|存量|续费|续报|续课/.test(t), fresh = /新签|新生|咨询|报名/.test(t);
-    return { countries, relation: e.field === '存量用户情况' ? '续费' : renew && !fresh ? '续费' : fresh && !renew ? '新签' : null };
+  // 单条证据的强度上限；Voice 按自带的 strength，没有时按 partial（和 niuma-home 服务端 behaviorRank 一致）。
+  const cap = id => { const e = ev.get(id); return !e ? 'none' : e.kind === 'voice' ? (RANK[e.strength] ? e.strength : 'partial') : e.kind === 'business' ? BIZ_CAP[e.bizType] ?? 'weak' : STRENGTH_CAP[e.verification] ?? 'weak'; };
+  // 业务证据的适用范围（#78，判法照搬 niuma-home 服务端 behaviorRank，07 bizcard-v1.1）：只读背景卡条目上的结构化字段 countries、relation，不从原文推。
+  // 国家：条目 countries 与情境国家至少一个相同。人群：「通用」条目对谁都算；「新签」「续费」只撑同一人群；本处是「通用」时只接受「通用」条目。
+  // 没填（countries 为空或 relation 为空）按「范围不明」处理，和对不上一样：不能把购买判断、学业需求、痛点提到 weak 以上，也不能撑 observed 痛点或实际商业关系。
+  // 本处人群：障碍、购买准备度看 Claim 的 targetRelation（服务端同款）；实际商业关系看它自己的 value。
+  // 学业需求、痛点看情境的 targetRelation，但只拦人群相反的（常浩 2026-11-09 定）：「通用」情境包含新签和续费两类学生，新签、续费条目都能用；
+  // 新签情境不能用续费条目，反之亦然。这几处服务端不查，是 skill 自己的生成质量要求。
+  const scopeMisfit = (e, scenario, relation, { withinGeneral = false } = {}) => {
+    const countries = e.countries || [], here = scenario?.countries || [], lacks = [];
+    if (!countries.length) lacks.push('没填适用国家');
+    else if (!countries.some(c => here.includes(c))) lacks.push(`适用国家 ${countries.join('、')}，本处 ${here.join('、') || '无情境'}`);
+    if (!e.relation) lacks.push('没填适用人群');
+    else if (e.relation !== '通用' && e.relation !== relation && !(withinGeneral && relation === '通用')) lacks.push(`适用人群 ${e.relation}，本处 ${relation || '未写'}`);
+    return lacks.join('，');
   };
-  // relation 为 新签 / 续费 时，人群推得出的证据须同一人群；通用的 Claim 只接受不限人群的证据。
-  const applies = (id, scenario, relation = null) => {
-    const e = ev.get(id); if (e?.kind !== 'business') return true;
-    const sc = scopeOf(e);
-    return (scenario?.countries || []).some(c => sc.countries.has(c)) && (!relation || !sc.relation || sc.relation === relation);
-  };
-  const misfitText = (ids, scenario, relation) => ids.map(id => { const sc = scopeOf(ev.get(id));
-    return `${id}（原文推出：${sc.countries.size ? [...sc.countries].join('、') : '看不出国家'}${sc.relation ? `、${sc.relation}` : ''}；本处：${(scenario?.countries || []).join('、') || '无情境'}${relation ? `、${relation}` : ''}）`; }).join('；');
+  const applies = (id, scenario, relation, opts) => { const e = ev.get(id); return e?.kind !== 'business' || !scopeMisfit(e, scenario, relation, opts); };
+  const misfitText = (ids, scenario, relation, opts) => ids.map(id => `${id}（${scopeMisfit(ev.get(id), scenario, relation, opts)}）`).join('；');
+  const NEED = { withinGeneral: true };
 
   // 研判稿绑定底稿（I-06）：draft.basedOnFingerprint 是研判时底稿的 inputFingerprint。和当前底稿不同，就必须给出那份旧底稿逐条比对；
   // 研判稿引用的 Evidence 版本变了或不见了，对应对象须重新研判，不能静默换成新版本。
@@ -176,7 +173,7 @@ export function assemble(facts, draft, { version = skillVersion(), prevFacts = n
     if (obs.value && obs.value !== 'unknown') {
       const biz = (obs.evidenceRefs || []).filter(id => ev.get(id)?.kind === 'business');
       if (!biz.length) err(at, '实际商业关系须有 business 类 Evidence（I-05）');
-      else if (!biz.some(id => applies(id, s, obs.value))) err(at, `实际商业关系引用的业务证据适用范围对不上：${misfitText(biz, s, obs.value)}`);
+      else if (!biz.some(id => applies(id, s, obs.value))) err(at, `实际商业关系引用的业务证据适用范围没填或对不上：${misfitText(biz, s, obs.value)}`);
     }
     if (s.targetRelation === '续费' && !hasField('存量用户情况') && obs.value !== 'unknown') err(at, '没有存量用户情况时，续费情境的 observedRelation 须为 unknown（07 §3）');
   }
@@ -194,16 +191,16 @@ export function assemble(facts, draft, { version = skillVersion(), prevFacts = n
     const sc = scenarios.find(s => s.id === c.scenario);
     const bizRefs = (c.evidenceRefs || []).filter(id => ev.get(id)?.kind === 'business');
     if (['academic_need', 'pain'].includes(c.claimType) && ['known', 'inferred'].includes(c.status) && c.evidenceStrength !== 'weak'
-      && !(c.evidenceRefs || []).some(id => ev.get(id)?.kind === 'voice' || (ev.get(id)?.kind === 'business' && applies(id, sc)))) {
-      if (bizRefs.length) err(at, `${c.claimType} 引用的业务证据适用范围对不上，不能提到 weak 以上：${misfitText(bizRefs, sc)}`);
+      && !(c.evidenceRefs || []).some(id => ev.get(id)?.kind === 'voice' || (ev.get(id)?.kind === 'business' && applies(id, sc, sc?.targetRelation, NEED)))) {
+      if (bizRefs.length) err(at, `${c.claimType} 引用的业务证据适用范围没填或对不上，不能提到 weak 以上：${misfitText(bizRefs, sc, sc?.targetRelation, NEED)}`);
       else err(at, `${c.claimType} 只有时间线证据时最高 inferred + weak`);
     }
     if (c.claimType === 'pain') {
       if (!['typical', 'observed'].includes(c.painKind)) err(at, 'pain 须写 painKind');
       const obsRefs = bizRefs.filter(id => ev.get(id).field === '用户观察');
       if (c.painKind === 'observed' && !hasField('用户观察')) err(at, '没有用户观察时痛点只能是 typical（07 §3）');
-      else if (c.painKind === 'observed' && !(c.evidenceRefs || []).some(id => ev.get(id)?.kind === 'voice' || obsRefs.includes(id) && applies(id, sc))) {
-        if (obsRefs.length) err(at, `observed 痛点引用的用户观察适用范围对不上，只能 typical：${misfitText(obsRefs, sc)}`);
+      else if (c.painKind === 'observed' && !(c.evidenceRefs || []).some(id => ev.get(id)?.kind === 'voice' || obsRefs.includes(id) && applies(id, sc, sc?.targetRelation, NEED))) {
+        if (obsRefs.length) err(at, `observed 痛点引用的用户观察适用范围没填或对不上，只能 typical：${misfitText(obsRefs, sc, sc?.targetRelation, NEED)}`);
         else err(at, 'observed 痛点须引用对应的用户观察条目（或 Voice），否则只能 typical');
       }
     }
@@ -222,7 +219,7 @@ export function assemble(facts, draft, { version = skillVersion(), prevFacts = n
       const behavior = usable.reduce((m, id) => Math.max(m, RANK[cap(id)]), 0);
       const need = c.status === 'known' || c.evidenceStrength === 'strong' ? 3 : c.evidenceStrength === 'partial' ? 2 : 1;
       if (misfit.length && behavior < need && !(c.status === 'inferred' && c.evidenceStrength === 'weak'))
-        err(at, `引用的业务证据适用范围对不上，不能撑这条${c.claimType === 'barrier' ? '障碍' : '购买准备度'}（范围不明或不符的证据最高 inferred + weak）：${misfitText(misfit, sc, c.targetRelation)}`);
+        err(at, `引用的业务证据适用范围没填或对不上，不能撑这条${c.claimType === 'barrier' ? '障碍' : '购买准备度'}（没填或对不上的证据最高 inferred + weak）：${misfitText(misfit, sc, c.targetRelation)}`);
       else if (!behavior) {
         if (c.claimType === 'barrier' && ['BR-M2', 'BR-M5'].includes(c.barrierCode)) err(at, `${c.barrierCode} 没有用户决策行为证据时须为 unknown（02 §2.3）`);
         else if (!(c.status === 'inferred' && c.evidenceStrength === 'weak')) err(at, `没有用户决策行为证据（事实记录、业务观察、Voice）时，${c.claimType === 'barrier' ? '障碍' : '购买准备度'}最高 inferred + weak；校历和管理判断都不算（02 §2.3）`);
@@ -248,6 +245,19 @@ export function assemble(facts, draft, { version = skillVersion(), prevFacts = n
     for (const rel of s.targetRelation === '通用' ? ['新签', '续费'] : [s.targetRelation])
       if (!mine.some(c => c.claimType === 'readiness' && c.targetRelation === rel)) err(s.id, `缺少${rel}的 readiness Claim（判断不了就写 unknown）`);
   }
+
+  // 缺范围的业务证据（#78）：研判稿引用了没填 countries / relation 的事实记录、业务观察，提示常浩补哪几条、补了能提到什么强度，并记进 research.notes。
+  // 管理判断补了范围也提不上去，不提示。
+  const LIFT = { 事实记录: '购买判断最高 known + strong', 业务观察: '购买判断最高 inferred + partial' };
+  const citedBy = new Map();
+  const cite = (owner, ids) => (ids || []).forEach(id => { const e = ev.get(id);
+    if (e?.kind === 'business' && LIFT[e.bizType] && !(e.countries?.length && e.relation)) citedBy.set(id, new Set([...(citedBy.get(id) || []), owner])); });
+  for (const s of scenarios) { cite(s.id, s.evidenceRefs); cite(s.id, s.observedRelation?.evidenceRefs); }
+  for (const c of claims.filter(x => x.origin === 'skill')) cite(c.id, c.evidenceRefs);
+  const scopeGaps = [...citedBy].map(([id, by]) => { const e = ev.get(id);
+    const miss = [!e.countries?.length && '适用国家', !e.relation && '适用人群'].filter(Boolean).join('、');
+    return `${id}（${e.field ?? '背景卡'}·${e.bizType}）没填${miss}，现在只能当范围不明的线索；在策略页背景卡补上、和引用处对得上后，${LIFT[e.bizType]}。引用处：${[...by].join('、')}`; });
+  for (const g of scopeGaps) warn('背景卡待补范围', g);
 
   // 08 §3 自检记录：八项逐条写结论；待确认 / 失败的写位置、问题类别、修复动作。批 1 没有 review 接口，转成文字存进 research.notes。
   const selfCheck = draft.research?.selfCheck || [];
@@ -275,12 +285,12 @@ export function assemble(facts, draft, { version = skillVersion(), prevFacts = n
     producedBy: { declared: { executor: draft.declared?.executor ?? 'unknown', model: draft.declared?.model ?? 'unknown', skillVersion: version } },
     brief: { judgement: draft.judgement, common: brief.common || [], diff: brief.diff || [], external: brief.external || [] },
     regions, scenarios, claims, opportunities: [], strategies: [],
-    research: { rejected: draft.research?.rejected || [], assumptions: draft.research?.assumptions || [], notes: [...(draft.research?.notes || []), ...selfCheckNotes] },
+    research: { rejected: draft.research?.rejected || [], assumptions: draft.research?.assumptions || [], notes: [...(draft.research?.notes || []), ...selfCheckNotes, ...scopeGaps.map(g => `背景卡待补范围｜${g}`)] },
   };
   const hash = createHash('sha256').update(JSON.stringify(document)).digest('hex').slice(0, 12);
   const idempotencyKey = `mus-${month}-${facts.inputFingerprint}-${hash}`;
   const submitArgs = { month, document, idempotencyKey, inputFingerprint: facts.inputFingerprint, baseRevision: facts.baseRevision ?? null, declared: document.producedBy.declared };
-  return { document, submitArgs, errors, warnings };
+  return { document, submitArgs, errors, warnings, scopeGaps };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

@@ -148,13 +148,17 @@ test('换新底稿重组装：依据版本变化或消失时拦截，不静默�
 });
 
 // —— GPT 验收（2026-11-08）P1-01～04、P2-01 的反例与正例 ——
+// 业务证据的适用范围只看背景卡条目上的结构化字段 countries、relation（#78，和 niuma-home 服务端同一判法）；原文不参与判断。
 const BIZ = [
-  { evidenceId: 'EV-obs', evidenceVersion: 'o1', kind: 'business', field: '用户观察', bizType: '业务观察', text: '英国学生 11 月下旬咨询集中在 Final 复习规划，多数问能不能只约考前几次课', ambiguous: false },
-  { evidenceId: 'EV-fact', evidenceVersion: 'f1', kind: 'business', field: '用户观察', bizType: '事实记录', text: '11 月英国新签咨询 46 条，其中 19 条明确说想等 1 月 Final 考完再决定报不报', ambiguous: false },
-  { evidenceId: 'EV-mgmt', evidenceVersion: 'g1', kind: 'business', field: '负责人特别判断', bizType: '管理判断', text: '我觉得英国学生今年对价格更敏感', ambiguous: false },
-  { evidenceId: 'EV-nowhere', evidenceVersion: 'n1', kind: 'business', field: '用户观察', bizType: '事实记录', text: '11 月咨询 46 条，其中 19 条明确说想等考完再决定报不报', ambiguous: false },
-  { evidenceId: 'EV-school', evidenceVersion: 's1', kind: 'business', field: '用户观察', bizType: '业务观察', text: '爱丁堡大学的学生多数问能不能只约考前几次课', ambiguous: false },
-  { evidenceId: 'EV-renew', evidenceVersion: 'r1', kind: 'business', field: '存量用户情况', bizType: '业务观察', text: '英国在读老学员多数 1 月考完，还没想好下学期要不要继续', ambiguous: false },
+  { evidenceId: 'EV-obs', evidenceVersion: 'o1', kind: 'business', field: '用户观察', bizType: '业务观察', countries: ['uk'], relation: '新签', text: '英国学生 11 月下旬咨询集中在 Final 复习规划，多数问能不能只约考前几次课', ambiguous: false },
+  { evidenceId: 'EV-fact', evidenceVersion: 'f1', kind: 'business', field: '用户观察', bizType: '事实记录', countries: ['uk'], relation: '新签', text: '11 月英国新签咨询 46 条，其中 19 条明确说想等 1 月 Final 考完再决定报不报', ambiguous: false },
+  { evidenceId: 'EV-mgmt', evidenceVersion: 'g1', kind: 'business', field: '负责人特别判断', bizType: '管理判断', countries: ['uk'], relation: '通用', text: '我觉得英国学生今年对价格更敏感', ambiguous: false },
+  // 原文写明了英国、新签，但没填字段：仍是范围不明
+  { evidenceId: 'EV-nowhere', evidenceVersion: 'n1', kind: 'business', field: '用户观察', bizType: '事实记录', text: '11 月英国新签咨询 46 条，其中 19 条明确说想等考完再决定报不报', ambiguous: false },
+  { evidenceId: 'EV-school', evidenceVersion: 's1', kind: 'business', field: '用户观察', bizType: '业务观察', countries: ['uk'], relation: '通用', text: '爱丁堡大学的学生多数问能不能只约考前几次课', ambiguous: false },
+  { evidenceId: 'EV-renew', evidenceVersion: 'r1', kind: 'business', field: '存量用户情况', bizType: '业务观察', countries: ['uk'], relation: '续费', text: '英国在读老学员多数 1 月考完，还没想好下学期要不要继续', ambiguous: false },
+  { evidenceId: 'EV-all', evidenceVersion: 'a1', kind: 'business', field: '用户观察', bizType: '事实记录', countries: ['hk', 'uk'], relation: '通用', text: '11 月咨询台账：考前冲刺类咨询 52 条', ambiguous: false },
+  { evidenceId: 'EV-half', evidenceVersion: 'h1', kind: 'business', field: '用户观察', bizType: '事实记录', countries: ['uk'], text: '11 月英国咨询 30 条', ambiguous: false },
 ];
 const bizFacts = () => { const f = facts({ bizcard: { 用户观察: [{ id: 'B-00000001' }, { id: 'B-00000002' }], 负责人特别判断: [{ id: 'B-00000003' }], 存量用户情况: [{ id: 'B-00000004' }] } }); f.evidence = [...f.evidence, ...BIZ]; return f; };
 // 把唯一的情境改成美国（GPT 1.1.0 定向验收的跨地区误用测试用）
@@ -178,7 +182,14 @@ test('E7 校历加无关管理判断不能把障碍提上去；管理判断单�
 test('E8 没有对应用户观察不能标 observed；引用了就可以', () => {
   assert.ok(hasError(assemble(bizFacts(), withClaim(5, { painKind: 'observed' })), '须引用对应的用户观察'));
   assert.ok(hasError(assemble(bizFacts(), withClaim(5, { painKind: 'observed', evidenceRefs: ['EV-mgmt'] })), '须引用对应的用户观察'));
+  assert.deepEqual(assemble(bizFacts(), withClaim(5, { painKind: 'observed', evidenceRefs: ['EV-school'], evidenceStrength: 'partial' })).errors, []);
+  // 学业需求、痛点只拦人群相反的（常浩 2026-11-09 定）：「通用」情境可以用只适用新签的用户观察；续费情境不行
   assert.deepEqual(assemble(bizFacts(), withClaim(5, { painKind: 'observed', evidenceRefs: ['EV-obs'], evidenceStrength: 'partial' })).errors, []);
+  const renewScn = withClaim(5, { painKind: 'observed', evidenceRefs: ['EV-obs'], evidenceStrength: 'partial' }); renewScn.scenarios[0].targetRelation = '续费';
+  assert.ok(hasError(assemble(bizFacts(), renewScn), '适用人群 新签，本处 续费'));
+  const renewNeed = withClaim(4, { evidenceStrength: 'partial', evidenceRefs: ['EV-src', 'EV-fact'] }); renewNeed.scenarios[0].targetRelation = '续费';
+  assert.ok(hasError(assemble(bizFacts(), renewNeed), 'academic_need 引用的业务证据适用范围没填或对不上'));
+  assert.deepEqual(assemble(bizFacts(), withClaim(4, { evidenceStrength: 'partial', evidenceRefs: ['EV-src', 'EV-fact'] })).errors, []);
 });
 
 test('E9 研判稿绑定底稿：指纹变了又没给研判时底稿就拦截，不静默换版本', () => {
@@ -227,7 +238,8 @@ test('国家代码：须在归一化表或底稿里，并属于情境所在地�
 
 test('学业需求、痛点只有时间线证据时最高 weak；有业务观察可以到 partial', () => {
   assert.ok(hasError(assemble(facts(), withClaim(4, { evidenceStrength: 'partial' })), '最高 inferred + weak'));
-  assert.deepEqual(assemble(bizFacts(), withClaim(4, { evidenceStrength: 'partial', evidenceRefs: ['EV-src', 'EV-obs'] })).errors, []);
+  assert.deepEqual(assemble(bizFacts(), withClaim(4, { evidenceStrength: 'partial', evidenceRefs: ['EV-src', 'EV-school'] })).errors, []);
+  assert.ok(hasError(assemble(bizFacts(), withClaim(4, { evidenceStrength: 'partial', evidenceRefs: ['EV-src', 'EV-nowhere'] })), '没填适用国家'));
 });
 
 test('自检「事实与来源核验」须逐个有情境的地区写明核过的例外（GPT P1-05，盲测 E6 第 2 轮）', () => {
@@ -250,19 +262,72 @@ test('P1-01 业务证据的适用范围：国家要对得上情境，人群要�
   // 测试 B：英国的用户观察不能撑美国的 observed 痛点
   const b = assemble(bizFacts(), toUS(withClaim(5, { text: '美国学生普遍反映辅导时间冲突', painKind: 'observed', evidenceRefs: ['EV-obs'], evidenceStrength: 'partial' })));
   assert.ok(hasError(b, '适用范围'), b.errors.join('\n'));
-  // 原文看不出国家：范围不明，购买判断最高 inferred + weak，也不能撑 observed
+  // 没填范围：范围不明，购买判断最高 inferred + weak，也不能撑 observed
   assert.ok(hasError(assemble(bizFacts(), withClaim(7, { ...newSign, level: '中', status: 'inferred', evidenceStrength: 'partial', evidenceRefs: ['EV-nowhere'] })), '适用范围'));
   assert.ok(hasError(assemble(bizFacts(), withClaim(5, { painKind: 'observed', evidenceRefs: ['EV-nowhere'], evidenceStrength: 'partial' })), '适用范围'));
-  assert.deepEqual(assemble(bizFacts(), withClaim(7, { ...newSign, level: '中', status: 'inferred', evidenceStrength: 'weak', evidenceRefs: ['EV-nowhere'], limitations: '原文没写国家' })).errors, []);
+  assert.deepEqual(assemble(bizFacts(), withClaim(7, { ...newSign, level: '中', status: 'inferred', evidenceStrength: 'weak', evidenceRefs: ['EV-nowhere'], limitations: '背景卡条目没填适用范围' })).errors, []);
   // 人群：存量用户情况只适用续费，不能撑新签
   assert.ok(hasError(assemble(bizFacts(), withClaim(7, { ...newSign, level: '中', status: 'inferred', evidenceStrength: 'partial', evidenceRefs: ['EV-renew'] })), '适用范围'));
   assert.deepEqual(assemble(bizFacts(), withClaim(2, { status: 'inferred', evidenceStrength: 'partial', evidenceRefs: ['EV-renew'], gap: undefined, route: undefined, limitations: '一条顾问观察', rule: '证据最强' })).errors, []);
   // 情境的实际商业关系也要对得上
   const obs = withClaim(0, {}); obs.scenarios[0].observedRelation = { value: '新签', evidenceRefs: ['EV-renew'] };
   assert.ok(hasError(assemble(bizFacts(), obs), '适用范围'));
-  // 正例：英国证据用于英国情境；原文写的是学校名也算
+  // 正例：填了范围的英国证据用于英国情境
   assert.deepEqual(assemble(bizFacts(), withClaim(7, { ...newSign, status: 'known', evidenceStrength: 'strong', evidenceRefs: ['EV-fact'] })).errors, []);
   assert.deepEqual(assemble(bizFacts(), withClaim(5, { painKind: 'observed', evidenceRefs: ['EV-school'], evidenceStrength: 'partial' })).errors, []);
+});
+
+test('#78 适用范围只读结构化字段：填了且对得上可以撑 partial / known，没填或对不上最高 inferred + weak', () => {
+  const ready = (refs, change = {}) => withClaim(7, { ...newSign, status: 'known', evidenceStrength: 'strong', evidenceRefs: refs, ...change });
+  const partial = { level: '中', status: 'inferred', evidenceStrength: 'partial', limitations: '一条顾问观察' };
+  // 填了且对得上：事实记录撑 known，业务观察撑 partial
+  assert.deepEqual(assemble(bizFacts(), ready(['EV-fact'])).errors, []);
+  assert.deepEqual(assemble(bizFacts(), ready(['EV-obs'], partial)).errors, []);
+  // 没填：原文写了英国、新签也不算；只填国家没填人群同样范围不明
+  const none = assemble(bizFacts(), ready(['EV-nowhere']));
+  assert.ok(hasError(none, '没填适用国家，没填适用人群'), none.errors.join('\n'));
+  assert.ok(hasError(assemble(bizFacts(), ready(['EV-half'], partial)), '没填适用人群'));
+  assert.deepEqual(assemble(bizFacts(), ready(['EV-nowhere'], { ...partial, evidenceStrength: 'weak' })).errors, []);
+  // 对不上：国家没有交集；人群不同
+  assert.ok(hasError(assemble(bizFacts(), toUS(ready(['EV-fact']))), '适用国家 uk，本处 us'));
+  assert.ok(hasError(assemble(bizFacts(), ready(['EV-renew'], partial)), '适用人群 续费，本处 新签'));
+  // 国家有一个相同就算对得上
+  assert.deepEqual(assemble(bizFacts(), ready(['EV-all'])).errors, []);
+  // M2 没有适用的行为证据时仍须 unknown
+  assert.ok(hasError(assemble(bizFacts(), withClaim(1, { barrierCode: 'BR-M2', status: 'inferred', evidenceStrength: 'weak', evidenceRefs: ['EV-nowhere'], limitations: 'x' })), '须为 unknown'));
+});
+
+test('#78 人群「通用」的三种情况', () => {
+  // 1. 「通用」条目撑新签的判断
+  assert.deepEqual(assemble(bizFacts(), withClaim(7, { ...newSign, status: 'known', evidenceStrength: 'strong', evidenceRefs: ['EV-all'] })).errors, []);
+  // 2. 「通用」条目撑续费的判断
+  assert.deepEqual(assemble(bizFacts(), withClaim(2, { status: 'known', evidenceStrength: 'strong', evidenceRefs: ['EV-all'], gap: undefined, route: undefined, rule: '证据最强' })).errors, []);
+  // 3. Claim 本身是「通用」：只接受「通用」条目，新签、续费条目都不行
+  const general = refs => withClaim(1, { targetRelation: '通用', barrierCode: 'BR-C1', status: 'inferred', evidenceStrength: 'partial', evidenceRefs: refs, limitations: 'x', rule: '证据最强' });
+  assert.ok(hasError(assemble(bizFacts(), general(['EV-obs'])), '适用人群 新签，本处 通用'));
+  assert.ok(hasError(assemble(bizFacts(), general(['EV-renew'])), '适用人群 续费，本处 通用'));
+  assert.deepEqual(assemble(bizFacts(), general(['EV-school'])).errors, []);
+});
+
+test('#78 缺范围提示：引用了没填范围的事实记录、业务观察，写明补哪条、补了能到什么强度，并记进 research.notes', () => {
+  const r = assemble(bizFacts(), withClaim(7, { ...newSign, level: '中', status: 'inferred', evidenceStrength: 'weak', evidenceRefs: ['EV-nowhere', 'EV-half'], limitations: '背景卡条目没填适用范围' }));
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.scopeGaps.length, 2);
+  assert.ok(r.warnings.some(w => w.includes('EV-nowhere') && w.includes('没填适用国家、适用人群') && w.includes('known + strong') && w.includes('CLM-2026-12-008')), r.warnings.join('\n'));
+  assert.ok(r.warnings.some(w => w.includes('EV-half') && w.includes('没填适用人群')));
+  assert.ok(r.document.research.notes.some(n => n.startsWith('背景卡待补范围｜EV-nowhere')));
+  // 填全了不提示；管理判断补了范围也提不上去，不提示
+  const f = bizFacts(); f.evidence = f.evidence.map(e => e.evidenceId === 'EV-mgmt' ? { ...e, countries: undefined, relation: undefined } : e);
+  const clean = assemble(f, withClaim(1, { barrierCode: 'BR-C1', status: 'inferred', evidenceStrength: 'weak', evidenceRefs: ['EV-mgmt', 'EV-obs'], limitations: 'x' }));
+  assert.deepEqual(clean.errors, []);
+  assert.deepEqual(clean.scopeGaps, []);
+});
+
+test('#78 Voice 按自带强度算，没有时按 partial（和服务端一致）', () => {
+  const f = bizFacts(); f.evidence.push({ evidenceId: 'EV-voice', evidenceVersion: 'vo1', kind: 'voice', ambiguous: false }, { evidenceId: 'EV-voice-s', evidenceVersion: 'vo2', kind: 'voice', strength: 'strong', ambiguous: false });
+  assert.deepEqual(assemble(f, withClaim(7, { ...newSign, level: '中', status: 'inferred', evidenceStrength: 'partial', evidenceRefs: ['EV-voice'], limitations: '一条原话' })).errors, []);
+  assert.ok(hasError(assemble(f, withClaim(7, { ...newSign, status: 'known', evidenceStrength: 'strong', evidenceRefs: ['EV-voice'] })), '须有 strong 的行为证据'));
+  assert.deepEqual(assemble(f, withClaim(7, { ...newSign, status: 'known', evidenceStrength: 'strong', evidenceRefs: ['EV-voice-s'] })).errors, []);
 });
 
 test('P1-03 输入不是合法 JSON：先清掉旧产出，写错误文件，非零退出（GPT 1.1.0 定向验收）', () => {
