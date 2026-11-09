@@ -183,8 +183,13 @@ test('E8 没有对应用户观察不能标 observed；引用了就可以', () =>
   assert.ok(hasError(assemble(bizFacts(), withClaim(5, { painKind: 'observed' })), '须引用对应的用户观察'));
   assert.ok(hasError(assemble(bizFacts(), withClaim(5, { painKind: 'observed', evidenceRefs: ['EV-mgmt'] })), '须引用对应的用户观察'));
   assert.deepEqual(assemble(bizFacts(), withClaim(5, { painKind: 'observed', evidenceRefs: ['EV-school'], evidenceStrength: 'partial' })).errors, []);
-  // 情境是「通用」，只适用新签的用户观察撑不了 observed
-  assert.ok(hasError(assemble(bizFacts(), withClaim(5, { painKind: 'observed', evidenceRefs: ['EV-obs'], evidenceStrength: 'partial' })), '适用人群 新签，本处 通用'));
+  // 学业需求、痛点只拦人群相反的（常浩 2026-11-09 定）：「通用」情境可以用只适用新签的用户观察；续费情境不行
+  assert.deepEqual(assemble(bizFacts(), withClaim(5, { painKind: 'observed', evidenceRefs: ['EV-obs'], evidenceStrength: 'partial' })).errors, []);
+  const renewScn = withClaim(5, { painKind: 'observed', evidenceRefs: ['EV-obs'], evidenceStrength: 'partial' }); renewScn.scenarios[0].targetRelation = '续费';
+  assert.ok(hasError(assemble(bizFacts(), renewScn), '适用人群 新签，本处 续费'));
+  const renewNeed = withClaim(4, { evidenceStrength: 'partial', evidenceRefs: ['EV-src', 'EV-fact'] }); renewNeed.scenarios[0].targetRelation = '续费';
+  assert.ok(hasError(assemble(bizFacts(), renewNeed), 'academic_need 引用的业务证据适用范围没填或对不上'));
+  assert.deepEqual(assemble(bizFacts(), withClaim(4, { evidenceStrength: 'partial', evidenceRefs: ['EV-src', 'EV-fact'] })).errors, []);
 });
 
 test('E9 研判稿绑定底稿：指纹变了又没给研判时底稿就拦截，不静默换版本', () => {

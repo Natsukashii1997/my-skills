@@ -51,17 +51,20 @@ export function assemble(facts, draft, { version = skillVersion(), prevFacts = n
   // 业务证据的适用范围（#78，判法照搬 niuma-home 服务端 behaviorRank，07 bizcard-v1.1）：只读背景卡条目上的结构化字段 countries、relation，不从原文推。
   // 国家：条目 countries 与情境国家至少一个相同。人群：「通用」条目对谁都算；「新签」「续费」只撑同一人群；本处是「通用」时只接受「通用」条目。
   // 没填（countries 为空或 relation 为空）按「范围不明」处理，和对不上一样：不能把购买判断、学业需求、痛点提到 weak 以上，也不能撑 observed 痛点或实际商业关系。
-  // 本处人群：障碍、购买准备度看 Claim 的 targetRelation；学业需求、痛点看情境的 targetRelation；实际商业关系看它自己的 value。
-  const scopeMisfit = (e, scenario, relation) => {
+  // 本处人群：障碍、购买准备度看 Claim 的 targetRelation（服务端同款）；实际商业关系看它自己的 value。
+  // 学业需求、痛点看情境的 targetRelation，但只拦人群相反的（常浩 2026-11-09 定）：「通用」情境包含新签和续费两类学生，新签、续费条目都能用；
+  // 新签情境不能用续费条目，反之亦然。这几处服务端不查，是 skill 自己的生成质量要求。
+  const scopeMisfit = (e, scenario, relation, { withinGeneral = false } = {}) => {
     const countries = e.countries || [], here = scenario?.countries || [], lacks = [];
     if (!countries.length) lacks.push('没填适用国家');
     else if (!countries.some(c => here.includes(c))) lacks.push(`适用国家 ${countries.join('、')}，本处 ${here.join('、') || '无情境'}`);
     if (!e.relation) lacks.push('没填适用人群');
-    else if (e.relation !== '通用' && e.relation !== relation) lacks.push(`适用人群 ${e.relation}，本处 ${relation || '未写'}`);
+    else if (e.relation !== '通用' && e.relation !== relation && !(withinGeneral && relation === '通用')) lacks.push(`适用人群 ${e.relation}，本处 ${relation || '未写'}`);
     return lacks.join('，');
   };
-  const applies = (id, scenario, relation) => { const e = ev.get(id); return e?.kind !== 'business' || !scopeMisfit(e, scenario, relation); };
-  const misfitText = (ids, scenario, relation) => ids.map(id => `${id}（${scopeMisfit(ev.get(id), scenario, relation)}）`).join('；');
+  const applies = (id, scenario, relation, opts) => { const e = ev.get(id); return e?.kind !== 'business' || !scopeMisfit(e, scenario, relation, opts); };
+  const misfitText = (ids, scenario, relation, opts) => ids.map(id => `${id}（${scopeMisfit(ev.get(id), scenario, relation, opts)}）`).join('；');
+  const NEED = { withinGeneral: true };
 
   // 研判稿绑定底稿（I-06）：draft.basedOnFingerprint 是研判时底稿的 inputFingerprint。和当前底稿不同，就必须给出那份旧底稿逐条比对；
   // 研判稿引用的 Evidence 版本变了或不见了，对应对象须重新研判，不能静默换成新版本。
@@ -188,16 +191,16 @@ export function assemble(facts, draft, { version = skillVersion(), prevFacts = n
     const sc = scenarios.find(s => s.id === c.scenario);
     const bizRefs = (c.evidenceRefs || []).filter(id => ev.get(id)?.kind === 'business');
     if (['academic_need', 'pain'].includes(c.claimType) && ['known', 'inferred'].includes(c.status) && c.evidenceStrength !== 'weak'
-      && !(c.evidenceRefs || []).some(id => ev.get(id)?.kind === 'voice' || (ev.get(id)?.kind === 'business' && applies(id, sc, sc?.targetRelation)))) {
-      if (bizRefs.length) err(at, `${c.claimType} 引用的业务证据适用范围没填或对不上，不能提到 weak 以上：${misfitText(bizRefs, sc, sc?.targetRelation)}`);
+      && !(c.evidenceRefs || []).some(id => ev.get(id)?.kind === 'voice' || (ev.get(id)?.kind === 'business' && applies(id, sc, sc?.targetRelation, NEED)))) {
+      if (bizRefs.length) err(at, `${c.claimType} 引用的业务证据适用范围没填或对不上，不能提到 weak 以上：${misfitText(bizRefs, sc, sc?.targetRelation, NEED)}`);
       else err(at, `${c.claimType} 只有时间线证据时最高 inferred + weak`);
     }
     if (c.claimType === 'pain') {
       if (!['typical', 'observed'].includes(c.painKind)) err(at, 'pain 须写 painKind');
       const obsRefs = bizRefs.filter(id => ev.get(id).field === '用户观察');
       if (c.painKind === 'observed' && !hasField('用户观察')) err(at, '没有用户观察时痛点只能是 typical（07 §3）');
-      else if (c.painKind === 'observed' && !(c.evidenceRefs || []).some(id => ev.get(id)?.kind === 'voice' || obsRefs.includes(id) && applies(id, sc, sc?.targetRelation))) {
-        if (obsRefs.length) err(at, `observed 痛点引用的用户观察适用范围没填或对不上，只能 typical：${misfitText(obsRefs, sc, sc?.targetRelation)}`);
+      else if (c.painKind === 'observed' && !(c.evidenceRefs || []).some(id => ev.get(id)?.kind === 'voice' || obsRefs.includes(id) && applies(id, sc, sc?.targetRelation, NEED))) {
+        if (obsRefs.length) err(at, `observed 痛点引用的用户观察适用范围没填或对不上，只能 typical：${misfitText(obsRefs, sc, sc?.targetRelation, NEED)}`);
         else err(at, 'observed 痛点须引用对应的用户观察条目（或 Voice），否则只能 typical');
       }
     }
