@@ -2,6 +2,17 @@
 
 版本号写在 SKILL.md frontmatter 的 `metadata.version`，和这里最上面一条保持一致。升版本的规则见 `templates/CHANGELOG.md`；规则摘录跟随 niuma-home `docs/策略规则/` 的版本号，规则升版本时先核对 references 再升本 skill。
 
+## 1.2.0 - 2026-11-09
+
+背景卡证据的适用范围改读结构化字段，和 niuma-home 服务端（niuma-home#40，PR #43，规则 07 bizcard-v1.1）口径对齐，对应 my-skills#78。
+
+- 改动：`assemble.mjs` 不再从原文推业务证据的国家和人群，只看 Evidence 上的 `countries`、`relation`；判法照搬服务端 `behaviorRank`（国家有交集；「通用」条目对谁都算，「新签」「续费」只撑同一人群，本处是「通用」时只接受「通用」条目；没填按范围不明，最高 inferred + weak）。障碍、购买准备度看 Claim 的人群；学业需求、痛点、observed 痛点看情境的人群；实际商业关系看它自己的 value。后三处服务端不查，常浩 2026-11-09 定也改读字段，不保留原文推断。
+- 改动：Voice 证据按自带的 `strength` 算，没有时按 partial（和服务端一致）。
+- 新增：研判稿引用了没填范围的事实记录、业务观察时，`assemble.mjs` 提示「背景卡待补范围」（哪一条、缺什么、补了能到什么强度、被哪些对象引用），并写进 `research.notes`；SKILL.md 第 6、8 步写明自检判「待确认」、答复里逐条告诉常浩补什么。
+- 新增：预填背景卡时每条带适用国家、适用人群和理由，说不出就留空写原因（`references/lifecycle-bizcard.md` 第 5 节，附样例）。
+- 改动：references 摘录升到 bizcard-v1.1；schema.md、quality.md 同步「适用」的说法。
+- 新增：单元测试（字段判定、人群「通用」三种情况、缺范围提示、Voice 强度）；evals E2 改测缺范围时的降级与提示，E7 底稿条目填上范围，新增 E8 预填背景卡。
+
 ## 1.1.0 - 2026-11-08
 
 按 GPT 独立深度验收（结论「需修改」，P1-01～05、P2-01/02/04）修订，对应 my-skills#75。GPT 对 1.1.0 的定向验收又指出三处，同版修完：

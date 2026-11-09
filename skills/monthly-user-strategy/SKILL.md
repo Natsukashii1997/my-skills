@@ -2,7 +2,7 @@
 name: monthly-user-strategy
 description: 「月度用户策略」generate 模式：替常浩生成牛马之家某个月的月度用户策略。按 SCOUT-8 阶段 01–05 和 08，经 workdesk 工具 strategy_facts 取事实底稿，定情境、解需求、判购买障碍、定地区优先级，组装成 schema 2.1 月度文档，自检后用 strategy_submit 提交为待确认 submission，再请常浩去工作台页面预览、确认；缺业务背景时按规则降级，提交结果不明时先查 submission，不自动重试。常浩说「生成 2026-12 的用户策略」「跑一下 12 月的月度策略」「出下个月用户策略」「monthly-user-strategy」时使用。不适用：refresh / review / refine 三种模式、写促销方案或打法（批 2）、确认或拒绝 submission（只在页面做）、旧月份迁移、修改策略规则本身、与牛马之家无关的一般策略分析（用 strategy-master）。
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
   governance:
     network: required
     external-writes: required
@@ -45,7 +45,8 @@ metadata:
 ### 第 0 步 · 确认月份与背景卡
 
 - 月份不明确就问一次（推荐：下个月）。
-- 取完底稿（第 1 步）发现业务背景卡整张没填或缺「存量用户情况」「用户观察」，而常浩没说过「直接生成」：问一次，推荐「先在页面补背景卡再生成」，备选「按降级直接生成」。常浩要先补，就按 `references/lifecycle-bizcard.md` 第 5 节起草预填稿交给他，本轮到此为止；他说直接生成或已经说过不填，就按降级继续，不再追问。
+- 取完底稿（第 1 步）发现业务背景卡整张没填或缺「存量用户情况」「用户观察」，而常浩没说过「直接生成」：问一次，推荐「先在页面补背景卡再生成」，备选「按降级直接生成」。常浩要先补，就按 `references/lifecycle-bizcard.md` 第 5 节起草预填稿交给他（每条带适用国家 `countries`、适用人群 `relation` 和理由），本轮到此为止；他说直接生成或已经说过不填，就按降级继续，不再追问。
+- 背景卡填了、但部分条目没填适用范围：不为此单独追问，照常生成；没填范围的条目按「范围不明」处理（见第 4 步），第 8 步答复里列出要补哪几条。
 
 ### 第 1 步 · 事实取证（阶段 01）
 
@@ -64,7 +65,7 @@ metadata:
 - 每个地区 0–4 个情境（通常 1–3 个），按「地区与学校 + 学业阶段 + 关键任务 + 目标人群」分，任务、困难、时间窗相同的合并。研究生节点明显不同时单列。
 - `evidenceRefs` 只从摘要里抄 Evidence ID，至少一个。`schools` 照抄底稿的校名。
 - `academicStage`：底稿事件的 `scope` 写了「仅研究生」等限定，或常浩、背景卡给了研究生的不同节点，才单列 `postgraduate` 情境；没有这类信息时按 `undergraduate` 写，并在 `research.assumptions` 记一句「时间线未标学业阶段，按本科处理」。
-- `observedRelation`：只有引用 business 类 Evidence 时才能写新签 / 续费，否则 `unknown`。
+- `observedRelation`：只有引用 business 类 Evidence、且它的适用范围和本情境对得上（第 4 步）时才能写新签 / 续费，否则 `unknown`。
 - 证据不够形成独立情境的地区：`scenarios` 留空，`emptyReason` 写原因和覆盖情况（学校数、可计算数、活跃数、数据不足数），不编学生群体。
 - 字段见 `references/schema.md` 第 2 节。
 
@@ -74,7 +75,7 @@ metadata:
 
 - `task`：引用的事件是官网核实或人工裁定的（强度上限 strong）才能 `known + strong`；原表日期最高 `inferred + partial`；推测最高 `inferred + weak`。
 - `academic_need`：只有时间线证据时一律 `inferred + weak`（潜在需求，考试存在不等于有辅导需求），用克制写法；有业务观察、事实记录或 Voice 支撑时才到 partial 以上。不能写成已验证需求。
-- `pain`：`painKind=observed` 必须引用对应的「用户观察」条目（或 Voice），否则只能 `typical`，且最高 `inferred + weak`。不把「有考试」写成「学生缺乏复习能力」。
+- `pain`：`painKind=observed` 必须引用对应的「用户观察」条目（适用范围对得上本情境，第 4 步）或 Voice，否则只能 `typical`，且最高 `inferred + weak`。不把「有考试」写成「学生缺乏复习能力」。
 - `need_strength`：`level` 高 / 中 / 低，`rule` 写窗口规则版本（如 `lifecycle-v0.2/Final`）；覆盖率是日历推断，不是付费需求。
 - `text` 不超过 40 字，结论先行，不写编码。
 
@@ -89,7 +90,7 @@ metadata:
 - `unknown` 的 route 只能指向来源登记表里的 ID：`SRC-bizcard` 可补 → `available`；`SRC-voice`、`SRC-crm` 未接入 → `unavailable`。
 - **购买准备度（readiness）和障碍同理**，是购买行为判断：没有用户决策行为证据时写 `unknown`（gap 写缺什么，route 指向 `SRC-bizcard`），最多 `inferred + weak`；有行为证据才往上提。
 - **背景卡条目没写学校时**，只套用到它描述的时间和任务对得上的情境（例：「想等 1 月考完再决定」只对 1 月考试的情境成立，不套到 12 月就考完的学校），在 limitations 写明套用理由；对不上的情境照没有证据处理。
-- **业务证据只用在它说到的国家和人群**：`assemble.mjs` 从原文推适用范围：国家看原文里的国家名或学校名；人群看「存量用户情况」一栏，或原文写到老学员、在读、续费（续费）、新签、咨询、报名（新签）。英国新签的台账不能拿来证明美国新签准备度，也不能撑美国的 observed 痛点。原文看不出国家的条目算范围不明：可以作为 inferred + weak 的线索引用，但不能把购买判断、学业需求、痛点提到 weak 以上，也不能撑 observed；答复里提醒常浩以后在背景卡写清国家。
+- **业务证据只用在背景卡条目填了的适用范围里**（bizcard-v1.1）：只看 Evidence 上的 `countries`（适用国家）和 `relation`（适用人群），**不从原文推**，原文写了「英国」「新签」也不算。判法和服务端一致：国家与本处情境的 `countries` 至少一个相同；人群「通用」的条目对任何人群都算，「新签」「续费」只撑同一人群，本处是「通用」时只接受「通用」条目。本处人群：障碍、购买准备度看 Claim 的 `targetRelation`，学业需求、痛点看情境的 `targetRelation`，实际商业关系看它自己的 `value`。没填（任一字段为空）按「范围不明」处理，和对不上一样：可以作为 `inferred + weak` 的线索引用，但不能把购买判断、学业需求、痛点提到 weak 以上，也不能撑 observed 痛点和实际商业关系。英国新签的台账不能拿来证明美国新签准备度。`assemble.mjs` 按这条拦截，并把引用了却没填范围的事实记录、业务观察列为「背景卡待补范围」。
 - **行为证据只有三种**：背景卡的事实记录（可到 known）、业务观察（最高 inferred + partial）、Voice。学校日历再强（官网核实）也只证明节点存在，不证明购买行为；管理判断是待检验的假设，单独或和校历一起引用都最高 `inferred + weak`。`assemble.mjs` 会按这条拦截。
 - **证据要对得上判定要点**：引用的业务证据必须直接说到这个障碍的判定要点（例如「觉得还来得及」要有推迟、观望、问「晚点再报行不行」这类时间判断的行为），只是间接相关的不能把障碍往上提，照「没有行为证据」处理；`evidenceRefs` 只放真正支撑这条判断的证据，不为凑强度多挂。
 - 学业需求（第 3 步）和购买需求（本步）不混写。
@@ -109,7 +110,8 @@ metadata:
 2. 按 `references/quality.md` 第 1 节逐项自检，结论写进 `research.selfCheck`；逐条对照第 3 节的四个反例。「事实与来源核验」带上 `regionCheck`：每个有情境的地区一句，写核过哪些学校、例外是哪几所、落到了哪句话里（没有例外就写「逐校核过 N 所，无例外」），脚本缺了会拦截。
 3. `node scripts/assemble.mjs facts.json draft.json --out-dir <工作目录>`。
    - 脚本每次先删掉目录里旧的 `document.json`、`submit-args.json`；全部通过才写新的，失败只写 `assemble-errors.txt`。所以目录里有 `submit-args.json`，就一定是最近一次通过的那份。
-   - 退出码 2：按「拦截」逐条改研判稿，重跑，直到通过。「提示」逐条看，能改就改。拦截项包括：每个情境缺四类需求 Claim 之一、缺该人群的 readiness（判断不了写 unknown）、购买判断没有行为证据却超过 inferred + weak、observed 痛点没引用用户观察、业务证据的国家或人群对不上本处情境和 Claim、弱证据主障碍没标「暂定研究重点」、自检缺某个有情境地区的 `regionCheck`。
+   - 退出码 2：按「拦截」逐条改研判稿，重跑，直到通过。「提示」逐条看，能改就改。拦截项包括：每个情境缺四类需求 Claim 之一、缺该人群的 readiness（判断不了写 unknown）、购买判断没有行为证据却超过 inferred + weak、observed 痛点没引用用户观察、业务证据的适用范围（`countries`、`relation`）没填或对不上本处、弱证据主障碍没标「暂定研究重点」、自检缺某个有情境地区的 `regionCheck`。
+   - 提示「背景卡待补范围」：研判稿引用了没填范围的事实记录、业务观察。脚本已把它们写进 `research.notes`；相关判断照「范围不明」写（最高 `inferred + weak`），自检「购买障碍论证」判「待确认」，`fix` 写「待常浩在背景卡补适用范围」。
    - 退出码 1：输入读不了或不是合法 JSON（原因写在 `assemble-errors.txt`），修好文件后重跑；旧的 document.json、submit-args.json 同样已删除。
    - 通过后得到 `document.json`、`submit-args.json` 和 `idempotencyKey`（由月份、输入指纹和内容哈希决定：内容不变，键就不变）。
 4. 组装通过后、提交前，**重取一次底稿**（`strategy_facts` → `facts-check.json`）比 `inputFingerprint`。没变就提交；变了就按下面「底稿变了」处理。
@@ -153,6 +155,7 @@ metadata:
 - 提交结果：submission `id`、状态、`agent`（服务端从凭据认定的）、提交时间、服务端提示。
 - 预览入口：`<工作台地址>/#/user/strategy`（策略 → 用户策略）的待确认区，工作台地址就是 `WORKDESK_URL`（默认 `http://127.0.0.1:5280`）；页面还没有待确认区时，预览接口是 `GET <工作台地址>/api/v3/strategy-v2/submissions/<id>/preview`。**请常浩在页面预览、确认**；skill 不会、也不能替他确认。
 - 内容摘要（只写文档里确实有的内容，说法和文档一致）：一句话判断；底稿里看到的时间线疑点（例如同一格两个日期、冲突未决、跨度异常长的日期段），提醒常浩去时间线页核对；六个地区的优先级（与默认不同的附理由）、情境数；空地区及原因；主要的 unknown 与缺口（尤其是缺背景卡导致的降级）；自检里的「待确认」项。
+- **背景卡待补范围**（组装有这类提示时必写）：逐条写哪一栏、哪一条（原文前十几个字）、缺国家还是人群、建议填什么（按 `references/lifecycle-bizcard.md` 第 5 节的预填规则给建议值和理由）、补了且对得上后最高能到什么强度（事实记录：购买判断可到 known + strong；业务观察：最高 inferred + partial）。指向策略页的业务背景卡；说明补范围会改条目的 Evidence 版本，补完要重新取底稿、重新生成，这次提交的稿子不会自动升级。
 - 工作目录路径（底稿、文档、提交结果都在那里）。
 
 ## 4. 不许做
