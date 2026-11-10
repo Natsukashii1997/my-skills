@@ -40,6 +40,8 @@ const CODES = [
   [/\b(CLM|EV|SCN|REV|SUB)-[A-Za-z0-9-]+/g, '研究对象编号'],
   [/\bBR-[MCOFR]\d\b/g, '障碍编码'],
   [/\b(inferred|unknown|known|partial|not_applicable|evidenceStrength)\b/g, '状态码'],
+  [/\bP\d{4}\b/g, '打法卡卡号'],
+  [/\b(undefined|NaN|null)\b/g, '程序残留'],
 ];
 
 // 不计空白和 Markdown 标记的字数
@@ -144,7 +146,9 @@ export function checkTrace(design, { synthesis, mainSkus = [], planTitles = [] }
   const untraced = mainSkus.filter(s => !products.includes(s));
   if (untraced.length) errors.push(`报告第五章的主推 SKU 在决策追溯表里追不到：${untraced.join('、')}`);
   const promos = trace.rows.map(r => r[col('促销方案')] || '');
-  const lost = planTitles.filter(t => !promos.some(p => p.includes(t)));
+  // 研究假设版的方案名带「（候选待确认）」，追溯表里写不写这个后缀都算对上
+  const bare = t => t.replace(/[（(]候选待确认[）)]\s*$/, '').trim();
+  const lost = planTitles.filter(t => !promos.some(p => p.includes(bare(t))));
   if (lost.length) errors.push(`报告第六章的促销方案在决策追溯表里追不到：${lost.join('、')}`);
   const cards = findTable(design, CARD_HEADER);
   const adopted = new Set((cards?.rows || []).filter(r => /^(采用|附条件采用)/.test(r[7] || '')).map(r => r[0]));

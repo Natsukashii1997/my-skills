@@ -76,15 +76,17 @@ test('P1-01/02 命令行：接口取不到不算失败，能力卡与打法卡�
   writeFileSync(join(pb, 'P0901-老学员续报价.md'), P0901);
   writeFileSync(join(pb, 'README.md'), '# 不是卡');
   writeFileSync(join(dir, 'card.md'), CARD);
-  const out = execFileSync('node', [join(here, '../scripts/product-context.mjs'), '--month', '2026-12', '--out-dir', dir, '--card', join(dir, 'card.md'), '--playbook', pb],
+  // 输出目录不存在时自动建（交付前复核写到 recheck/，2.1.0 模拟试跑发现会 ENOENT）
+  const outDir = join(dir, 'recheck');
+  const out = execFileSync('node', [join(here, '../scripts/product-context.mjs'), '--month', '2026-12', '--out-dir', outDir, '--card', join(dir, 'card.md'), '--playbook', pb],
     { encoding: 'utf8', env: { ...process.env, WORKDESK_URL: 'http://127.0.0.1:9' } });
   assert.match(out, /取不到：promos、skus/);
-  const md = readFileSync(join(dir, 'products.md'), 'utf8');
+  const md = readFileSync(join(outDir, 'products.md'), 'utf8');
   assert.match(md, /促销表读取失败/);
   assert.match(md, /- 明确不提供什么：不保成绩/);
   assert.match(md, /1 张卡/);
   assert.match(md, /\| P0901 \| 老学员续报价 \| 续费 \|/);
-  const json = JSON.parse(readFileSync(join(dir, 'products.json'), 'utf8'));
+  const json = JSON.parse(readFileSync(join(outDir, 'products.json'), 'utf8'));
   assert.equal(json.playbook[0].id, 'P0901');
   assert.equal(json.cardExtras.version, '2026-11-20 常浩填');
 });
@@ -115,4 +117,14 @@ test('评测夹具：E9 / E12 / E13 的输入按规格 8.4 分别够到研究假
   // 夹具都是占位内容，打法库只给索引并要求读原文
   for (const f of ['products-e12.md', 'products-e13.md']) assert.match(md(f), /占位/);
   for (const f of ['products-e9.md', 'products-e12.md', 'products-e13.md']) assert.match(md(f), /47 张卡[\s\S]*\| P0901 \| 老学员续报价 \| 续费 \|/);
+});
+
+test('结束日分旬按学校计数：同一所学校同一旬两段日期只算一所', () => {
+  const f = JSON.parse(readFileSync(join(fixtures, 'facts-e7-with-behavior.json'), 'utf8'));
+  const glasgow = f.evidence.find(e => e.evidenceId === 'EV-207c82edea34c32a');
+  f.evidence.push({ ...glasgow, evidenceId: 'EV-dup0000000000001', dates: { from: '2026-12-15', to: '2026-12-16', precision: 'day' } });
+  const dir = mkdtempSync(join(tmpdir(), 'dg-'));
+  writeFileSync(join(dir, 'facts.json'), JSON.stringify(f));
+  const text = execFileSync('node', [join(here, '../scripts/digest.mjs'), join(dir, 'facts.json')], { encoding: 'utf8' });
+  assert.match(text, /中旬（11–20 日）2 所：格拉斯哥大学 12-18、12-16；布里斯托大学 12-18/);
 });

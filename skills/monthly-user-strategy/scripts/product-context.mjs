@@ -8,7 +8,7 @@
 // 产出：<工作目录>/products.json（原始返回）、products.md（摘要）。
 // 环境变量：WORKDESK_URL（默认 http://127.0.0.1:5280，只允许本机）。
 // 退出码：0 成功（某个来源取不到会写进摘要，不算失败）；1 参数错误。
-import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SKUS } from './report-check.mjs';
@@ -150,6 +150,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     ? readdirSync(playbookDir).filter(f => /^P\d+.*\.md$/.test(f)).sort().map(f => parsePlaybookCard(readFileSync(join(playbookDir, f), 'utf8'), f))
     : null;
   const { text } = summarize({ month, promos, plan, skus, card, cardExtras, playbook, playbookDir, errors });
+  mkdirSync(outDir, { recursive: true });
   writeFileSync(join(outDir, 'products.json'), JSON.stringify({ month, baseMonth: bm, promos, plan: plan && { month: plan.month, line: plan.line, special: plan.special, savedAt: plan.savedAt }, skus, card, cardExtras, playbook, errors }, null, 2) + '\n');
   writeFileSync(join(outDir, 'products.md'), text);
   process.stdout.write(`已写入 ${join(outDir, 'products.md')}${Object.keys(errors).length ? `（取不到：${Object.keys(errors).join('、')}）` : ''}\n`);

@@ -191,6 +191,20 @@ test('P1-04 决策追溯：缺表、空格、编号不存在、主推和方案�
   assert.match(errs(checkReport(report(), { design: DESIGN([traceRow({ 促销方案: '本月不额外促销' }), traceRow({ 编号: 'T-02', 产品选择: '学考无忧Pass', 促销方案: '本月不额外促销' })]) })), /促销方案在决策追溯表里追不到：考后衔接续报/);
 });
 
+test('研究假设版方案名带「（候选待确认）」，追溯表写不写这个后缀都能对上', () => {
+  const plan = { ...PLAN, title: '考后衔接续报（候选待确认）' };
+  assert.deepEqual(checkReport(report({ grade: '研究假设版', plans: [plan] }), { design: DESIGN(), synthesis: SYN }).errors, []);
+  const withSuffix = DESIGN([traceRow({ 促销方案: '考后衔接续报（候选待确认）（P0901）' }), traceRow({ 编号: 'T-02', 产品选择: '学考无忧Pass（主推）', 促销方案: '本月不额外促销', 需求洞察: 'I-02' })]);
+  assert.deepEqual(checkReport(report({ grade: '研究假设版', plans: [plan] }), { design: withSuffix, synthesis: SYN }).errors, []);
+});
+
+test('正文出现打法卡卡号、程序残留（undefined）都拦，附录里可以有卡号', () => {
+  const r = checkReport(report({ body: '采用 P0603 免费学业诊断，限制条件 undefined。', appendix: '候选卡 P0603、P0101' }));
+  assert.match(errs(r), /打法卡卡号（只能放附录）：P0603/);
+  assert.match(errs(r), /程序残留（只能放附录）：undefined/);
+  assert.doesNotMatch(errs(checkReport(report({ appendix: '候选卡 P0603' }))), /卡号/);
+});
+
 test('P1-02 方案要对应核对表里采用的卡，或注明非打法库机制', () => {
   const two = r => DESIGN([r, traceRow({ 编号: 'T-02', 产品选择: '学考无忧Pass', 促销方案: '本月不额外促销' })]);
   assert.match(errs(checkReport(report(), { design: two(traceRow({ 促销方案: '考后衔接续报' })) })), /要写对应卡号，或注明「非打法库机制」/);

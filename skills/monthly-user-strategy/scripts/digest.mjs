@@ -93,14 +93,16 @@ for (const [key, name] of REGIONS) {
   const xunGroups = new Map();
   for (const e of events.filter(x => !context.includes(x) && x.dates.precision === 'day' && (x.dates.to || x.dates.from || '').startsWith(f.month))) {
     const end = e.dates.to || e.dates.from, d = Number(end.slice(8, 10));
-    const g = xunGroups.get(e.eventType) || [[], [], []];
-    g[d <= 10 ? 0 : d <= 20 ? 1 : 2].push(`${e.school} ${end.slice(5)}`);
+    // 按学校计数：同一所学校同一旬有两段日期只算一所，日期并列（2.1.0 模拟试跑发现按事件计数会多算）
+    const g = xunGroups.get(e.eventType) || [new Map(), new Map(), new Map()];
+    const bucket = g[d <= 10 ? 0 : d <= 20 ? 1 : 2];
+    bucket.set(e.school, [...(bucket.get(e.school) || []), end.slice(5)]);
     xunGroups.set(e.eventType, g);
   }
   if (xunGroups.size) {
     p('');
     p('结束日分旬（本月精确到日的事件；写「上旬 / 中旬 / 下旬」前逐校对照）：');
-    for (const [type, g] of xunGroups) p(`- ${type}：${['上旬（1–10 日）', '中旬（11–20 日）', '下旬（21 日起）'].map((n, i) => `${n}${g[i].length} 所${g[i].length ? `：${g[i].map(cell).join('、')}` : ''}`).join('｜')}`);
+    for (const [type, g] of xunGroups) p(`- ${type}：${['上旬（1–10 日）', '中旬（11–20 日）', '下旬（21 日起）'].map((n, i) => `${n}${g[i].size} 所${g[i].size ? `：${[...g[i]].map(([s, ds]) => cell(`${s} ${ds.join('、')}`)).join('；')}` : ''}`).join('｜')}`);
   }
   const doubts = events.filter(e => e.dates.precision !== 'day' || ['guess', 'conflict'].includes(e.verification) || e.anchorType === 'anchor_unknown' || e.ambiguous);
   p('');
