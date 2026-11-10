@@ -1,8 +1,8 @@
 ---
 name: matt-flow
-description: 「Matt 流程向导」：常浩提开发任务（做功能、改东西、修 bug、开新项目、「我有个想法」），或做完一步问「下一步呢」时使用。先判 0–3 档（顺手改 / 轻量 / 标准 / 大雾）或认出半路入口，再按 Matt Pocock 技能（grilling、grill-with-docs、to-spec、to-tickets、implement、tdd、code-review、diagnosing-bugs 等）的顺序带着走，每步结束给下一站。只管判档、导航和衔接，具体活交给对应技能。纯问答、非开发任务（写文章、查资料、飞书操作）、只让跑某个命令时不用。
+description: 「Matt 流程向导」：常浩要做软件、改代码时使用：做功能、改东西、修代码 bug、开新项目、「我想做个 X 软件 / 功能」，或开发流程进行中问「下一步呢」。先判 0–3 档（顺手改 / 轻量 / 标准 / 大雾）或认出半路入口，按 Matt Pocock 技能的顺序带着走，每站结束告诉他下一步回什么。只管判档、导航和衔接。不用于：纯问答、只跑某个命令、写文章、和开发无关的查资料、飞书操作；本机定时任务、后台服务、机器人没反应（用 automation-checkup）；业务流程要不要用 AI、飞书自动化（用 ai-landing-method）；常浩点名某个技能时直接用那个技能。
 metadata:
-  version: "1.0.0"
+  version: "2.0.0"
   governance:
     network: optional
     external-writes: optional
@@ -15,91 +15,132 @@ metadata:
 
 # Matt 流程向导
 
-常浩没有技术背景，只会说想做什么。这个 skill 替他选 Matt Pocock 的技能、排好顺序、每步做完告诉他下一站。它只做三件事：**判档、导航、衔接**。每一站具体怎么做，以那个技能的原文为准。
+常浩没有技术背景，只会说想做什么。这个 skill 替他选 Matt Pocock 的技能、排好顺序，每站做完告诉他**下一步回什么**，他不用记任何技能名。它只做三件事：**判档、导航、衔接**。每一站具体怎么做，以那个技能的原文为准。
 
 ## 1. 怎么调用 Matt 的技能
 
-- **能自动调用的 11 个**（grilling、domain-modeling、codebase-design、tdd、code-review、diagnosing-bugs、research、prototype、pr、wizard、writing-for-agents）：Claude 里用 Skill 工具调 `mattpocock-skills:<名字>`。
-- **其余的（上游锁成只能手动）**：读它的 `SKILL.md` 原文，照原文做；不改 Matt 的原文件。按名字找，不写死分类目录：
+- **能自动调用的**（当前可用技能列表里有 `mattpocock-skills:<名字>` 的；1.3.2 版有 grilling、domain-modeling、codebase-design、tdd、code-review、diagnosing-bugs、research、prototype、pr、wizard、writing-for-agents）：用 Skill 工具调 `mattpocock-skills:<名字>`。
+- **只能手动的**（上游锁成用户调用，列表里没有）：轮到这一站时，在下一站卡片里写出常浩要回的那一行命令：Claude 里是 `/mattpocock-skills:<名字>`（插件外 `~/.claude/skills/` 下的原版是 `/<名字>`），Codex 里是 `$<名字>`。他发了命令，技能按正规方式加载，照它做；做完照常给下一站卡片。
+- **常浩用自己的话明确同意进入这一站**（回「好」、点名要做这一站，或者之前说过「一口气做完」）：视为他授权了这一站，读原文照做，不再要他发命令。按名字找原文，不写死分类目录：
 
   ```bash
   find -L ~/.claude/plugins/marketplaces ~/.claude/skills -maxdepth 6 \( -path "*/mattpocock-skills/skills/*/<名字>/SKILL.md" -o -path "$HOME/.claude/skills/<名字>/SKILL.md" \) 2>/dev/null
   ```
 
-  找到两份时用 `~/.claude/skills/` 那份（插件里 `in-progress/` 下的是未发布草稿）。同目录下原文引用的文件（如 `PHASE-BOUNDARIES.md`、模板）一并按需读。**找不到原文就明确告诉常浩「没找到 <名字> 的原文」并停在这一站**，不凭记忆执行。
+  找到两份时用 `~/.claude/skills/` 那份（插件 `in-progress/` 下是未发布草稿）；原文引用的同目录文件按需读。**找不到就告诉常浩「没找到 <名字> 的原文」，停在这一站**，不凭记忆做。
 - 原文写「Call the Skill tool with X」时，X 指 `mattpocock-skills:X`。
-- **code-review 一律指 `mattpocock-skills:code-review`**（Standards + Spec 两轴审查）。Claude Code 自带的 `code-review`（找正确性 bug）不是这一站。写计划、写动作时用全名，免得到了这一站调错。
-- **在 Codex 里**：一律读 `~/.agents/skills/<名字>/SKILL.md`（Codex 适配版）照做，对常浩称 `$名字`。
+- **code-review 一律指 `mattpocock-skills:code-review`**（Standards + Spec 两轴审查），写计划和动作时用全名。Claude Code 自带的 `code-review`（找正确性 bug）不是这一站。
+- **在 Codex 里**：一律读 `~/.agents/skills/<名字>/SKILL.md` 照做，对常浩称 `$<名字>`；原文里的 Skill 工具、子 agent 用 Codex 自己的等价做法。Codex 全链路还没实测，卡住时如实告诉常浩卡在哪。
+- **版本基线**：本 skill 按插件 1.3.2（上游 `4ae2317`）写成。`~/.claude/plugins/installed_plugins.json` 里 `mattpocock-skills` 的版本不是 1.3.2 时，第一张卡里提醒常浩「Matt 技能更新了，matt-flow 需要复核」；原文和本 skill 冲突时按原文做，并在收尾里说明。
 
-每个技能的白话作用、前后衔接、什么时候单独用，见 [references/skills.md](references/skills.md)。
+每个技能的白话作用和单独用法见 [references/skills.md](references/skills.md)。
 
 ## 2. 第一步：判档
 
-先判是**档位**（从头开始的新任务）还是**半路入口**（第 3 节）。判完用一句话说出档位和理由。
+先判是**档位**（从头开始的新任务）、**半路入口**（第 4 节），还是**流程进行中的回复**（第 3 节）。判完用一句话说出档位和理由。
 
-| 档 | 什么样的任务 | 走法 |
+各档路线只写在这张表里：
+
+| 档 | 什么样的任务 | 路线 |
 |---|---|---|
-| 0 档 · 顺手改 | 一两处小改，没有要决定的事（错字、文案、颜色值、配置项） | 直接做，不走流程 |
-| 1 档 · 轻量 | 需求清楚、一个会话能做完 | grilling（一轮，最多 3 问）→ tdd → code-review |
-| 2 档 · 标准 | 需求还模糊，或要改多处 | grill-with-docs →（需要看实物时）prototype → to-spec → to-tickets → implement 逐张（或 implement-spec 一次跑完）→ code-review → pr → retro |
-| 3 档 · 大雾 | 全新项目，或方向不清的大工程 | wayfinder → 并入 2 档，从 to-spec 开始 |
+| 0 档 · 顺手改 | 一两处小改，没有要决定的事 | 直接改 → 开 PR（先问） |
+| 1 档 · 轻量 | 需求清楚、一个会话做得完 | 问一轮（grilling，最多 3 问）→ 测试先行实现（tdd）→ 审查（`mattpocock-skills:code-review`）→ 开 PR（先问） |
+| 2 档 · 标准 | 需求还模糊，或要改多处 | 问透想法（grill-with-docs）→ **判断一个会话做不做得完**：做得完 → 本会话实现（implement，内含 tdd 和审查）→ 开 PR；做不完 →（需要看实物时）原型（prototype）→ 写需求文档（to-spec）→ 拆任务卡（to-tickets）→ 逐张实现（implement，每张卡内含审查，一张卡一个 PR）或多个 AI 并行做完（implement-spec，末尾统一审查，一个 PR）→ 复盘（retro） |
+| 3 档 · 大雾 | 全新项目，或方向不清的大工程 | 画方向地图（wayfinder）→ 地图清了并入 2 档，从写需求文档（to-spec）开始 |
 
 - **0 / 1 档**：说完档位直接做。
-- **2 / 3 档**：先只问一句，然后停下等回复：「我判断这是 X 档（理由），建议走 A → B → C，开始吗？」常浩回「好」就走；他改档就按他的。这一轮只说档位、理由、路线（含前置检查）和这一问，不提前列出后面要追问的问题。
-- 判据、正反例、拿不准时怎么办、半路升降档：见 [references/tiers.md](references/tiers.md)。
+- **2 / 3 档**：先只问一句，然后停下等回复：「我判断这是 X 档（理由），建议走 <中文步骤名，技能名放括号> ，开始吗？回复『好』就开始。」这一轮只说档位、理由、路线（含第 5 节的前置检查）和这一问，不提前列出后面要追问的问题。前置检查要在**回复里**告诉常浩，包括任务卡放哪；没有 GitHub 的，写明「建不建 GitHub 仓库到那一站由你定，不建就放本机」。收尾三项照常附上，「下一步」写「回复『好』就开始」。
+- 判据、正反例、拿不准时、升降档、各档细节：见 [references/tiers.md](references/tiers.md)。
 
-## 3. 半路入口
+## 3. 流程进行中
 
-常浩不是从头开始时，从对应的站接上，不重走前面的站。入口不判档，也不问「开始吗」，说一句「从 X 这站接上」就开始；那一站要对外写入的，照第 6 节第 3 条单独确认。
+- **回复按当前站理解**：本会话已有进行中的流程时，常浩的回复（「就这么做」「好」「都按推荐」）是对当前站的回答，不重新判档、不重新认入口。
+- **停在哪**：
+  - 1 档：常浩答完那一轮问题后，连着做完 tdd 和审查，只在开 PR 等对外写入之前停。
+  - 2 / 3 档：每站做完就停，卡片写清「回复 X 进入下一站」。
+  - 常浩说「一口气做完」：这句话只表示「中间别停」，不表示选哪种实现方式（实现方式给他选时叫「一张张做」和「多个 AI 并行做完」，不用「一次跑完」这个说法）。先用一行列出接下来仍会停的点（例如发需求 issue、发任务卡、推送、开 PR），再用一行说明实现时怎么保证改动有据可查（每张卡从 `origin/main` 开 worktree 分支、记下起点，审查前本地提交、和起点比），然后连着走；同一站要他拍板的事和对外写入并成一张清单，确认一次。
+- **点名技能**：常浩点名某个技能（`/xxx`、「用 tdd」）时直接用它，不判档；流程进行中的，做完照常给下一站卡片。
+- **插进来的事**：
+  - 先看当前卡的改动（含没提交的）碰没碰到出问题的地方，再判断有没有关系，并把依据告诉常浩。
+  - 本流程刚改出来的 bug：算当前站（当前卡）的一部分，在原分支上修。
+  - 无关的 0 档小改：记下来，当前站做完后在单独分支上做。
+  - 无关的 bug 或更大的事：提议另开一个会话处理（桌面版用 `start_session`），由常浩决定。新会话要有自己的 worktree（不和当前卡共用），标题不用「【交接】」前缀，那个前缀是上下文到 50% 时交接专用的。
+  - 绕去 diagnosing-bugs、research、to-questionnaire、wait-what、wizard 的，做完回到原站；retro 留到整个流程结束。
+  - 收尾三项的「下一步」写回被挂起的那一站。
+- **记进度**（每站收尾的第一步，见第 6 节）：2 / 3 档每站结束，把「X 档 · 第 n 站 <站名> 已完成 · 下一站 <站名> · 需求 #N / 卡 #M」写进主目录 `CURRENT.md` 的当前任务处；项目没有 `CURRENT.md` 的，写进主目录 `.scratch/<功能>/flow.md`，功能目录名在第 1 站结束时就定。只改本地文件，要不要提交、推送照项目约定，推送仍先问。
+- **升档、降档**：升档用三选一问常浩，降档说一句就降，见 tiers.md。
+
+## 4. 半路入口
+
+常浩不是从头开始时，先查前面的站有没有产出、够不够格进这一站、他这次想做到哪一步，再从对应的站接上，不重走前面的站。入口不判档，也不问「开始吗」，说一句「从 X 这站接上」就开始；只能手动的站照第 1 节给命令，对外写入照第 7 节确认。
 
 | 现状 | 从这站接上 |
 |---|---|
 | 想法已经聊清 | to-spec |
 | 已有需求文档 | to-tickets |
 | 已有任务卡 | implement |
-| 代码已经写完 | code-review → pr → retro |
-| 出 bug | diagnosing-bugs |
+| 代码已经写完 | code-review；要提交、合并时再开 PR；之后 retro |
+| 出 bug | diagnosing-bugs（流程进行中的按第 3 节） |
 | 反馈和问题积压 | triage |
-| 代码越来越乱 | improve-codebase-architecture |
+| 代码越来越乱 | improve-codebase-architecture（要扫全库，先问一句） |
 | 听不懂刚才说的 | wait-what |
 | 需要人亲手配置账号、密钥 | wizard |
-| 需要查资料 | research |
+| 开发要用的资料要查 | research |
 | 信息卡在别人手里 | to-questionnaire |
-| 想学一个概念 | teach |
-| 问「下一步呢」 | 先查清现在在哪一站（看本会话、`docs/agents/`、`.scratch/`、issue、`git status` 和 `git log`），再给下一站 |
+| 要系统学一个开发概念 | teach（在 `~/Sandbox/` 的学习目录里做；一句话能答的直接答） |
+| 问「下一步呢」 | 按 entries.md「下一步呢」一节查清在哪一站 |
 
-每个入口的识别信号、先决条件、做完接哪站：见 [references/entries.md](references/entries.md)。
+每个入口的识别信号、进站条件、做完接哪站：见 [references/entries.md](references/entries.md)。
 
-## 4. 前置检查（项目第一次走 2 / 3 档时）
+## 5. 前置检查（项目第一次走 2 / 3 档时）
 
-1. 看项目根目录有没有 `docs/agents/`。有就跳过本节。
-2. 没有：项目**没有 AGENTS.md** → 先走 `project-starter`；**已有 AGENTS.md** → 先走 `setup-matt-pocock-skills`。这一步放在流程第一站，写进第 2 节那句提问里。
-3. 任务卡放哪：已接 GitHub（`git remote -v` 里有 github.com）或铺过 project-starter 的项目用 **GitHub Issues**；没有 GitHub 的小项目用本地 **`.scratch/`**（setup 时选 Local markdown；project-starter 铺完但常浩不建 GitHub 仓库的，把 `docs/agents/issue-tracker.md` 换成 setup-matt-pocock-skills 的 `issue-tracker-local.md` 写法）。
+1. 查配置能不能用，不只看目录在不在：
+   - `docs/agents/issue-tracker.md` 和 `docs/agents/domain.md` 都在，里面没有 `{{` 占位；
+   - `AGENTS.md`（或 `CLAUDE.md`）里有「Agent skills」一节指向它们；
+   - 选 GitHub 的，`gh repo view` 打得开；选本地的，`.scratch/` 的写法和 `issue-tracker.md` 一致；
+   - `issue-tracker.md` 引用的文件（如 `triage-labels.md`）都在。本地看板缺 `triage-labels.md` 的，不阻塞，状态直接用 `ready-for-agent` / `done` 字面写。
+
+   全部满足就跳过本节。
+2. 缺什么补什么：项目**没有 AGENTS.md** → 先走 `project-starter`；**已有 AGENTS.md** → 先走 `setup-matt-pocock-skills`，只补缺的。这一步作为流程第一站，写进第 2 节那句提问里。
+3. 任务卡放哪：
+   - 已接 GitHub（`git remote -v` 里有 github.com），或铺过 project-starter 的项目，用 **GitHub Issues**。
+   - 没有 GitHub 的小项目用本地 **`.scratch/`**：setup 时选 Local markdown。project-starter 铺完但常浩不建 GitHub 仓库的，把 `docs/agents/issue-tracker.md` 换成 setup-matt-pocock-skills 的 `issue-tracker-local.md` 写法，同时改掉 AGENTS.md 里「用本仓库 GitHub Issues」那一段。
 
 0 / 1 档不做前置检查。
 
-## 5. 每站收尾：下一站卡片
+## 6. 每站收尾：下一站卡片
 
-每站做完，下一站卡片并进常浩的「收尾三项」，写在答复最末：
+每站做完，先按第 3 节更新进度，再写下一站卡片，并进常浩的「收尾三项」，写在答复最末。交付时（每张卡做完、或整个流程结束），正文先按常浩全局规则第 3 节列全部改动，分「你要求的 / 我顺手改的」两栏，改变已有行为的单独标出；「一口气做完」期间替常浩定下的小取舍，再单列「我替你定的」一栏，每条附理由，说明可以撤回。
 
 ```
 **本次完成**：<刚完成的站和产出，附证据（文件、issue、提交号、测试结果）>
-**当前状态**：〔状态词〕<X 档 · 第 n/N 站 <技能> 已完成>
-**下一步**：下一站 `<技能>`（<白话：它做什么>），因为 <为什么是它>。你要做的：<具体动作，如「回复『好』」；不需要就写「无需动作，我接着做」>
+**当前状态**：〔等你决定〕X 档 · 第 n 站「<中文站名>」已完成（后面还有：<剩下的站>）
+**下一步**：下一站「<中文站名>」（`<技能>`：<白话：它做什么>），因为 <为什么是它>。你要做的：回复 <命令或「好」>
 ```
 
-- 一站还没做完就停下（等常浩回答、等他操作）时，「下一步」先写本站内他要做的事，再补半句「这站做完后，下一站是 `<技能>`」。修 bug 这类入口，下一站是 retro。
-- 默认每站做完就停，等常浩回复再进下一站。常浩说「一口气做完」时连着走，遇到要他拍板、对外写入、或全局规则要求停的地方仍然停。
-- 0 档和整个流程走完时：「本任务已结束，下一步无需任何动作。」
-- 流程走完后，建议的最后一站是 retro（2 / 3 档）；出过 bug 的也建议 retro。
+- 「回复」写什么：下一站是只能手动的技能，写它的命令（第 1 节），并注明「回『好』也行」；是能自动调用的技能，写「好」。
+- 一站没做完就停（等他回答、等他操作）时，「下一步」先写本站内他要做的事，再补半句「这站做完后，下一站是「<站名>」」。
+- 状态词：等他回复用〔等你决定〕，等他亲手操作用〔等你操作〕。改动还没提交、没开 PR 的，不写〔已结束〕，问他要不要开 PR。只有改动已经合并，或者是项目允许直接进 main 的纯文档改动且已处理完，才写〔已结束〕和「本任务已结束，下一步无需任何动作。」
+- 2 / 3 档流程走完、PR 合并后，最后一站是 retro；修过 bug 的也建议 retro。
 
-## 6. 铁律：和常浩现有规则的分工
+## 7. 铁律：和常浩现有规则的分工
 
-1. **交接和上下文以常浩规则为准**。不用 Matt 的 `/handoff`、`/compact`、`/clear`。站与站之间默认在本会话继续（Matt `PHASE-BOUNDARIES.md` 第 1 问：下一站要用这一站的原话）。收到「上下文提醒」、要换工具或换目录时，按常浩全局规则第 5 节出交接卡，卡里写明档位、所在站和下一站。wayfinder 原文规定一个会话只解决一张决策卡：解决完一张，用交接卡提议新会话接下一张。原文里让子 agent 做的（implement-spec、code-review、research）照常用子 agent。
-2. **要不要送 GPT 评审，按 `thinking-review`**。to-spec 写完、准备拆卡和实现之前，以及接手别人的方案时，是它的检查节点；判成 B / C 的直接继续。
-3. **对外写入每次单独确认**：发 issue（to-spec、to-tickets、triage、wayfinder 都会发）、建或改标签、推送、开 PR、合并，做之前各问一次，即使 2 档开头已经回了「好」。写本地文件（含 `.scratch/`）不用问。
-4. **改常浩定过的东西**，按全局规则第 15 节单独确认，流程里哪一站都一样。
-5. **每轮都有收尾三项**，「下一步」写下一站（第 5 节）。
-6. **说人话**：对常浩提到技能名时带一句白话作用；术语第一次出现时附一句白话，查 [references/glossary.md](references/glossary.md)。grilling 的问题里，技术事实自己查，只把要常浩拍板的决定交给他，每题给推荐答案，并用白话说清选不同答案的影响。
-7. **项目约定优先于 Matt 的默认**：项目有自己的 PR 模板（`.github/pull_request_template.md`）就按项目模板写，pr 的证据和合并风险写进对应栏；项目有自己的分支、提交约定就照项目的。
+1. **交接和上下文以常浩规则为准**。不用 Matt 的 `/handoff`、`/compact`、`/clear`。站与站之间默认在本会话继续（Matt `PHASE-BOUNDARIES.md` 第 1 问：下一站要用这一站的原话）。收到「上下文提醒」、要换工具或换目录时，按常浩全局规则第 5 节出交接卡，卡里写明档位、所在站、下一站，以及原型的结论和分支位置（如有）。wayfinder 原文规定一个会话只解决一张决策卡：解决完一张，用交接卡提议新会话接下一张。原文里让子 agent 做的（implement-spec、code-review、research）照常用子 agent。
+2. **要不要送 GPT 评审，按 `thinking-review`**。检查节点：wayfinder 定下目的地和地图时；to-spec 写完、准备拆卡和实现之前；接手别人的方案时。判成 B / C 的直接继续。
+3. **对外写入每次单独确认**：任何改动 GitHub 等远端内容的操作都算，包括建、改、评论、指派、关闭 issue 或 PR，开草稿 PR，建改标签，推送任何分支（含原型、研究、集成分支），合并。即使 2 档开头已经回了「好」，也要单独问。同一站的写入列成一张清单，写明具体对象（哪几张 issue、哪个分支），确认一次；授权只对清单上的对象有效。子 agent 守同样的边界。拿不到授权就停在这一步，记下进度。写本地文件（含 `.scratch/`）和本地提交不用问。
+4. **改常浩定过的东西**，按全局规则第 15 节单独确认，流程里哪一站都一样，0 档也一样。
+5. **每轮都有收尾三项**，「下一步」写下一站和要回复的内容（第 6 节）。
+6. **说人话，每一站都说**：提到技能名带一句白话作用，路线用中文步骤名、技能名放括号；术语第一次出现附一句白话，查 [references/glossary.md](references/glossary.md)。技术事实自己查，只把要常浩拍板的决定交给他，每题给推荐答案，用白话说清选不同答案的影响。要他提供技术材料时，翻成具体操作（点哪里、复制什么），必要时用 wizard。
+7. **分支、issue、PR、合并照 `agent-kit/工程流程.md`**（`~/Documents/ChatGPT/个人/work/agent-kit/工程流程.md`）：
+   - 分支从 `origin/main` 拉，在 worktree 里做，命名 `claude/<issue号>-<短名>`（Codex 用 `codex/`）。
+   - 0 / 1 档先在本地分支上改；改完一次确认「开 issue、推送、开 PR」，开了 issue 再按号重命名分支后推送。
+   - 2 档逐张实现时，一张卡一个分支、一个 PR，`Closes #卡号`；多个 AI 并行做完时，一条集成分支、一个 PR 关闭全部卡。
+   - PR 正文按项目模板写，pr 的证据和合并风险写进对应栏。
+   - 项目 AGENTS.md 规定的交付步骤（如 my-skills 的升版本、写 CHANGELOG、重跑 evals）放在审查之后、开 PR 之前。
+   - 项目 AGENTS.md「Agent skills」一节里的旧路线（「小改跳过 to-spec」「只在点名时加载」）以本 skill 的档位为准；那一节写的看板、标签、文档位置照用。
+   - **没有 GitHub 的项目**：
+     - 分支名用 `claude/<功能>-<卡号>-<短名>`，免得不同功能的 01 号卡撞名；
+     - 每张卡审查通过后，在本地并入 main，被它挡着的卡从并入后的 main 拉。要不要这样并，在拆卡那次确认里问一次；本地并入不算对外写入。
+     - 并入时把这张卡的验收项打勾，`Status` 改成 `done`。
+     - 对这类项目来说，并入本地 main 就算「已合并」。
 8. **本 skill 只管「什么时候用、按什么顺序、谁来确认、怎么交接」**；每一站怎么做，以那个技能的原文为准。
