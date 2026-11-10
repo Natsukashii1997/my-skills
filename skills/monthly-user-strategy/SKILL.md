@@ -1,11 +1,11 @@
 ---
 name: monthly-user-strategy
-description: 「月度用户策略」generate 模式：替常浩生成牛马之家某个月的月度用户策略。按 SCOUT-8 阶段 01–05 和 08，经 workdesk 工具 strategy_facts 取事实底稿，定情境、解需求、判购买障碍、定地区优先级，组装成 schema 2.1 月度文档，自检后用 strategy_submit 提交为待确认 submission，再请常浩去工作台页面预览、确认；缺业务背景时按规则降级，提交结果不明时先查 submission，不自动重试。常浩说「生成 2026-12 的用户策略」「跑一下 12 月的月度策略」「出下个月用户策略」「monthly-user-strategy」时使用。不适用：refresh / review / refine 三种模式、写促销方案或打法（批 2）、确认或拒绝 submission（只在页面做）、旧月份迁移、修改策略规则本身、与牛马之家无关的一般策略分析（用 strategy-master）。
+description: 「月度用户策略」generate 模式：替常浩写牛马之家某个月的《月度用户策略报告》。主交付是一份八章、可从头读到尾的经营决策文档（月度总览 → 时间线与需求节奏 → 六地区需求深度分析 → 地区优先级与机会 → SKU 与产品价值 → 营销与促销 → 执行方针 → 关键假设），按五轮生成：完整研究（SCOUT 阶段 01–05，经 workdesk 工具 strategy_facts 取底稿）→ 洞察综合 → 商业策略设计 → 报告写作 → 新上下文独立审核；规格是 niuma-home `docs/策略规则/10-报告内容规格.md`（report-v2.1）。试写期默认不提交，常浩明确要求时才把研究层文档用 strategy_submit 提交为待确认 submission。常浩说「生成 2026-12 的用户策略」「跑一下 12 月的月度策略」「出下个月用户策略报告」「monthly-user-strategy」时使用。不适用：refresh / review / refine 三种模式、确认或拒绝 submission（只在页面做）、旧月份迁移、修改策略规则本身、定具体价格（价格模块）、与牛马之家无关的一般策略分析（用 strategy-master）。
 metadata:
-  version: "1.2.0"
+  version: "2.1.0"
   governance:
     network: required
-    external-writes: required
+    external-writes: optional
     destructive-actions: none
     credentials: required
     dependencies:
@@ -14,9 +14,11 @@ metadata:
 
 # 月度用户策略 · generate
 
-替常浩生成一个月的月度用户策略，交到工作台待确认。工作台本身不调用模型：skill 在 Claude 或 Codex 会话里运行，经 workdesk 工具读事实、交 submission；常浩在工作台页面预览、确认后，才成为正式版本。
+替常浩写一个月的《月度用户策略报告》：既是这个月的说明文档，也是行动方针。工作台本身不调用模型；skill 在 Claude 或 Codex 会话里运行，经 workdesk 工具读事实，在证据目录里产出报告。
 
-规则的唯一来源是 niuma-home 仓库 `docs/策略规则/`（批 0 规格）。`references/` 是摘录，每份写了出处和版本号；摘录和原文对不上时以原文为准，并提醒常浩更新本 skill。读不到原文（例如会话不许碰那个仓库）时按摘录做，并在答复里说明没核对原文版本。
+**为什么是报告**：1.x 把研究过程（情境、Claim、证据）当成了策略成果，常浩判为「看不懂、拆得太碎、没有结论、推断太浅」（2026-11-09）。2.0 起分三层：研究层（结构化、可追溯）是底座，综合层把零散事实变成相互关联的商业结论，报告层写给人读。**SCOUT-8 是内部研究方法，不是报告的章节；Claim 是中间资产，不是阅读单元。**
+
+规则来源：niuma-home `docs/策略规则/`。报告层以 `10-报告内容规格.md`（report-v2.1）为准；研究层仍以 00–09 为准。`references/` 是摘录，每份写了出处和版本；对不上时以原文为准并提醒常浩更新本 skill；读不到原文时按摘录做，并在答复里说明。
 
 ## 1. 边界
 
@@ -24,146 +26,109 @@ metadata:
 
 **不用**（说明原因，不硬套）：
 
-- refresh、review、refine 三种模式（批 2、批 3）；常浩要的是这些时，说明当前只支持 generate。
-- 促销方案、打法、机会 P0/P1/P2：批 2 才实现，批 1 提交里 `opportunities`、`strategies` 必须为空。
+- refresh、review、refine 三种模式：说明当前只支持 generate。对已有报告的复审要求，说明 review 模式还没做，由常浩决定。
 - 确认、拒绝、回退 submission：只在页面做；skill 没有、也不找这类接口。
-- 改 `docs/策略规则/` 里的规则：走方法论修订流程（08 §4），AI 不在单月里自行改规则。
-- 与牛马之家无关的一般策略分析、问题拆解。牛马之家本身的促销、复审要求不要转去别的 skill 出替代品：说明在批 2，由常浩决定先记下还是他自己处理。
+- 改 `docs/策略规则/` 的规则：走方法论修订流程（08 §4），AI 不在单月里自行改规则。
+- 定价格、金额：归价格模块。报告写促销机制和条件，不编金额。
+- 与牛马之家无关的一般策略分析。
 
-**只经工作台工具读写**：`strategy_facts`（只读）、`strategy_submit`（只能创建待确认 submission）、`strategy_submission`（查状态）。不读写数据库、不读 `data/` 目录、不调页面接口、不碰正式服务的进程。
+**读写范围**：
+- 工作台智能体工具：`strategy_facts`（只读）、`strategy_submission`（查状态）、`strategy_submit`（可选，只能建待确认 submission）。
+- 试写期另外允许（常浩 2026-11-09 同意）：经 `scripts/product-context.mjs` 只读 `GET /api/promos`、`/api/plans/<月>/大学辅导`、`/api/v3/price/skus`；读 niuma-home 仓库的 `docs/打法库/`、`docs/策略输入/产品能力卡.md`。
+- 不读写数据库、不读 `data/`、不调任何写接口、不碰正式服务的进程。
 
 ## 2. 准备
 
-1. **工具接入**，两种都走工作台的智能体接口（授权、留痕在服务端），效果相同：
-   - 会话里接了 workdesk MCP（`server/mcp-workdesk.mjs`）：直接调同名工具。每次调用的参数里加 `_caller: { "platform": "local-session", "chatType": "p2p", "userId": "changhao" }`，否则服务端回 `400 CALLER_REQUIRED`。
-   - 没接 MCP：用 `node scripts/workdesk.mjs <工具> …`（脚本已带 caller）。环境变量 `WORKDESK_AGENT_TOKEN`，或 `WORKDESK_ENV` 指向写有它的 `.env`；`WORKDESK_URL` 默认 `http://127.0.0.1:5280`。
-2. **凭据由常浩签发**（niuma-home `scripts/agent-token.mjs issue <agent> strategy_facts,strategy_submit,strategy_submission`）。没有凭据就停下来请常浩签发，skill 不自己对正式数据目录签发、轮换或撤销凭据。`401`：凭据无效；`403 TOOL_FORBIDDEN`：凭据没授权这个工具。两种都停下来告诉常浩，不换别的路子绕过。
-3. **工作目录**：`~/Library/Application Support/NiumaHome/evidence/strategy-<月份>-<YYYYMMDD-HHMM>/`。底稿、摘要、研判稿、文档、提交结果都放这里，不放 `/tmp`。`WORKDESK_URL` 不是正式的 `http://127.0.0.1:5280`（隔离测试工作台）时，目录名末尾加 `-test`，和正式产出分开。
+1. **工具接入**：会话接了 workdesk MCP 就直接调同名工具（参数加 `_caller: { "platform": "local-session", "chatType": "p2p", "userId": "changhao" }`）；没接就用 `node scripts/workdesk.mjs <工具> …`，环境变量 `WORKDESK_AGENT_TOKEN` 或 `WORKDESK_ENV` 指向写有它的 `.env`，`WORKDESK_URL` 默认 `http://127.0.0.1:5280`。不读出、不打印凭据内容。
+2. **凭据由常浩签发**。没有就停下来请他签发；`401` 凭据无效、`403 TOOL_FORBIDDEN` 没授权，都停下来告诉他，不绕过。
+3. **niuma-home 仓库**：常浩本机默认 `~/Documents/ChatGPT/个人/work/niuma-home`（下称 `<niuma-home>`），用来读规则原文、打法库、产品能力卡。
+4. **工作目录**：`~/Library/Application Support/NiumaHome/evidence/strategy-<月份>-<YYYYMMDD-HHMM>/`，所有产出放这里，不放 `/tmp`。`WORKDESK_URL` 不是正式 5280 时目录名加 `-test`。
 
-## 3. 流程
+## 3. 流程：五轮
 
-### 第 0 步 · 确认月份与背景卡
+每轮单独完成、单独产出文件。**负责生成大量 Claim 的第 1 轮不同时承担洞察、商业设计和写作**，否则注意力会耗在填字段上。
+
+### 第 0 步 · 月份与输入
 
 - 月份不明确就问一次（推荐：下个月）。
-- 取完底稿（第 1 步）发现业务背景卡整张没填或缺「存量用户情况」「用户观察」，而常浩没说过「直接生成」：问一次，推荐「先在页面补背景卡再生成」，备选「按降级直接生成」。常浩要先补，就按 `references/lifecycle-bizcard.md` 第 5 节起草预填稿交给他（每条带适用国家 `countries`、适用人群 `relation` 和理由），本轮到此为止；他说直接生成或已经说过不填，就按降级继续，不再追问。
-- 背景卡填了、但部分条目没填适用范围：不为此单独追问，照常生成；没填范围的条目按「范围不明」处理（见第 4 步），第 8 步答复里列出要补哪几条。
+- 取底稿：`strategy_facts { month }` → `facts.json`（`409 TIMELINE_RESYNC` 就停，请常浩先在「策略 → 用户时间」同步）；`node scripts/digest.mjs facts.json --out digest.md`，读摘要，不整份读 `facts.json`。
+- 取产品与活动：`node scripts/product-context.mjs --month <月份> --out-dir <工作目录> --card <niuma-home>/docs/策略输入/产品能力卡.md --playbook <niuma-home>/docs/打法库`，读 `products.md`：活动基线、价格档案、能力卡逐项原文（没填的写「未填」）、打法卡索引（卡号、阶段、针对的障碍、机制、定位句）。
+- **输入不足时问一次**（常浩说过「直接生成」就不问）：业务背景卡整张没填或缺「用户观察」「存量用户情况」，或产品能力卡大部分没填。推荐「先补再生成」，备选「按降级直接生成」。常浩要先补背景卡，就按 `references/lifecycle-bizcard.md` 第 5 节起草预填稿给他，本轮到此为止。
+- **定报告等级**（规格 8.4，`references/report-spec.md` 第 4 节）：按 `digest.md` 的业务背景卡栏和 `products.md` 的能力卡、活动基线，定研究假设版 / 条件性策略版 / 可执行策略版，写进报告头，只能低报不能高报。问输入时顺带告诉常浩：现在的输入只够哪一级、补哪几项能升级。研究假设版：第三章 04–06 层以〔待验证假设〕为主，第五章卖点写「需确认产品能力」，第六章不出正式促销方案（只出「候选待确认」或本月不额外促销），第一章和第八章说明这一点。
 
-### 第 1 步 · 事实取证（阶段 01）
+### 第 1 轮 · 完整研究
 
-1. `strategy_facts { month }` → 存为 `facts.json`。
-   - `409 TIMELINE_RESYNC`：**停止生成**，请常浩先到工作台「策略 → 用户时间」同步一次时间线。
-   - 其他错误：照实报告，不编底稿。
-2. `node scripts/digest.mjs facts.json --out digest.md`，读 `digest.md`（不要整份读 `facts.json`，太大）。
-3. 记下 `inputFingerprint`、`baseRevision`、各地区覆盖率与默认优先级、背景卡哪些字段有内容、正式版本里有没有常浩手写的 Claim。
-4. 列出不确定性：推测、冲突未决、只有月份、锚点不明、`ambiguous`。这些不能当精确日期用。摘要最后一列是原格原文：同一格写了几个日期、跨年日期段被解析成「仅月份」、列名和内容对不上的，记为时间线疑点。
-   - `verification=verified` / `ruled` 而原格原文（`source.raw`）写着「推测」「AI推测」、日期还差一两天，是**正常的**：官网核实、人工裁定本来就是来纠正原表推测的，生效日期以核实结果为准，强度照常 strong，不降级、不当疑点。
+照 `references/research.md`（SCOUT 阶段 01–05，即 1.x 的第 1–6 步）做：情境、四类需求 Claim、新签与续费分开的障碍和准备度、研究层的地区优先级与 `brief`、八项自检，`node scripts/assemble.mjs facts.json draft.json --out-dir <工作目录>` 直到预检通过。规则见 `schema.md`、`barriers.md`、`lifecycle-bizcard.md`、`quality.md`、`scout-generate.md`。
 
-阶段要求见 `references/scout-generate.md`，窗口与覆盖率怎么读见 `references/lifecycle-bizcard.md`。
+产出：`draft.json`、通过预检的 `document.json`。这是报告的研究底座和附录来源，不是报告。
 
-### 第 2 步 · 情境定位（阶段 02）
+### 第 2 轮 · 洞察综合
 
-- 每个地区 0–4 个情境（通常 1–3 个），按「地区与学校 + 学业阶段 + 关键任务 + 目标人群」分，任务、困难、时间窗相同的合并。研究生节点明显不同时单列。
-- `evidenceRefs` 只从摘要里抄 Evidence ID，至少一个。`schools` 照抄底稿的校名。
-- `academicStage`：底稿事件的 `scope` 写了「仅研究生」等限定，或常浩、背景卡给了研究生的不同节点，才单列 `postgraduate` 情境；没有这类信息时按 `undergraduate` 写，并在 `research.assumptions` 记一句「时间线未标学业阶段，按本科处理」。
-- `observedRelation`：只有引用 business 类 Evidence、且它的适用范围和本情境对得上（第 4 步）时才能写新签 / 续费，否则 `unknown`。
-- 证据不够形成独立情境的地区：`scenarios` 留空，`emptyReason` 写原因和覆盖情况（学校数、可计算数、活跃数、数据不足数），不编学生群体。
-- 字段见 `references/schema.md` 第 2 节。
+照 `references/insight.md`，只用第 1 轮产出和 `digest.md`，写 `synthesis.md`：
 
-### 第 3 步 · 需求解码（阶段 03）
+1. 每个地区：院校时间线六维聚合 → 地区规律（多数 / 例外）→ 用户状态与关键任务。
+2. 核心场景，建议 3–6 个（证据不足可以少，写明原因；不为凑数拆场景；跨地区共有的场景只写一次，注明涉及哪些地区）：六层分析（事实、约束、动机、决策标准、价值、策略）、需求三问、购买障碍与行动时机（新签、续费分开）、四维（紧迫性、真实性、购买成熟度、服务可行性）。
+3. 会影响主推 SKU、促销或资源投入的核心判断，至少比较一个替代解释。
+4. 关键洞察清单（每条：核心结论、事实支撑、解释机制、适用范围、经营含义、可信程度）。
+5. 策略综合与主线形成：主要需求归纳、跨地区共性与差异、月度核心论点、机会主题候选（建议 2–4 个，证据不足可以少于 2 个并写明原因）。
 
-每个情境至少写 `task`、`academic_need`、`pain`、`need_strength` 各一条：
+关键洞察从 I-01 起编号；「适用范围」写到国家和人群（新签 / 续费），不比证据宽：业务证据的范围看 `digest.md` 业务背景卡条目的「适用国家」「适用人群」两列。
 
-- `task`：引用的事件是官网核实或人工裁定的（强度上限 strong）才能 `known + strong`；原表日期最高 `inferred + partial`；推测最高 `inferred + weak`。
-- `academic_need`：只有时间线证据时一律 `inferred + weak`（潜在需求，考试存在不等于有辅导需求），用克制写法；有业务观察、事实记录或 Voice 支撑时才到 partial 以上。不能写成已验证需求。
-- `pain`：`painKind=observed` 必须引用对应的「用户观察」条目（适用范围对得上本情境，第 4 步）或 Voice，否则只能 `typical`，且最高 `inferred + weak`。不把「有考试」写成「学生缺乏复习能力」。
-- `need_strength`：`level` 高 / 中 / 低，`rule` 写窗口规则版本（如 `lifecycle-v0.2/Final`）；覆盖率是日历推断，不是付费需求。
-- `text` 不超过 40 字，结论先行，不写编码。
+缺少真实反馈时，不停在「可能需要辅导」：继续提出合理、可检验的机制假设，标〔待验证假设〕。研究层 `unknown` 或 `inferred + weak` 的购买判断，在这里和报告里只能是〔待验证假设〕。
 
-### 第 4 步 · 决策洞察（阶段 04）
+### 第 3 轮 · 商业策略设计
 
-按情境的 `targetRelation` 研判：新签情境研判新签，续费情境研判续费，通用情境两边都研判，**分开写**。每组（情境 × 人群）写 1–3 条 `barrier` 和 1 条 `readiness`：
+照 `references/design.md`，只用 `synthesis.md` 和 `products.md`，写 `design.md`：地区决策表（主攻 / 培育 / 观察 + 机会阶段）与机会主题；每个主题的「用户关切 → 产品能力 → 卖点」，主推 SKU，七个 SKU 的角色；营销主张；促销方案（每个写促销目标、适用人群、核心机制、选择依据、商业约束、验证指标；候选从打法库选、过六个匹配条件；或结论为「本月不额外促销」）；现行活动的时间口径；执行方针（时间 × 部门、可执行事项）；3–5 项关键假设。
 
-- 编码、判定要点、相近障碍区分见 `references/barriers.md`。
-- **没有用户决策行为证据**（背景卡的事实记录、业务观察，或 Voice）时：`BR-M2`、`BR-M5` 只能 `unknown`；其他障碍最高 `inferred + weak`，limitations 写「缺少用户决策行为证据」；任何障碍都不能 `known`（09 #2）。
-- **没有「存量用户情况」**时：续费的 barrier、readiness 一律 `unknown`，gap「缺少存量学员下一阶段任务与续报信息」，route `{ status: available, source: SRC-bizcard }`；不从新签复制续费障碍（09 #4）。
-- 每组恰好一个 `barrierRole=primary`，理由写进 `rule`。主障碍只有 `inferred + weak` 或 `unknown` 时，`rule` 里写「暂定研究重点」，正文和答复里称它为「待验证的障碍假设」，不说成确定的主导原因（批 2 不能拿它直接定促销方向）。
-- `unknown` 的 route 只能指向来源登记表里的 ID：`SRC-bizcard` 可补 → `available`；`SRC-voice`、`SRC-crm` 未接入 → `unavailable`。
-- **购买准备度（readiness）和障碍同理**，是购买行为判断：没有用户决策行为证据时写 `unknown`（gap 写缺什么，route 指向 `SRC-bizcard`），最多 `inferred + weak`；有行为证据才往上提。
-- **背景卡条目没写学校时**，只套用到它描述的时间和任务对得上的情境（例：「想等 1 月考完再决定」只对 1 月考试的情境成立，不套到 12 月就考完的学校），在 limitations 写明套用理由；对不上的情境照没有证据处理。
-- **业务证据只用在背景卡条目填了的适用范围里**（bizcard-v1.1）：只看 Evidence 上的 `countries`（适用国家）和 `relation`（适用人群），**不从原文推**，原文写了「英国」「新签」也不算。判法和服务端一致：国家与本处情境的 `countries` 至少一个相同；人群「通用」的条目对任何人群都算，「新签」「续费」只撑同一人群，本处是「通用」时只接受「通用」条目。本处人群：障碍、购买准备度看 Claim 的 `targetRelation`，实际商业关系看它自己的 `value`；学业需求、痛点（含 observed）看情境的 `targetRelation`，但只拦人群相反的：「通用」情境包含新签和续费两类学生，新签、续费条目都能用，新签情境不能用续费条目，反之亦然。没填（任一字段为空）按「范围不明」处理，和对不上一样：可以作为 `inferred + weak` 的线索引用，但不能把购买判断、学业需求、痛点提到 weak 以上，也不能撑 observed 痛点和实际商业关系。英国新签的台账不能拿来证明美国新签准备度。`assemble.mjs` 按这条拦截，并把引用了却没填范围的事实记录、业务观察列为「背景卡待补范围」。
-- **行为证据只有三种**：背景卡的事实记录（可到 known）、业务观察（最高 inferred + partial）、Voice。学校日历再强（官网核实）也只证明节点存在，不证明购买行为；管理判断是待检验的假设，单独或和校历一起引用都最高 `inferred + weak`。`assemble.mjs` 会按这条拦截。
-- **证据要对得上判定要点**：引用的业务证据必须直接说到这个障碍的判定要点（例如「觉得还来得及」要有推迟、观望、问「晚点再报行不行」这类时间判断的行为），只是间接相关的不能把障碍往上提，照「没有行为证据」处理；`evidenceRefs` 只放真正支撑这条判断的证据，不为凑强度多挂。
-- 学业需求（第 3 步）和购买需求（本步）不混写。
+两张内部表必填（不进报告正文）：
+- **候选卡核对表**：`products.md` 的打法卡只是索引。进入候选的卡逐张读原文，写适用人群 / 阶段、期限、产品条件、叠加限制、业务边界、生效 / 失效条件、是否采用及理由。
+- **决策追溯表**：每个主推 SKU、核心卖点、正式促销方案都能沿「用户情境 → 需求洞察（I-xx）→ 商业机会 → 产品选择 → 价值主张 → 促销方案（卡号）→ 执行行动 → 验证指标」追回第 2 轮。
 
-### 第 5 步 · 地区优先级与一句话判断（阶段 05，批 1 范围）
+需求驱动产品：不先定 SKU 再编理由。卖点必须「用户确实在意 + 产品确实能提供」，能力卡没写的能力不承诺。
 
-- 六个地区都给 `priority`：默认矩阵（摘要里已算好）只是参考；与默认不同写 `reason`。覆盖率高不等于付费需求大，样本很小、日期质量差时可以调档。
-- 一句话月度判断：不超过 100 字，引用至少一条本稿 Claim。
-- **地区概括要核对例外**，范围是所有写地区结论的地方：一句话判断、`brief.diff`、`brief.external`、情境的 `phase` / `keyTask`、Claim 正文，以及给常浩的答复。做法：先按地区写 `brief.diff`，每个地区回到摘要事件表逐校看一遍，把例外写进去；**一句话判断从 `diff` 压缩出来，压缩时保留「多数 / 部分」这类限定词，或带上例外**，不能在压缩时把例外丢掉（例：diff 写了「UNSW 期末至 12 月 10 日」，判断就不能写「澳洲已转入出分与补考」）。用了「均、都、全部、已结束、基本、普遍」这类说法，要么确实没有例外，要么写出例外学校（例：「多数已进入出分与补考阶段，UNSW 期末持续到 12 月 10 日」），要么改成限定说法（「多所学校…，部分持续至下旬」）。引用了真实 Evidence 不等于归纳出的文字就对。
-- **「上旬 / 中旬 / 下旬」按日期算**：1–10 日上旬、11–20 日中旬、21 日到月底下旬。写「某组学校上旬考完」前，对照摘要每个地区的「结束日分旬」，逐校看结束日；跨两个旬的写日期段（例：UC 四校 12 月 11–12 日结束，写「中旬初」或「12 月 11–12 日」，不写「上旬」）。
-- `brief.common` / `diff` / `external`：共性、地区差异、外部变量。背景卡整张没填时，`common` 第一条写「本月未提供业务背景，用户需求与购买判断均基于学校时间线推断」。`external` 只写节假日、出行、学校放假对学生**可用学习时间、注意力和排课**的影响，以及考试与出分节点怎样交错；不写等优惠、家长参与决策这类消费心理推断（那属于购买研判，要有行为证据或写成明确的待验证假设）。
-- 想到的机会方向记进 `research.notes`（批 2 才写 Opportunity），不写进正式字段。
+### 第 4 轮 · 报告写作
 
-### 第 6 步 · 组装与自检（阶段 08 前半）
+照 `references/report-spec.md` 写 `report.md`：八章 + 附录，二级标题一字不差，比重按规格，**第一章最后写**。正文写段落和必要表格，结论先行，地区分析用「结论 → 论证 → 行动含义」，关键判断标可信程度，边界集中写在节末、第八章和附录。正文不出现 Claim / Evidence 编号、状态码、障碍编码；附录可以有。
 
-1. 按 `references/schema.md` 第 5 节写 `draft.json`：`basedOnFingerprint` 写研判时底稿的 `inputFingerprint`（digest.md 顶部），`declared.executor` 写当前执行方（Claude 或 Codex），`model` 写当前模型。
-2. 按 `references/quality.md` 第 1 节逐项自检，结论写进 `research.selfCheck`；逐条对照第 3 节的四个反例。「事实与来源核验」带上 `regionCheck`：每个有情境的地区一句，写核过哪些学校、例外是哪几所、落到了哪句话里（没有例外就写「逐校核过 N 所，无例外」），脚本缺了会拦截。
-3. `node scripts/assemble.mjs facts.json draft.json --out-dir <工作目录>`。
-   - 脚本每次先删掉目录里旧的 `document.json`、`submit-args.json`；全部通过才写新的，失败只写 `assemble-errors.txt`。所以目录里有 `submit-args.json`，就一定是最近一次通过的那份。
-   - 退出码 2：按「拦截」逐条改研判稿，重跑，直到通过。「提示」逐条看，能改就改。拦截项包括：每个情境缺四类需求 Claim 之一、缺该人群的 readiness（判断不了写 unknown）、购买判断没有行为证据却超过 inferred + weak、observed 痛点没引用用户观察、业务证据的适用范围（`countries`、`relation`）没填或对不上本处、弱证据主障碍没标「暂定研究重点」、自检缺某个有情境地区的 `regionCheck`。
-   - 提示「背景卡待补范围」：研判稿引用了没填范围的事实记录、业务观察。脚本已把它们写进 `research.notes`；相关判断照「范围不明」写（最高 `inferred + weak`），自检「购买障碍论证」判「待确认」，`fix` 写「待常浩在背景卡补适用范围」。
-   - 退出码 1：输入读不了或不是合法 JSON（原因写在 `assemble-errors.txt`），修好文件后重跑；旧的 document.json、submit-args.json 同样已删除。
-   - 通过后得到 `document.json`、`submit-args.json` 和 `idempotencyKey`（由月份、输入指纹和内容哈希决定：内容不变，键就不变）。
-4. 组装通过后、提交前，**重取一次底稿**（`strategy_facts` → `facts-check.json`）比 `inputFingerprint`。没变就提交；变了就按下面「底稿变了」处理。
+写完跑 `node scripts/report-check.mjs report.md --month <月份> --synthesis synthesis.md --design design.md --digest digest.md --products products.md --out report-check.txt`（后四个文件用来核对决策追溯和报告等级）：退出码 2 就按拦截逐条改，直到通过；提示逐条看，能改就改。
 
-### 第 7 步 · 提交（阶段 08）
+### 第 5 轮 · 独立质量审核
 
-`strategy_submit`，参数就是 `submit-args.json`（MCP 方式再加 `_caller`）；结果存为 `submit-result.json`。
+照 `references/quality-content.md` 第 3–5 节：开一个**新上下文**的审核方（Claude 用 Agent 工具开子 agent；Codex 开新会话），**不给 `synthesis.md`、`design.md` 和生成过程**，分两次给材料：
+1. 视角一（管理者只读）：只给 `report.md` 和规格摘录，审核方复述主线、答五个强制问题、标出看不懂和推导断开的地方。
+2. 视角二（回查事实）：视角一写完后，用 SendMessage 续同一个子 agent（Codex 在同一会话发第二条），再给 `report-check.txt`、`digest.md`、`products.md`，抽查事实、核对等级与能力卡，完成六项 30 分和一票否决。
 
-| 结果 | 怎么办 |
-|---|---|
-| 成功：`{ id, state: "pending", warnings, stale: false }` | 记下 `id`，进第 8 步。`warnings` 原样转告常浩 |
-| 成功但 `stale: true` | 已建成，但底稿在研判后变了，常浩确认时会被拒。按下面「底稿变了」处理一次 |
-| 成功且 `repeated: true` | 同一内容早已提交过，返回的是原 submission，不是新建；照第 8 步告诉常浩 |
-| `422 STRATEGY_INVALID` | 没保存。按服务端列出的原因（规则编号 + 对象 ID）改研判稿，重新组装（内容变了，键自然变），再提交。服务端一次最多列 8 条，可能要几轮；同一原因改两次还过不了，停下来报告 |
-| `409 IDEMPOTENCY_CONFLICT` | 同一个键之前交过不同内容。不要换键硬交：先查明是哪次提交（常浩页面上的待确认列表），再决定 |
-| `400` | 参数问题，按原因改 |
-| `401` / `403` | 凭据问题，停下来请常浩处理（第 2 节） |
-| **结果不明**：超时、断线、`5xx`、`workdesk.mjs` 退出码 3 | 见下一节，**不自动重试** |
+两个视角都写进 `review.md`。
 
-### 底稿变了
+- 一次审核 → 按「必须修改」返修 `report.md`（重跑 `report-check.mjs`）→ 同一审核方定向复核，只核上次的问题。
+- 复核后仍未解决的关键问题，写进答复交常浩裁决，不无限循环。
+- 开不了独立审核方：`review.md` 写「第 5 轮未执行」及原因，答复里照实说；自评分数标「自评」，不当通过。
 
-`inputFingerprint` 和研判时不同（提交前复核发现，或提交返回 `stale: true`）：
+### 第 6 步 · 交付
 
-1. 用新底稿重组装，并带上研判时的旧底稿：`node scripts/assemble.mjs facts-new.json draft.json --out-dir <目录> --prev-facts facts.json`。研判稿的 `basedOnFingerprint` 和新底稿不同时，不给 `--prev-facts` 脚本直接拦截，不会把旧判断悄悄换成新版本。脚本会拦下引用的 Evidence 版本变了或消失的对象：只重新研判这些对象，其余不动；全部没变的，`basedOnFingerprint` 保持研判时的值，不要改成新指纹。
-2. 通过后提交新的那份（指纹变了，键自然变），旧文件改名留档（`-1` 后缀）。
-3. **只重做一次**。重交后仍然 `stale: true`，或几分钟内指纹又变，不再循环：把两次的 `inputFingerprint`、变化的内容（用 digest 对比）报告给常浩，由他决定。
-4. 之前那条过期的 submission 不用 skill 处理：常浩确认新的那条时，同月其余待确认提交会自动转为过期；他也可以在页面直接拒绝。答复里写明两条的 id 和哪条是新的。
+**交付前复核输入有没有变**（写报告要几个小时，期间常浩可能同步了时间线、改了活动或能力卡）：
+1. 重取底稿存为 `facts-recheck.json`，比较它和 `facts.json` 的 `inputFingerprint`。
+2. 重跑 `product-context.mjs`，`--out-dir` 指向 `<工作目录>/recheck/`，`diff products.md recheck/products.md`。
+3. 都没变：报告头的「资料截至」写复核时间。变了：判断影响哪几章；影响结论的，回到对应轮次改，重跑 `report-check.mjs`；来不及改的，在报告头和答复里写明「交付前输入有变：……，以下章节按旧输入」，不悄悄交付。
 
-### 结果不明
+答复常浩：
+- 报告路径（`<工作目录>/report.md`）、报告等级，以及用一段话转述第一章的主线和关键取舍；
+- 交付前复核结果：输入没变，或变了什么、怎么处理的；
+- 审核结果：六项分数与合计、五个问题、未解决的问题（审核没执行就照实说）；
+- 第八章的 3–5 项关键假设，和最该补的输入（背景卡哪几栏、能力卡哪几个 SKU）；
+- 底稿里的时间线疑点（同一格两个日期、跨年日期段被解析成仅月份、列名和内容对不上、先后顺序可疑），请常浩到时间线页核对；
+- 工作目录里各轮文件：`digest.md`、`products.md`、`draft.json`、`synthesis.md`、`design.md`（含候选卡核对表、决策追溯表）、`report.md`、`report-check.txt`、`review.md`。
 
-不知道 submission 有没有建成时，不再调 `strategy_submit`：
-
-1. 手上有 submission `id`（例如提交返回了、但后续步骤出错）：调 `strategy_submission { id }` 查状态，照实告诉常浩。
-2. 没有 `id`：告诉常浩「提交结果不明」，给出 `idempotencyKey` 和 `submit-args.json` 的路径，请他看工作台页面的待确认列表里有没有这个月新出现的 submission。
-3. 常浩明确说「重提」后，才用**同一份** `submit-args.json`（同一个键、同一份内容）再交一次：之前已建成的会原样返回（`repeated: true`），没建成的会新建。重提时不改内容、不换键。
-
-### 第 8 步 · 答复与预览入口
-
-答复里写清：
-
-- 提交结果：submission `id`、状态、`agent`（服务端从凭据认定的）、提交时间、服务端提示。
-- 预览入口：`<工作台地址>/#/user/strategy`（策略 → 用户策略）的待确认区，工作台地址就是 `WORKDESK_URL`（默认 `http://127.0.0.1:5280`）；页面还没有待确认区时，预览接口是 `GET <工作台地址>/api/v3/strategy-v2/submissions/<id>/preview`。**请常浩在页面预览、确认**；skill 不会、也不能替他确认。
-- 内容摘要（只写文档里确实有的内容，说法和文档一致）：一句话判断；底稿里看到的时间线疑点（例如同一格两个日期、冲突未决、跨度异常长的日期段），提醒常浩去时间线页核对；六个地区的优先级（与默认不同的附理由）、情境数；空地区及原因；主要的 unknown 与缺口（尤其是缺背景卡导致的降级）；自检里的「待确认」项。
-- **背景卡待补范围**（组装有这类提示时必写）：逐条写哪一栏、哪一条（原文前十几个字）、缺国家还是人群、建议填什么（按 `references/lifecycle-bizcard.md` 第 5 节的预填规则给建议值和理由）、补了且对得上后最高能到什么强度（事实记录：购买判断可到 known + strong；业务观察：最高 inferred + partial）。指向策略页的业务背景卡；说明补范围会改条目的 Evidence 版本，补完要重新取底稿、重新生成，这次提交的稿子不会自动升级。
-- 工作目录路径（底稿、文档、提交结果都在那里）。
+请常浩按 `quality-content.md` 的六项评分和五个问题验收报告（试写期同时给 A–D）。**试写期不提交结构化版本**；常浩明确说「提交结构化版本」时，按 `references/submit.md` 提交第 1 轮的研究层文档（提交前重取底稿比指纹；结果不明先查 submission，不自动重试）。
 
 ## 4. 不许做
 
-- 编 Evidence ID、学校、日期，或把推测、只有月份、冲突未决的日期当精确日期写。
-- 没有行为证据写 `known` 的障碍；从新签复制续费障碍；把覆盖率写成「需求旺盛」「付费意愿强」。
-- 写 `origin=manual`，改动或删除常浩手写的 Claim（`assemble.mjs` 会原样带上）。
-- 往 `opportunities`、`strategies` 里写东西；写促销、打法、价格、限时类建议。
-- 结果不明时自动重提；换 `idempotencyKey` 绕开 409。
-- 调确认、拒绝、回退接口，读写数据库或 `data/`，对正式数据目录签发凭据。
-- 自行修改 `docs/策略规则/` 或本 skill 的规则摘录来让提交通过。
+- 编 Evidence ID、学校、日期、经营数据、收入目标、价格金额、产品能力、负责人；把推测、只有月份、冲突未决的日期当精确日期写。
+- 把〔待验证假设〕写成已验证；研究层 `unknown` / `inferred + weak` 的购买判断在报告里被写成确定结论；把覆盖率写成「需求旺盛」「付费意愿强」。
+- 先定 SKU 再编需求；写产品能力卡里没有的服务承诺（包过、几小时配到老师、退款）。
+- 为填满报告生成促销；不写依据就选机制；把跨月或已过期的活动当成本月激励。
+- 跳过 `report-check.mjs`，或把自评当独立审核；报告等级高报；交付前不复核输入，或输入变了不说。
+- 只看打法库索引就定促销方案（进候选的卡要读原文）；`design.md` 不写决策追溯表，或追溯表里的洞察编号、主推、方案和报告对不上。
+- 研究层：没有行为证据写 `known` 的障碍；从新签复制续费障碍；写 `origin=manual`、改动常浩手写的 Claim；往研究层 `opportunities`、`strategies` 写东西（当前 Schema 只接受空数组）。
+- 结果不明时自动重提、换 `idempotencyKey` 绕开 409；调确认、拒绝、回退接口；读写数据库或 `data/`；调写接口；对正式数据目录签发凭据。
+- 自行修改 `docs/策略规则/` 或本 skill 的摘录来让检查通过。

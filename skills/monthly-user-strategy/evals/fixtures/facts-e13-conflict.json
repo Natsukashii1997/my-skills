@@ -1,0 +1,992 @@
+{
+ "month": "2026-12",
+ "schemaVersion": "2.1",
+ "inputFingerprint": "e13f1x7u2e000013",
+ "baseRevision": null,
+ "rules": {
+  "versions": {
+   "sources": "sources-v1.1",
+   "barrier": "barrier-v2.1",
+   "lifecycle": "lifecycle-v0.2",
+   "scout": "scout-v1.1",
+   "quality": "quality-v1",
+   "baseline": "baseline-v1"
+  },
+  "sources": [
+   "SRC-timeline",
+   "SRC-official",
+   "SRC-ruling",
+   "SRC-bizcard",
+   "SRC-playbook",
+   "SRC-voice",
+   "SRC-crm",
+   "SRC-service"
+  ],
+  "barriers": {
+   "BR-M1": [
+    "新签"
+   ],
+   "BR-M2": [
+    "新签",
+    "续费"
+   ],
+   "BR-M3": [
+    "新签",
+    "续费"
+   ],
+   "BR-M4": [
+    "新签",
+    "续费"
+   ],
+   "BR-M5": [
+    "新签",
+    "续费"
+   ],
+   "BR-C1": [
+    "新签",
+    "续费"
+   ],
+   "BR-C2": [
+    "新签",
+    "续费"
+   ],
+   "BR-C3": [
+    "新签",
+    "续费"
+   ],
+   "BR-C4": [
+    "新签",
+    "续费"
+   ],
+   "BR-O1": [
+    "新签"
+   ],
+   "BR-F1": [
+    "新签",
+    "续费"
+   ],
+   "BR-R1": [
+    "续费"
+   ],
+   "BR-R2": [
+    "续费"
+   ],
+   "BR-R3": [
+    "续费"
+   ],
+   "BR-R4": [
+    "续费"
+   ],
+   "BR-R5": [
+    "续费"
+   ]
+  }
+ },
+ "coverage": {
+  "uk": {
+   "value": "高",
+   "status": "inferred",
+   "ratio": 1,
+   "dateQuality": {
+    "verified": 0,
+    "ruled": 0,
+    "source": 6,
+    "guess": 0
+   },
+   "coverage": {
+    "schools": 7,
+    "calculable": 6,
+    "active": 6,
+    "notCovered": 0,
+    "insufficient": 1
+   },
+   "range": {
+    "from": "2026-12-01",
+    "to": "2027-01-14"
+   },
+   "ruleVersion": "lifecycle-v0.2",
+   "byCountry": null
+  },
+  "us": {
+   "value": "高",
+   "status": "inferred",
+   "ratio": 1,
+   "dateQuality": {
+    "verified": 1,
+    "ruled": 0,
+    "source": 2,
+    "guess": 0
+   },
+   "coverage": {
+    "schools": 3,
+    "calculable": 3,
+    "active": 3,
+    "notCovered": 0,
+    "insufficient": 0
+   },
+   "range": {
+    "from": "2026-12-01",
+    "to": "2027-01-14"
+   },
+   "ruleVersion": "lifecycle-v0.2",
+   "byCountry": null
+  },
+  "hk": {
+   "value": "高",
+   "status": "inferred",
+   "ratio": 0.5,
+   "dateQuality": {
+    "verified": 2,
+    "ruled": 0,
+    "source": 0,
+    "guess": 0
+   },
+   "coverage": {
+    "schools": 2,
+    "calculable": 2,
+    "active": 1,
+    "notCovered": 1,
+    "insufficient": 0
+   },
+   "range": {
+    "from": "2026-12-01",
+    "to": "2027-01-14"
+   },
+   "ruleVersion": "lifecycle-v0.2",
+   "byCountry": null
+  },
+  "au": {
+   "value": "低",
+   "status": "inferred",
+   "ratio": 0,
+   "dateQuality": {
+    "verified": 0,
+    "ruled": 0,
+    "source": 2,
+    "guess": 0
+   },
+   "coverage": {
+    "schools": 2,
+    "calculable": 2,
+    "active": 0,
+    "notCovered": 2,
+    "insufficient": 0
+   },
+   "range": {
+    "from": "2026-12-01",
+    "to": "2027-01-14"
+   },
+   "ruleVersion": "lifecycle-v0.2",
+   "byCountry": null
+  },
+  "ca": {
+   "value": "unknown",
+   "status": "unknown",
+   "ratio": null,
+   "dateQuality": {
+    "verified": 0,
+    "ruled": 0,
+    "source": 0,
+    "guess": 0
+   },
+   "coverage": {
+    "schools": 0,
+    "calculable": 0,
+    "active": 0,
+    "notCovered": 0,
+    "insufficient": 0
+   },
+   "range": {
+    "from": "2026-12-01",
+    "to": "2027-01-14"
+   },
+   "ruleVersion": "lifecycle-v0.2",
+   "byCountry": null
+  },
+  "other": {
+   "value": "unknown",
+   "status": "unknown",
+   "ratio": null,
+   "dateQuality": {
+    "verified": 0,
+    "ruled": 0,
+    "source": 0,
+    "guess": 0
+   },
+   "coverage": {
+    "schools": 1,
+    "calculable": 0,
+    "active": 0,
+    "notCovered": 0,
+    "insufficient": 1
+   },
+   "range": {
+    "from": "2026-12-01",
+    "to": "2027-01-14"
+   },
+   "ruleVersion": "lifecycle-v0.2",
+   "byCountry": {
+    "sg": {
+     "value": "unknown",
+     "status": "unknown",
+     "ratio": null,
+     "dateQuality": {
+      "verified": 0,
+      "ruled": 0,
+      "source": 0,
+      "guess": 0
+     },
+     "coverage": {
+      "schools": 1,
+      "calculable": 0,
+      "active": 0,
+      "notCovered": 0,
+      "insufficient": 1
+     }
+    }
+   }
+  }
+ },
+ "evidence": [
+  {
+   "evidenceId": "EV-207c82edea34c32a",
+   "evidenceVersion": "766a75fa04e22033",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "uk",
+   "school": "格拉斯哥大学",
+   "header": "S1 Final 时间",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-12-07",
+    "to": "2026-12-18",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "英国 爱尔兰!O3",
+    "raw": "2026.12.7-12.18",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-67f763bd4eb31970",
+   "evidenceVersion": "25a518e2be8307ec",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "uk",
+   "school": "布里斯托大学",
+   "header": "S1 Final 时间",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-12-14",
+    "to": "2026-12-18",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "英国 爱尔兰!O11",
+    "raw": "2026.12.14-12.18",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-15d7a89a6d4051ae",
+   "evidenceVersion": "3551ca823921a084",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "uk",
+   "school": "伦敦城市大学",
+   "header": "Final时间",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2027-01-04",
+    "to": "2027-01-15",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "英国 爱尔兰!O30",
+    "raw": "2027.1.4-1.15",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-2d514ec9dfee7ab7",
+   "evidenceVersion": "472e65de7f5e1352",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "uk",
+   "school": "伦敦政治经济学院 LSE",
+   "header": "Final时间",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2027-01-04",
+    "to": "2027-01-10",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "英国 爱尔兰!O24",
+    "raw": "2027.1.4~2027.1.10",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-89a1b6d9400ac2f0",
+   "evidenceVersion": "472e65de7f5e1352",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "uk",
+   "school": "埃克塞特大学",
+   "header": "Final时间",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2027-01-04",
+    "to": "2027-01-10",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "英国 爱尔兰!O29",
+    "raw": "2027.1.4-1.10",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-a38d2cc4adc9f2e9",
+   "evidenceVersion": "4187af5b97bcef7a",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "uk",
+   "school": "约克大学",
+   "header": "S1 Final 时间",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2027-01-04",
+    "to": "2027-01-15",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "英国 爱尔兰!O6",
+    "raw": "2027.1.4-1.15",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-0f9947956c6c1033",
+   "evidenceVersion": "7e5e99e00d9a715e",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "uk",
+   "school": "杜伦大学",
+   "header": "圣诞假期",
+   "eventType": "期中假",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-12-12",
+    "to": "2027-01-10",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "英国 爱尔兰!Q25",
+    "raw": "2026.12.12-2027.1.10",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-76b377d65024d8e5",
+   "evidenceVersion": "b23e5d190dfea01d",
+   "kind": "timeline",
+   "sourceId": "SRC-official",
+   "year": 2026,
+   "country": "us",
+   "school": "密歇根大学 Umich",
+   "header": "Winter学期选课",
+   "eventType": "选课",
+   "anchorType": "period",
+   "dates": {
+    "from": "2026-11-19",
+    "to": "2026-12-04",
+    "precision": "day"
+   },
+   "verification": "verified",
+   "ambiguous": false,
+   "source": {
+    "ref": "美东 美西 加拿大!V17",
+    "raw": "10.20（推测）",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-d0f8c438c7b5d66d",
+   "evidenceVersion": "fc38d3d8ee3378b4",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "us",
+   "school": "华盛顿大学 UW",
+   "header": "Winter学期选课",
+   "eventType": "选课",
+   "anchorType": "period",
+   "dates": {
+    "from": "2026-11-05",
+    "to": "2027-01-10",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "美东 美西 加拿大!V2",
+    "raw": "11.5-2027.1.10",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-8495b1aeb4becf6d",
+   "evidenceVersion": "fd5057b5b8759eb1",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "us",
+   "school": "加州大学欧文分校 UCI",
+   "header": "Winter学期选课",
+   "eventType": "选课",
+   "anchorType": "period",
+   "dates": {
+    "from": "2026-11-16",
+    "to": "2026-12-04",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "美东 美西 加拿大!V6",
+    "raw": "11.16-12.4",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-18c7182f7c3872ba",
+   "evidenceVersion": "78a27d35d1a74044",
+   "kind": "timeline",
+   "sourceId": "SRC-official",
+   "year": 2026,
+   "country": "hk",
+   "school": "香港教育大学 EdUHK",
+   "header": "Final时间",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-12-01",
+    "to": "2026-12-12",
+    "precision": "day"
+   },
+   "verification": "verified",
+   "ambiguous": false,
+   "source": {
+    "ref": "香港 澳门 新加坡 马来西亚!S2",
+    "raw": "2026.11.30 - 12.12（AI推测）",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-176fb41f4d9f8b54",
+   "evidenceVersion": "3bea3dbe0f23cbb4",
+   "kind": "timeline",
+   "sourceId": "SRC-official",
+   "year": 2026,
+   "country": "hk",
+   "school": "香港大学 HKU",
+   "header": "Final时间",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-12-07",
+    "to": "2026-12-23",
+    "precision": "day"
+   },
+   "verification": "verified",
+   "ambiguous": false,
+   "source": {
+    "ref": "香港 澳门 新加坡 马来西亚!S4",
+    "raw": "2026.12.8-12.23（AI推测）",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-1f987513cc16fe29",
+   "evidenceVersion": "4d32fee96e40e709",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "au",
+   "school": "新南威尔士大学 UNSW",
+   "header": "Final Period",
+   "eventType": "Final",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-11-27",
+    "to": "2026-12-10",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "澳大利亚 新西兰!T13",
+    "raw": "11.27-12.10",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-3cbf5efa2765ef3e",
+   "evidenceVersion": "0cd06117caeb2580",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "au",
+   "school": "皇家墨尔本理工大学 RMIT",
+   "header": "Final补考",
+   "eventType": "补考",
+   "anchorType": "start",
+   "dates": {
+    "from": "2026-11-30",
+    "to": "2026-12-04",
+    "precision": "day"
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "澳大利亚 新西兰!V4",
+    "raw": "11.30-12.4",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-09f73b7e8dab93b9",
+   "evidenceVersion": "88735007fe92a4d7",
+   "kind": "timeline",
+   "sourceId": "SRC-timeline",
+   "year": 2026,
+   "country": "sg",
+   "school": "南洋理工 NTU",
+   "header": "出分时间",
+   "eventType": "出分",
+   "anchorType": "release",
+   "dates": {
+    "from": null,
+    "to": null,
+    "precision": "month",
+    "months": [
+     "2026-12",
+     "2027-01"
+    ]
+   },
+   "verification": "source",
+   "ambiguous": false,
+   "source": {
+    "ref": "香港 澳门 新加坡 马来西亚!T18",
+    "raw": "2026.12底-2027.1初",
+    "snapshot": "9669531abe84337b"
+   }
+  },
+  {
+   "evidenceId": "EV-e7b0000000000001",
+   "evidenceVersion": "e7v0000000000011",
+   "kind": "business",
+   "sourceId": "SRC-bizcard",
+   "field": "用户观察",
+   "text": "11 月英国新签咨询 46 条，其中 19 条明确说想等 1 月 Final 考完再决定报不报",
+   "bizType": "事实记录",
+   "strength": "strong",
+   "basis": "咨询台账 2026-11",
+   "countries": [
+    "uk"
+   ],
+   "relation": "新签",
+   "ambiguous": false,
+   "source": {
+    "ref": "2026-12·用户观察·B-7c1d2e3f",
+    "raw": "11 月英国新签咨询 46 条，其中 19 条明确说想等 1 月 Final 考完再决定报不报",
+    "snapshot": ""
+   }
+  },
+  {
+   "evidenceId": "EV-e7b0000000000002",
+   "evidenceVersion": "e7v0000000000012",
+   "kind": "business",
+   "sourceId": "SRC-bizcard",
+   "field": "存量用户情况",
+   "text": "英国在读老学员多数 1 月考完，顾问反馈他们还没想好下学期要不要继续、下学期课表未定",
+   "bizType": "业务观察",
+   "strength": "partial",
+   "basis": "顾问周会反馈",
+   "countries": [
+    "uk"
+   ],
+   "relation": "续费",
+   "ambiguous": false,
+   "source": {
+    "ref": "2026-12·存量用户情况·B-8d2e3f4a",
+    "raw": "英国在读老学员多数 1 月考完，顾问反馈他们还没想好下学期要不要继续、下学期课表未定",
+    "snapshot": ""
+   }
+  },
+  {
+   "evidenceId": "EV-e13b000000000003",
+   "evidenceVersion": "e13v000000000013",
+   "kind": "business",
+   "sourceId": "SRC-bizcard",
+   "field": "用户观察",
+   "text": "11 月英国新签咨询里有 12 条要求一周内开课、赶在 1 月 Final 前冲刺，顾问说这些学生最在意能不能马上排到老师",
+   "bizType": "业务观察",
+   "strength": "partial",
+   "basis": "顾问周会反馈",
+   "countries": [
+    "uk"
+   ],
+   "relation": "新签",
+   "ambiguous": false,
+   "source": {
+    "ref": "2026-12·用户观察·B-9e3f4a5b",
+    "raw": "11 月英国新签咨询里有 12 条要求一周内开课、赶在 1 月 Final 前冲刺，顾问说这些学生最在意能不能马上排到老师",
+    "snapshot": ""
+   }
+  },
+  {
+   "evidenceId": "EV-e13b000000000004",
+   "evidenceVersion": "e13v000000000014",
+   "kind": "business",
+   "sourceId": "SRC-bizcard",
+   "field": "用户观察",
+   "text": "12 月 1–7 日美国新签咨询 14 条，11 条是 12 月中旬 Final 前的冲刺需求，其中 6 条要求 3 天内开课",
+   "bizType": "事实记录",
+   "strength": "strong",
+   "basis": "咨询台账 2026-12 第 1 周",
+   "countries": [
+    "us"
+   ],
+   "relation": "新签",
+   "ambiguous": false,
+   "source": {
+    "ref": "2026-12·用户观察·B-1a5b6c7d",
+    "raw": "12 月 1–7 日美国新签咨询 14 条，11 条是 12 月中旬 Final 前的冲刺需求，其中 6 条要求 3 天内开课",
+    "snapshot": ""
+   }
+  },
+  {
+   "evidenceId": "EV-e13b000000000005",
+   "evidenceVersion": "e13v000000000015",
+   "kind": "business",
+   "sourceId": "SRC-bizcard",
+   "field": "存量用户情况",
+   "text": "11 月英国老学员续费意向问卷 20 人回收，14 人表示下学期继续辅导",
+   "bizType": "事实记录",
+   "strength": "strong",
+   "basis": "续费意向问卷 2026-11",
+   "countries": [
+    "uk"
+   ],
+   "relation": "续费",
+   "ambiguous": false,
+   "source": {
+    "ref": "2026-12·存量用户情况·B-0f4a5b6c",
+    "raw": "11 月英国老学员续费意向问卷 20 人回收，14 人表示下学期继续辅导",
+    "snapshot": ""
+   }
+  }
+ ],
+ "windows": [
+  {
+   "evidenceId": "EV-207c82edea34c32a",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-10-26",
+    "to": "2026-12-06"
+   },
+   "action": {
+    "from": "2026-11-09",
+    "to": "2026-12-02"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-67f763bd4eb31970",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-11-02",
+    "to": "2026-12-13"
+   },
+   "action": {
+    "from": "2026-11-16",
+    "to": "2026-12-09"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-15d7a89a6d4051ae",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-11-23",
+    "to": "2027-01-03"
+   },
+   "action": {
+    "from": "2026-12-07",
+    "to": "2026-12-30"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-2d514ec9dfee7ab7",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-11-23",
+    "to": "2027-01-03"
+   },
+   "action": {
+    "from": "2026-12-07",
+    "to": "2026-12-30"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-89a1b6d9400ac2f0",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-11-23",
+    "to": "2027-01-03"
+   },
+   "action": {
+    "from": "2026-12-07",
+    "to": "2026-12-30"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-a38d2cc4adc9f2e9",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-11-23",
+    "to": "2027-01-03"
+   },
+   "action": {
+    "from": "2026-12-07",
+    "to": "2026-12-30"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-0f9947956c6c1033",
+   "category": "假期",
+   "skipped": "假期不默认推出需求窗口"
+  },
+  {
+   "evidenceId": "EV-76b377d65024d8e5",
+   "category": "选课",
+   "next": "课程确认、开学准备",
+   "ruleVersion": "lifecycle-v0.2/选课",
+   "limitations": [],
+   "need": null,
+   "action": {
+    "from": "2026-11-19",
+    "to": "2026-12-04"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-d0f8c438c7b5d66d",
+   "category": "选课",
+   "next": "课程确认、开学准备",
+   "ruleVersion": "lifecycle-v0.2/选课",
+   "limitations": [],
+   "need": null,
+   "action": {
+    "from": "2026-11-05",
+    "to": "2027-01-10"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-8495b1aeb4becf6d",
+   "category": "选课",
+   "next": "课程确认、开学准备",
+   "ruleVersion": "lifecycle-v0.2/选课",
+   "limitations": [],
+   "need": null,
+   "action": {
+    "from": "2026-11-16",
+    "to": "2026-12-04"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-18c7182f7c3872ba",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-10-20",
+    "to": "2026-11-30"
+   },
+   "action": {
+    "from": "2026-11-03",
+    "to": "2026-11-26"
+   },
+   "status": "known"
+  },
+  {
+   "evidenceId": "EV-176fb41f4d9f8b54",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-10-26",
+    "to": "2026-12-06"
+   },
+   "action": {
+    "from": "2026-11-09",
+    "to": "2026-12-02"
+   },
+   "status": "known"
+  },
+  {
+   "evidenceId": "EV-1f987513cc16fe29",
+   "category": "Final",
+   "next": "出分、学期衔接、可能的补考",
+   "ruleVersion": "lifecycle-v0.2/Final",
+   "limitations": [],
+   "need": {
+    "from": "2026-10-16",
+    "to": "2026-11-26"
+   },
+   "action": {
+    "from": "2026-10-30",
+    "to": "2026-11-22"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-3cbf5efa2765ef3e",
+   "category": "补考",
+   "next": "出分、后续修课",
+   "ruleVersion": "lifecycle-v0.2/补考",
+   "limitations": [
+    "公告日未知，以 T-28 作为起点"
+   ],
+   "need": {
+    "from": "2026-11-02",
+    "to": "2026-11-29"
+   },
+   "action": {
+    "from": "2026-11-02",
+    "to": "2026-11-27"
+   },
+   "status": "inferred"
+  },
+  {
+   "evidenceId": "EV-09f73b7e8dab93b9",
+   "category": "出分",
+   "skipped": "只有月份，不计算精确窗口"
+  }
+ ],
+ "anomalies": [],
+ "bizcard": {
+  "用户观察": [
+   {
+    "id": "B-7c1d2e3f",
+    "text": "11 月英国新签咨询 46 条，其中 19 条明确说想等 1 月 Final 考完再决定报不报",
+    "type": "事实记录",
+    "basis": "咨询台账 2026-11",
+    "countries": [
+     "uk"
+    ],
+    "relation": "新签"
+   },
+   {
+    "id": "B-9e3f4a5b",
+    "text": "11 月英国新签咨询里有 12 条要求一周内开课、赶在 1 月 Final 前冲刺，顾问说这些学生最在意能不能马上排到老师",
+    "type": "业务观察",
+    "basis": "顾问周会反馈",
+    "countries": [
+     "uk"
+    ],
+    "relation": "新签"
+   },
+   {
+    "id": "B-1a5b6c7d",
+    "text": "12 月 1–7 日美国新签咨询 14 条，11 条是 12 月中旬 Final 前的冲刺需求，其中 6 条要求 3 天内开课",
+    "type": "事实记录",
+    "basis": "咨询台账 2026-12 第 1 周",
+    "countries": [
+     "us"
+    ],
+    "relation": "新签"
+   }
+  ],
+  "存量用户情况": [
+   {
+    "id": "B-8d2e3f4a",
+    "text": "英国在读老学员多数 1 月考完，顾问反馈他们还没想好下学期要不要继续、下学期课表未定",
+    "type": "业务观察",
+    "basis": "顾问周会反馈",
+    "countries": [
+     "uk"
+    ],
+    "relation": "续费"
+   },
+   {
+    "id": "B-0f4a5b6c",
+    "text": "11 月英国老学员续费意向问卷 20 人回收，14 人表示下学期继续辅导",
+    "type": "事实记录",
+    "basis": "续费意向问卷 2026-11",
+    "countries": [
+     "uk"
+    ],
+    "relation": "续费"
+   }
+  ]
+ },
+ "revision": null
+}

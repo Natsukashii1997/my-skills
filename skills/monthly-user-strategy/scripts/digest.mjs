@@ -12,6 +12,7 @@ const f = JSON.parse(readFileSync(args[0], 'utf8'));
 
 const REGIONS = [['uk', '英国'], ['us', '美国'], ['hk', '香港'], ['au', '澳洲'], ['ca', '加拿大'], ['other', '其他']];
 const OWN = new Set(['uk', 'us', 'hk', 'au', 'ca']);
+const REGION_NAME = Object.fromEntries(REGIONS);
 const STRENGTH = { verified: 'strong', ruled: 'strong', source: 'partial', guess: 'weak', conflict: 'weak' };
 const BIZ = { 事实记录: 'strong', 业务观察: 'partial', 管理判断: 'weak' };
 // 05 第 7 节默认矩阵。
@@ -46,9 +47,12 @@ p('## 业务背景卡条目');
 p('');
 if (!business.length) p('（无）');
 else {
-  p('| evidenceId | 字段 | 类型 | 强度上限 | 原文 | 依据 |');
-  p('|---|---|---|---|---|---|');
-  for (const e of business) p(`| ${e.evidenceId} | ${e.field} | ${e.bizType} | ${BIZ[e.bizType] ?? '?'} | ${cell(e.text)} | ${cell(e.basis)} |`);
+  // 适用国家、适用人群、来源（GPT 2.0.0 审核 P1-03）：洞察的适用范围不能比证据宽，没填就明写范围不明。
+  const UNSET = '未填（范围不明）';
+  const countries = e => (e.countries || []).length ? e.countries.map(c => REGION_NAME[c] ? `${REGION_NAME[c]}（${c}）` : c).join('、') : UNSET;
+  p('| evidenceId | 字段 | 类型 | 强度上限 | 适用国家 | 适用人群 | 原文 | 依据 | 来源 |');
+  p('|---|---|---|---|---|---|---|---|---|');
+  for (const e of business) p(`| ${e.evidenceId} | ${e.field} | ${e.bizType} | ${BIZ[e.bizType] ?? '?'} | ${countries(e)} | ${e.relation || UNSET} | ${cell(e.text)} | ${cell(e.basis) || '未写'} | ${cell(e.source?.ref) || '未写'} |`);
 }
 p('');
 
