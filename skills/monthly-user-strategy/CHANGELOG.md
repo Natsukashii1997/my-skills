@@ -18,6 +18,7 @@
 - 改动（P1-05）：第 5 轮审核分两个视角、两次给材料：先只给报告（管理者视角，复述主线、答五问），写完再给 `report-check.txt`、`digest.md`、`products.md` 回查事实并打满六项；`quality-content.md` 简报与 `review.md` 模板同步。
 - 新增（P1-05）：evals E12（证据较充分）、E13（地区错峰、用户证据冲突、交付限制），夹具 `facts-e13-conflict.json`、`products-e12.md`、`products-e13.md`（占位内容）；E9 改为研究假设版并带四个内部文件跑检查；`products-e9.md` 换成新格式。真正运行 E9 / E12 / E13 与 12 月真实试写是下一步（批 C），本版未运行。
 - 新增：单元测试 `tests/inputs.test.mjs`（输入链路 8 项），`report-check.test.mjs` 改写并扩充（共 22 项）；全量见 PR。
+- 修复（2026-11-10 用 12 月真实输入模拟试跑发现）：`digest.mjs` 结束日分旬按学校计数（同校两段日期曾被算成两所）；`report-check.mjs` 方案名带「（候选待确认）」时追溯表写不写后缀都能对上，正文出现打法卡卡号、`undefined` 等程序残留拦截；`product-context.mjs` 输出目录不存在时自动建。模拟记录在 `~/Library/Application Support/NiumaHome/evidence/strategy-2026-12-20261110-1654/`（报告研究假设版，独立审核 18/30 → 返修后 21/30）。
 
 ## 2.0.0 - 2026-11-09
 
