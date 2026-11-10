@@ -1,0 +1,6 @@
+interface:
+  display_name: "Matt 流程向导"
+  short_description: "开发任务先判 0–3 档，再按 Matt Pocock 技能的顺序带着走，每步给下一站"
+  default_prompt: "使用 $matt-flow 判断这件开发任务该走哪一档、从哪个 Matt 技能开始。"
+policy:
+  allow_implicit_invocation: true
