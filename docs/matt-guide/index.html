@@ -41,7 +41,7 @@ code,kbd{font-family:var(--mono);font-size:.88em}
 .cap{font-size:13px;color:var(--ink3);line-height:1.65}
 .say{font-weight:700;color:var(--ink)}
 .say::before{content:"「"}.say::after{content:"」"}
-.cmd{font-family:var(--mono);font-size:13px;background:var(--surface2);border:1px solid var(--rule2);padding:0 6px;border-radius:2px;white-space:nowrap;color:var(--ink)}
+.cmd{font-family:var(--mono);font-size:13px;background:var(--surface2);border:1px solid var(--rule2);padding:0 6px;border-radius:2px;overflow-wrap:anywhere;color:var(--ink)}
 
 /* ---------- 顶栏 ---------- */
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:rgba(243,244,246,.94);backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--rule)}
@@ -123,7 +123,8 @@ figcaption{margin-top:14px;font-size:14px;color:var(--ink2);line-height:1.7;max-
 .m-n1{fill:var(--s1)}.m-n2{fill:var(--s2)}.m-n3{fill:var(--s3)}.m-n4{fill:var(--s4)}
 .m-node{stroke:var(--surface);stroke-width:2.5}
 .m-opt{fill:var(--surface);stroke-width:2;stroke-dasharray:3 2}
-.m-opt1{stroke:var(--s1)}.m-opt3{stroke:var(--s3)}
+.m-opt1{stroke:var(--s1)}.m-opt3{stroke:var(--s3)}.m-opt4{stroke:var(--s4)}
+.m-bypass{stroke:var(--ink2);stroke-width:1.8;stroke-dasharray:6 4;fill:none}
 .m-lab{font:500 11px var(--mono);fill:var(--ink)}
 .m-note{font:400 11px var(--sans);fill:var(--ink3)}
 .m-join{font:700 12px var(--sans);fill:var(--ink)}
@@ -145,6 +146,7 @@ figcaption{margin-top:14px;font-size:14px;color:var(--ink2);line-height:1.7;max-
 .route span{font-family:var(--mono);font-size:12px;padding:1px 7px;background:var(--ct);color:var(--cd);font-weight:500;border-left:2px solid var(--c)}
 .route span.opt{background:var(--surface);border:1px dashed var(--c);border-left-width:1px}
 .route i{font-style:normal;color:var(--ink3);font-size:12px}
+.routes{display:flex;flex-direction:column;gap:6px}
 .route em{font-style:normal;font-size:13px;color:var(--ink2)}
 .ex{background:var(--surface);border:1px solid var(--rule);padding:12px 14px;font-size:14px;line-height:1.65}
 .ex b{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--ink3);font-weight:500;margin-bottom:4px}
@@ -252,7 +254,7 @@ figcaption{margin-top:14px;font-size:14px;color:var(--ink2);line-height:1.7;max-
 .nxt dt,.nxt dd{margin:0;padding:12px 18px;border-bottom:1px solid var(--rule2);font-size:15px;line-height:1.6}
 .nxt dt{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--ink3);padding-right:0;padding-top:15px}
 .nxt dd:last-of-type,.nxt dt:last-of-type{border-bottom:0}
-.nxt dd b,.msg b,.f3 b code{white-space:nowrap}
+.nxt dd b,.msg b,.f3 b code,.nxt dd code,.msg code,.nw{white-space:nowrap}
 .manual{display:flex;flex-direction:column;gap:14px}
 .mrow{display:grid;grid-template-columns:118px minmax(0,1fr);gap:14px;padding-bottom:14px;border-bottom:1px solid var(--rule2);font-size:15px;line-height:1.7}
 .mrow:last-child{border-bottom:0}
@@ -467,11 +469,11 @@ mark{background:var(--s1t);color:var(--s1d);padding:0 1px}
 <!-- 01 地图 -->
 <section class="sec white" id="map">
   <div class="wrap">
-    <div class="sec-head"><span class="sec-num">01</span><div><span class="k">一张地图</span><h2 class="h2">活有大小，走的站数不一样</h2><p class="lead">主线一共十站。小活只停两三站，大活从头走到尾，也可以从中间某一站上车。</p></div></div>
+    <div class="sec-head"><span class="sec-num">01</span><div><span class="k">一张地图</span><h2 class="h2">活有大小，走的站数不一样</h2><p class="lead">主线一共十站。小活只停几站，大活从头走到尾，也可以从中间某一站上车。</p></div></div>
     <figure>
       <p class="map-hint">← 左右滑动看全图 →</p>
       <div class="map-scroll">
-        <svg viewBox="0 0 1120 470" role="img" aria-label="Matt 技能库线路图：四个档位各自经过的站点，以及半路上车的位置。0 档直接改；1 档走 grilling、tdd、code-review；2 档走 grill-with-docs、按需 prototype、to-spec、to-tickets、implement、code-review、pr、retro；3 档先走 wayfinder，再并入 2 档的 to-spec。">
+        <svg viewBox="0 0 1120 512" role="img" aria-label="Matt 技能库线路图：四个档位各自经过的站点，以及半路上车的位置。0 档直接改，开 PR 前先问；1 档走 grilling（只问一轮）、tdd、code-review、pr；2 档走 grill-with-docs，一次对话做得完就直接实现，做不完再按需 prototype、to-spec、to-tickets、implement（自带测试和审查，一卡一个 PR）、retro；3 档先走 wayfinder，再并入 2 档的 to-spec。">
           <defs>
             <marker id="mk" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="m-head2"/></marker>
             <marker id="mk2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" class="m-head"/></marker>
@@ -495,51 +497,55 @@ mark{background:var(--s1t);color:var(--s1d);padding:0 1px}
             <text x="685" y="66" class="m-st">写代码</text><text x="685" y="83" class="m-sk">implement</text>
             <text x="781" y="66" class="m-st">测试先行</text><text x="781" y="83" class="m-sk">tdd</text>
             <text x="877" y="66" class="m-st">审查</text><text x="877" y="83" class="m-sk">code-review</text>
-            <text x="973" y="66" class="m-st">PR 说明</text><text x="973" y="83" class="m-sk">pr</text>
+            <text x="973" y="66" class="m-st">开 PR</text><text x="973" y="83" class="m-sk">pr</text>
             <text x="1069" y="66" class="m-st">复盘</text><text x="1069" y="83" class="m-sk">retro</text>
           </g>
           <g class="m-grid">
-            <line x1="205" y1="98" x2="205" y2="396"/><line x1="301" y1="98" x2="301" y2="396"/><line x1="397" y1="98" x2="397" y2="396"/><line x1="493" y1="98" x2="493" y2="396"/><line x1="589" y1="98" x2="589" y2="396"/><line x1="685" y1="98" x2="685" y2="396"/><line x1="781" y1="98" x2="781" y2="396"/><line x1="877" y1="98" x2="877" y2="396"/><line x1="973" y1="98" x2="973" y2="396"/><line x1="1069" y1="98" x2="1069" y2="396"/>
+            <line x1="205" y1="98" x2="205" y2="438"/><line x1="301" y1="98" x2="301" y2="438"/><line x1="397" y1="98" x2="397" y2="438"/><line x1="493" y1="98" x2="493" y2="438"/><line x1="589" y1="98" x2="589" y2="438"/><line x1="685" y1="98" x2="685" y2="438"/><line x1="781" y1="98" x2="781" y2="438"/><line x1="877" y1="98" x2="877" y2="438"/><line x1="973" y1="98" x2="973" y2="438"/><line x1="1069" y1="98" x2="1069" y2="438"/>
           </g>
           <!-- 档位标签 -->
           <text x="8" y="132" class="m-tier">0 档</text><text x="8" y="150" class="m-tiern">顺手改</text>
           <text x="8" y="198" class="m-tier">1 档</text><text x="8" y="216" class="m-tiern">轻量</text>
-          <text x="8" y="264" class="m-tier">2 档</text><text x="8" y="282" class="m-tiern">标准</text>
-          <text x="8" y="330" class="m-tier">3 档</text><text x="8" y="348" class="m-tiern">大雾</text>
+          <text x="8" y="292" class="m-tier">2 档</text><text x="8" y="310" class="m-tiern">标准</text>
+          <text x="8" y="380" class="m-tier">3 档</text><text x="8" y="398" class="m-tiern">大雾</text>
           <!-- 0 档 -->
           <line x1="140" y1="130" x2="677" y2="130" class="m-line"/>
           <rect x="677" y="122" width="16" height="16" class="m-sq"/>
-          <text x="705" y="134" class="m-join">直接改，改完告诉你改了哪</text>
+          <text x="705" y="134" class="m-join">直接改，开 PR 前先问你</text>
           <!-- 1 档 -->
-          <line x1="140" y1="196" x2="877" y2="196" class="m-line"/>
-          <circle cx="301" cy="196" r="8" class="m-node m-n1"/><text x="301" y="222" text-anchor="middle" class="m-lab">grilling</text>
-          <circle cx="781" cy="196" r="8" class="m-node m-n3"/><text x="781" y="222" text-anchor="middle" class="m-lab">tdd</text>
-          <circle cx="877" cy="196" r="8" class="m-node m-n4"/><text x="877" y="222" text-anchor="middle" class="m-lab">code-review</text>
+          <line x1="140" y1="196" x2="973" y2="196" class="m-line"/>
+          <circle cx="301" cy="196" r="8" class="m-node m-n1"/><text x="301" y="220" text-anchor="middle" class="m-lab">grilling</text><text x="301" y="234" text-anchor="middle" class="m-note">只问一轮，最多 3 题</text>
+          <circle cx="781" cy="196" r="8" class="m-node m-n3"/><text x="781" y="220" text-anchor="middle" class="m-lab">tdd</text>
+          <circle cx="877" cy="196" r="8" class="m-node m-n4"/><text x="877" y="220" text-anchor="middle" class="m-lab">code-review</text>
+          <circle cx="973" cy="196" r="8" class="m-node m-n4"/><text x="973" y="220" text-anchor="middle" class="m-lab">pr</text><text x="973" y="234" text-anchor="middle" class="m-note">开之前问你</text>
+          <!-- 2 档：一次对话做得完时的近路 -->
+          <path d="M309 278 C380 238 610 238 677 278" class="m-bypass" marker-end="url(#mk2)"/>
+          <text x="493" y="240" text-anchor="middle" class="m-join">一次对话做得完：跳过这三站，直接实现</text>
           <!-- 2 档 -->
-          <line x1="140" y1="262" x2="1069" y2="262" class="m-line"/>
-          <circle cx="301" cy="262" r="8" class="m-node m-n1"/><text x="301" y="288" text-anchor="middle" class="m-lab">grill-with-docs</text>
-          <circle cx="397" cy="262" r="7" class="m-opt m-opt1"/><text x="397" y="288" text-anchor="middle" class="m-lab">prototype</text><text x="397" y="302" text-anchor="middle" class="m-note">要看实物时</text>
-          <circle cx="493" cy="262" r="8" class="m-node m-n2"/><text x="493" y="288" text-anchor="middle" class="m-lab">to-spec</text>
-          <circle cx="589" cy="262" r="8" class="m-node m-n2"/><text x="589" y="288" text-anchor="middle" class="m-lab">to-tickets</text>
-          <circle cx="685" cy="262" r="8" class="m-node m-n3"/><text x="685" y="288" text-anchor="middle" class="m-lab">implement</text><text x="685" y="302" text-anchor="middle" class="m-note">或 implement-spec</text>
-          <circle cx="781" cy="262" r="7" class="m-opt m-opt3"/><text x="781" y="288" text-anchor="middle" class="m-lab">tdd</text><text x="781" y="302" text-anchor="middle" class="m-note">写代码时自带</text>
-          <circle cx="877" cy="262" r="8" class="m-node m-n4"/><text x="877" y="288" text-anchor="middle" class="m-lab">code-review</text>
-          <circle cx="973" cy="262" r="8" class="m-node m-n4"/><text x="973" y="288" text-anchor="middle" class="m-lab">pr</text>
-          <circle cx="1069" cy="262" r="8" class="m-node m-n4"/><text x="1069" y="288" text-anchor="middle" class="m-lab">retro</text>
+          <line x1="140" y1="284" x2="1069" y2="284" class="m-line"/>
+          <circle cx="301" cy="284" r="8" class="m-node m-n1"/><text x="301" y="308" text-anchor="middle" class="m-lab">grill-with-docs</text><text x="301" y="322" text-anchor="middle" class="m-note">问完判断做得完吗</text>
+          <circle cx="397" cy="284" r="7" class="m-opt m-opt1"/><text x="397" y="308" text-anchor="middle" class="m-lab">prototype</text><text x="397" y="322" text-anchor="middle" class="m-note">要看实物时</text>
+          <circle cx="493" cy="284" r="8" class="m-node m-n2"/><text x="493" y="308" text-anchor="middle" class="m-lab">to-spec</text>
+          <circle cx="589" cy="284" r="8" class="m-node m-n2"/><text x="589" y="308" text-anchor="middle" class="m-lab">to-tickets</text>
+          <circle cx="685" cy="284" r="8" class="m-node m-n3"/><text x="685" y="308" text-anchor="middle" class="m-lab">implement</text><text x="685" y="322" text-anchor="middle" class="m-note">一张卡一个 PR</text>
+          <circle cx="781" cy="284" r="7" class="m-opt m-opt3"/><text x="781" y="308" text-anchor="middle" class="m-lab">tdd</text><text x="781" y="322" text-anchor="middle" class="m-note">实现里自带</text>
+          <circle cx="877" cy="284" r="7" class="m-opt m-opt4"/><text x="877" y="308" text-anchor="middle" class="m-lab">code-review</text><text x="877" y="322" text-anchor="middle" class="m-note">实现里自带</text>
+          <circle cx="973" cy="284" r="8" class="m-node m-n4"/><text x="973" y="308" text-anchor="middle" class="m-lab">pr</text><text x="973" y="322" text-anchor="middle" class="m-note">开之前问你</text>
+          <circle cx="1069" cy="284" r="8" class="m-node m-n4"/><text x="1069" y="308" text-anchor="middle" class="m-lab">retro</text><text x="1069" y="322" text-anchor="middle" class="m-note">合并以后</text>
           <!-- 3 档 -->
-          <path d="M140 328 L370 328 C430 328 440 262 487 262" class="m-line" marker-end="url(#mk2)"/>
-          <circle cx="205" cy="328" r="8" class="m-node m-n1"/><text x="205" y="354" text-anchor="middle" class="m-lab">wayfinder</text>
-          <text x="250" y="354" class="m-join">地图走通后，并入 2 档 ↗</text>
+          <path d="M140 372 L370 372 C430 372 440 284 487 284" class="m-line" marker-end="url(#mk2)"/>
+          <circle cx="205" cy="372" r="8" class="m-node m-n1"/><text x="205" y="396" text-anchor="middle" class="m-lab">wayfinder</text>
+          <text x="252" y="398" class="m-join">地图走通后，并入 2 档 ↗</text>
           <!-- 半路上车 -->
-          <text x="8" y="452" class="m-tier" style="font-size:14px">半路</text><text x="8" y="468" class="m-tiern">上车</text>
-          <path d="M493 432 L493 314" class="m-ramp" marker-end="url(#mk)"/><text x="493" y="452" text-anchor="middle" class="m-rampt">想法已聊清</text>
-          <path d="M589 432 L589 300" class="m-ramp" marker-end="url(#mk)"/><text x="589" y="452" text-anchor="middle" class="m-rampt">已有需求文档</text>
-          <path d="M685 432 L685 314" class="m-ramp" marker-end="url(#mk)"/><text x="685" y="452" text-anchor="middle" class="m-rampt">已有任务卡</text>
-          <path d="M877 432 L877 300" class="m-ramp" marker-end="url(#mk)"/><text x="877" y="452" text-anchor="middle" class="m-rampt">代码已写完</text>
-          <text x="1069" y="452" text-anchor="middle" class="m-note">出 bug、找资料等</text><text x="1069" y="466" text-anchor="middle" class="m-note">见第 05 节</text>
+          <text x="8" y="490" class="m-tier" style="font-size:14px">半路</text><text x="8" y="506" class="m-tiern">上车</text>
+          <path d="M493 470 L493 320" class="m-ramp" marker-end="url(#mk)"/><text x="493" y="490" text-anchor="middle" class="m-rampt">想法已聊清</text>
+          <path d="M589 470 L589 320" class="m-ramp" marker-end="url(#mk)"/><text x="589" y="490" text-anchor="middle" class="m-rampt">已有需求文档</text>
+          <path d="M685 470 L685 334" class="m-ramp" marker-end="url(#mk)"/><text x="685" y="490" text-anchor="middle" class="m-rampt">已有任务卡</text>
+          <path d="M877 470 L877 334" class="m-ramp" marker-end="url(#mk)"/><text x="877" y="490" text-anchor="middle" class="m-rampt">代码已写完</text>
+          <text x="1069" y="490" text-anchor="middle" class="m-note">出 bug、找资料等</text><text x="1069" y="504" text-anchor="middle" class="m-note">见第 05 节</text>
         </svg>
       </div>
-      <figcaption>每一行是一档要停的站：实心点必停，空心点需要时才停；颜色对应上面四段。0 档不进流程，直接改。3 档先用 wayfinder 把大事拆成一个个决定，走通后从「需求文档」那站并入 2 档。底下的虚线箭头是半路上车的位置。第一次在一个项目里走 2、3 档前，要先铺设施（见第 04 节）。</figcaption>
+      <figcaption>每一行是一档要停的站：实心点必停，空心点是需要时才停，或已经含在「写代码」那站里；颜色对应上面四段。0 档不进流程，直接改。2 档问完先判断一次对话做不做得完，做得完就走上面那条虚线近路直接实现。3 档先用 wayfinder 把大事拆成一个个决定，走通后从「需求文档」那站并入 2 档。改完要开 PR、推送之前，都会先问你。底下的虚线箭头是半路上车的位置。第一次在一个项目里走 2、3 档前，要先铺设施（见第 04 节）。</figcaption>
     </figure>
   </div>
 </section>
@@ -552,35 +558,38 @@ mark{background:var(--s1t);color:var(--s1d);padding:0 1px}
       <div class="tier p0">
         <div class="tier-n"><b>0</b><span>顺手改</span></div>
         <p class="sig"><b>信号</b>改一两处，改完看一眼就知道对不对，功能怎么用不变。</p>
-        <div class="route"><em>不走技能，直接改</em></div>
+        <div class="route"><em>直接改</em><i>→</i><span class="p4">pr</span><em>（先问）</em></div>
         <div class="ex"><b>例子（示意）</b>驿窗设置页「已配置」写成了「以配置」，改掉。</div>
-        <p class="ask"><b>Claude 怎么做</b>不问，直接改，改完告诉你改了哪一处。</p>
+        <p class="ask"><b>Claude 怎么做</b>说一句档位，就在单独的分支上改，改完自己验；开 issue、推送、开 PR 之前一次问你。</p>
       </div>
       <div class="tier p1">
         <div class="tier-n"><b>1</b><span>轻量</span></div>
         <p class="sig"><b>信号</b>要改功能的行为，但范围清楚，一次对话做得完。</p>
-        <div class="route"><span class="p1">grilling</span><i>→</i><span class="p3">tdd</span><i>→</i><span class="p4">code-review</span></div>
+        <div class="route"><span class="p1">grilling</span><i>→</i><span class="p3">tdd</span><i>→</i><span class="p4">code-review</span><i>→</i><span class="p4">pr</span><em>（先问）</em></div>
         <div class="ex"><b>例子（示意）</b>牛马之家的折线图，鼠标停在点上时显示当天的具体数值。</div>
-        <p class="ask"><b>Claude 怎么做</b>说一句<q>这是 1 档，按 追问 → 测试先行 → 审查 来</q>就开始，不等你回。追问只问一轮，最多 3 题。</p>
+        <p class="ask"><b>Claude 怎么做</b>说一句<q>这是 1 档，按 问一轮 → 测试先行 → 审查 来</q>就开始。只问一轮，最多 3 题；你答完它连着做完测试和审查，到开 PR 之前才停下问你。</p>
       </div>
       <div class="tier p2">
         <div class="tier-n"><b>2</b><span>标准</span></div>
-        <p class="sig"><b>信号</b>一个新功能，牵涉好几个界面或文件，需求得先定下来，可能要分几次做。</p>
-        <div class="route"><span class="p1">grill-with-docs</span><i>→</i><span class="p1 opt">prototype</span><i>→</i><span class="p2">to-spec</span><i>→</i><span class="p2">to-tickets</span><i>→</i><span class="p3">implement</span><i>→</i><span class="p4">code-review</span><i>→</i><span class="p4">pr</span><i>→</i><span class="p4">retro</span></div>
+        <p class="sig"><b>信号</b>一个新功能，需求还有几种理解要取舍，或者牵涉好几个界面、文件。</p>
+        <div class="routes">
+          <div class="route"><span class="p1">grill-with-docs</span><i>→</i><em>问完判断：一次对话做得完</em><i>→</i><span class="p3">implement</span><i>→</i><span class="p4">pr</span></div>
+          <div class="route"><em>做不完</em><i>→</i><span class="p1 opt">prototype</span><i>→</i><span class="p2">to-spec</span><i>→</i><span class="p2">to-tickets</span><i>→</i><span class="p3">implement</span><em>（一张卡一个 PR）</em><i>→</i><span class="p4">retro</span></div>
+        </div>
         <div class="ex"><b>例子（示意）</b>给驿窗加一个「会话接力」面板：看到哪些会话在等你，一键接着做。</div>
-        <p class="ask"><b>Claude 先问你</b><q>我判断这是 2 档（新功能，牵涉侧栏和会话列表），建议走 追问 → 需求文档 → 任务卡 → 实现 → 审查，开始吗？</q>你回「好」才开始。</p>
+        <p class="ask"><b>Claude 先问你</b><q>我判断这是 2 档（新功能，牵涉侧栏和会话列表），建议走 问透想法（grill-with-docs）→ 写需求文档（to-spec）→ 拆任务卡（to-tickets）→ 逐张实现（implement），开始吗？回复「好」就开始。</q></p>
       </div>
       <div class="tier p3">
         <div class="tier-n"><b>3</b><span>大雾</span></div>
         <p class="sig"><b>信号</b>连终点长什么样都说不清，先要做很多决定，一次对话装不下。新项目但一句话说得清的小工具，不算这档。</p>
         <div class="route"><span class="p1">wayfinder</span><i>→</i><em>并入 2 档，从</em><span class="p2">to-spec</span><em>开始</em></div>
         <div class="ex"><b>例子（示意）</b>从零做一个新应用，比如「个人 AI 工作台」：用户是谁、放哪些模块都还没想好。</div>
-        <p class="ask"><b>Claude 先问你</b><q>我判断这是 3 档（新应用，方向还没定），建议先用 wayfinder 画地图，路清楚了再写需求文档，开始吗？</q></p>
+        <p class="ask"><b>Claude 先问你</b><q>我判断这是 3 档（新应用，方向还没定），建议先画方向地图（wayfinder），路清楚了再写需求文档（to-spec），开始吗？回复「好」就开始。</q></p>
       </div>
     </div>
     <div class="judge">
       <div><i>拿不准时</i><p>Claude 按<b>高一档</b>问你，并说明「也可以按 X 档轻量做」。你回<span class="say">按 1 档来</span>就降档。</p></div>
-      <div><i>中途变了</i><p><b>升档要问</b>：1 档做着发现要改多处、要取舍，Claude 停下来问要不要升 2 档。比想的小，它说一句就<b>直接降档</b>。</p></div>
+      <div><i>中途变了</i><p>要升档时 Claude 停下来给你<b>三选一</b>，各写清代价：① 缩小范围留在原档；② 升档，问过的不重问；③ 先停。回个数字就行。比想的小，它说一句就<b>直接降档</b>。</p></div>
       <div><i>只想聊不想改</i><p>回<span class="say">先只聊，不改代码</span>。追问照常进行，聊完再决定做不做。</p></div>
     </div>
   </div>
@@ -602,11 +611,13 @@ mark{background:var(--s1t);color:var(--s1d);padding:0 1px}
       <div class="fork">
         <div class="fork-h"><span>你要的是</span><span>接下来</span><span>你可以这样说</span><span style="text-align:right">档位</span></div>
         <div class="fork-r"><div class="q">只是想清楚，不写代码（计划、文章、决定）</div><div class="go">到这里就结束。缺的信息在别人手里，就用 <code>to-questionnaire</code> 写份问卷发给对方。</div><div class="s"><span class="say">好，就按这个定了</span></div><span class="tier-tag">不进流程</span></div>
-        <div class="fork-r"><div class="q">一个小改动，今天就做完</div><div class="go"><div class="route"><span class="p3">tdd</span><i>→</i><span class="p4">code-review</span></div>同一个对话里接着做，先写检查标准再改代码，最后自查。</div><div class="s"><span class="say">就这么改，用测试先行做吧</span></div><span class="tier-tag">1 档</span></div>
-        <div class="fork-r"><div class="q">有一处得亲眼看到才能定（界面长相、流程对不对）</div><div class="go"><div class="route"><span class="p1">prototype</span><i>→</i><span class="p2">to-spec</span></div>先做个用完即扔的小样，看完把结论带回来再写需求文档。</div><div class="s"><span class="say">界面先做个原型给我看几种样子</span></div><span class="tier-tag">2 档</span></div>
-        <div class="fork-r"><div class="q">一个正经功能，要分几次做完</div><div class="go"><div class="route"><span class="p2">to-spec</span><i>→</i><span class="p2">to-tickets</span><i>→</i><span class="p3">implement</span></div>把刚才聊的整理成需求文档，再拆成任务卡，一张张做。</div><div class="s"><span class="say">聊清楚了，整理成需求文档</span></div><span class="tier-tag">2 档</span></div>
-        <div class="fork-r"><div class="q">越聊越大，一次对话装不下</div><div class="go"><div class="route"><span class="p1">wayfinder</span><i>→</i><span class="p2">to-spec</span></div>先把大事拆成一张张「要做的决定」，一个个解决，路清楚了再写需求文档。</div><div class="s"><span class="say">太大了，先用 wayfinder 画张地图</span></div><span class="tier-tag">3 档</span></div>
+        <div class="fork-r"><div class="q">一个小改动，今天就做完</div><div class="go"><div class="route"><span class="p3">tdd</span><i>→</i><span class="p4">code-review</span><i>→</i><span class="p4">pr</span></div>同一个对话里接着做：先写检查标准再改代码，自查完，开 PR 前问你。</div><div class="s"><span class="say">就这么改，用测试先行做吧</span></div><span class="tier-tag">1 档</span></div>
+        <div class="fork-r"><div class="q">有一处得亲眼看到才能定（界面长相、流程对不对）</div><div class="go"><div class="route"><span class="p1">prototype</span><i>→</i><span class="p2">to-spec</span></div>先做个用完即扔的小样。界面问题会出三版放进一个网页给你挑，看完把结论带回来。</div><div class="s"><span class="say">界面先做个原型，给我看几种样子</span></div><span class="tier-tag">2 档</span></div>
+        <div class="fork-r"><div class="q">一个功能，一次对话就做得完</div><div class="go"><div class="route"><span class="p3">implement</span><i>→</i><span class="p4">pr</span></div>不写需求文档、不拆卡，就在这个对话里实现（自带测试和审查），开 PR 前问你。</div><div class="s"><span class="say">就这么做</span></div><span class="tier-tag">2 档</span></div>
+        <div class="fork-r"><div class="q">一个正经功能，要分几次做完</div><div class="go"><div class="route"><span class="p2">to-spec</span><i>→</i><span class="p2">to-tickets</span><i>→</i><span class="p3">implement</span></div>把刚才聊的整理成需求文档，再拆成任务卡，一张卡一个 PR。</div><div class="s"><span class="cmd"><span class="nw">/mattpocock-skills:</span><wbr><span class="nw">to-spec</span></span>，或<span class="say">聊清楚了，整理成需求文档</span></div><span class="tier-tag">2 档</span></div>
+        <div class="fork-r"><div class="q">越聊越大，一次对话装不下</div><div class="go"><div class="route"><span class="p1">wayfinder</span><i>→</i><span class="p2">to-spec</span></div>先把大事拆成一张张「要做的决定」，一个个解决，路清楚了再写需求文档。</div><div class="s"><span class="cmd"><span class="nw">/mattpocock-skills:</span><wbr><span class="nw">wayfinder</span></span>，或<span class="say">太大了，先画张地图</span></div><span class="tier-tag">3 档</span></div>
       </div>
+      <p class="cap" style="margin-top:12px">带斜杠的是「只能手动叫」的技能的命令。走 matt-flow 时，Claude 会在下一站卡片里把它写好，你复制发出就行，回「好」也行。</p>
     </div>
 
     <div class="rules3">
@@ -627,7 +638,7 @@ mark{background:var(--s1t);color:var(--s1d);padding:0 1px}
           <button class="btn pri" type="button" data-act="play"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 1l9 5-9 5z"/></svg><span>播放</span></button>
           <button class="btn" type="button" data-act="replay">重播</button>
           <button class="btn" type="button" data-act="step">逐步 →</button>
-          <span class="dm-prog" aria-live="polite">0 / 8</span>
+          <span class="dm-prog" aria-live="polite">0 / 7</span>
         </div>
       </div>
       <div class="dm-stage">
@@ -635,13 +646,13 @@ mark{background:var(--s1t);color:var(--s1d);padding:0 1px}
         <div class="win"><div class="win-bar"><b>流程走到哪了</b><span class="demo-note">2 档</span></div>
           <div class="track" id="g1-track">
             <div class="trk p1" data-s="0"><span class="dot"></span><div><b>grill-with-docs</b><span>追问，直到没有含糊的地方</span><em></em></div></div>
-            <div class="trk p2" data-s="1"><span class="dot"></span><div><b>to-spec</b><span>整理成需求文档；发出去前单独问你</span><em></em></div></div>
+            <div class="trk p2" data-s="1"><span class="dot"></span><div><b>to-spec</b><span>先写草稿，再一次确认接缝、发布、默认值</span><em></em></div></div>
             <div class="trk p2" data-s="2"><span class="dot"></span><div><b>to-tickets</b><span>拆成任务卡，你点头才发布</span><em></em></div></div>
-            <div class="trk p3" data-s="3"><span class="dot"></span><div><b>implement</b><span>按先后一张张做，每张做完给下一站</span><em></em></div></div>
+            <div class="trk p3" data-s="3"><span class="dot"></span><div><b>implement</b><span>一张卡一个分支、一个 PR</span><em></em></div></div>
           </div>
         </div>
       </div>
-      <p class="dm-end">追问结束后，你只回两次：「好」进下一站，「发」同意把需求文档发出去。</p>
+      <p class="dm-end">追问结束后，你只回两次：「好」进下一站，「都按推荐」一次确认要发出去的东西。</p>
     </div>
   </div>
 </section>
@@ -654,9 +665,9 @@ mark{background:var(--s1t);color:var(--s1d);padding:0 1px}
     <div class="flow-auto">
       <div class="f3"><span class="k">你</span><b>直接说想做什么</b><small>不用说技能名。比如「牛马之家的折线图想加悬停数值」。</small></div>
       <div class="f3a" aria-hidden="true">→</div>
-      <div class="f3"><span class="k">Claude</span><b>判档；2、3 档先问一句</b><small>「我判断这是 X 档（理由），建议走 A → B → C，开始吗？」0、1 档说一句就直接做。半路入口不判档，直接从那站接上。</small></div>
+      <div class="f3"><span class="k">Claude</span><b>判档；2、3 档先问一句</b><small>「我判断这是 X 档（理由），建议走 A → B → C，开始吗？回复『好』就开始。」0、1 档说一句就直接做。半路入口不判档，直接从那站接上。</small></div>
       <div class="f3a" aria-hidden="true">→</div>
-      <div class="f3 o"><span class="k">每站做完</span><b>给一张「下一站卡片」</b><small>就是回复末尾那三行：本次完成、当前状态、下一步（下一站是什么、你要回什么）。</small></div>
+      <div class="f3 o"><span class="k">每站做完</span><b>给一张「下一站卡片」</b><small>就是回复末尾那三行：本次完成、当前状态、下一步。「下一步」写明你要回什么：「好」，或者一行命令。</small></div>
     </div>
 
     <div class="sub-blk two-col">
@@ -664,15 +675,18 @@ mark{background:var(--s1t);color:var(--s1d);padding:0 1px}
         <div class="blk-k"><span class="bk-t">你拍板</span><span class="bk-d">只有这几处要你回话</span></div>
         <div class="decide">
           <div class="dc-h"><span>什么时候</span><span>Claude 在等什么</span><span>你回</span></div>
-          <div class="dc-r"><div>开始前（2、3 档）</div><div class="w">确认档位和路线</div><div><span class="say">好</span>，或<span class="say">按 1 档来</span>、<span class="say">先只聊</span></div></div>
-          <div class="dc-r"><div>每一轮追问</div><div class="w">每题都附了推荐答案</div><div><span class="say">是</span>就是全接受；不同意就说<span class="say">Q2 不对，我要……</span></div></div>
-          <div class="dc-r"><div>动手写代码前</div><div class="w">确认从哪几处检查功能对不对（测试接缝）；1 档并在追问里一起问</div><div><span class="say">可以</span>；看不懂就回<span class="say">用大白话讲</span></div></div>
-          <div class="dc-r"><div>拆任务卡时</div><div class="w">看拆法：粒度、先后顺序</div><div><span class="say">可以</span>，或<span class="say">第 3 张太大，再拆细</span></div></div>
-          <div class="dc-r"><div>对外发布前</div><div class="w">发需求文档或任务卡到 GitHub、推送、开 PR，每次单独问</div><div><span class="say">发</span>，或<span class="say">先别发</span></div></div>
+          <div class="dc-r"><div>开始前（2、3 档）</div><div class="w">确认档位和路线；也会告诉你任务卡放哪</div><div><span class="say">好</span>，或<span class="say">按 1 档来</span>、<span class="say">先只聊</span></div></div>
+          <div class="dc-r"><div>每一轮追问</div><div class="w">每题都附了推荐答案；1 档只问一轮</div><div><span class="say">是</span>就是全接受；不同意就说<span class="say">Q2 不对，我要……</span></div></div>
+          <div class="dc-r"><div>2 档问完时</div><div class="w">理解一致吗；一次对话做不做得完（做得完就直接实现）</div><div><span class="say">一致，好</span></div></div>
+          <div class="dc-r"><div>需求文档草稿写好时</div><div class="w">一次确认三件事：从哪几处检查（测试接缝）、发不发到 GitHub、补的默认值</div><div><span class="say">都按推荐</span>，或逐条改</div></div>
+          <div class="dc-r"><div>拆任务卡时</div><div class="w">一次确认拆法、发哪几张、一张张做还是多个 AI 并行做完</div><div><span class="say">可以，一张张做</span></div></div>
+          <div class="dc-r"><div>要升档时</div><div class="w">三选一：缩小范围 / 升档 / 先停</div><div>回 1、2 或 3</div></div>
+          <div class="dc-r"><div>对外写入前</div><div class="w">建、改、评论、关闭 issue 或 PR，推送任何分支，开 PR，合并，都要单独问；同一站的列成一张清单，确认一次</div><div><span class="say">发</span>，或<span class="say">先别发</span></div></div>
           <div class="dc-r"><div>要你亲手做的事</div><div class="w">注册账号、复制密钥这类它做不了的</div><div>按 wizard 向导一步步做</div></div>
           <div class="dc-r"><div>合并前</div><div class="w">PR 已开，等你批准</div><div><span class="say">合并</span>，或<span class="say">先别合</span></div></div>
-          <div class="dc-r"><div>每站做完</div><div class="w">2、3 档每站做完都停下，等你回话；下一站卡片的「下一步」写着你要做什么</div><div><span class="say">好</span>进下一站；不想每站都等就说<span class="say">一口气做完</span></div></div>
-        </div>
+          <div class="dc-r"><div>每站做完</div><div class="w">2、3 档每站都停下；卡片写明你要回什么</div><div><span class="say">好</span>或那行命令。不想每站都等就说<span class="say">一口气做完</span>，它会先列出仍会停的地方</div></div>
+        
+</div>
       </div>
       <div>
         <div class="blk-k"><span class="bk-t">下一站卡</span><span class="bk-d">就是每次回复末尾那三行（示意）</span></div>
@@ -680,15 +694,16 @@ mark{background:var(--s1t);color:var(--s1d);padding:0 1px}
           <div class="nxt-h">回复末尾 · 2 档 · 会话接力面板</div>
           <dl>
             <dt>本次完成</dt><dd><b>to-spec</b>：需求文档「会话接力面板」已发到 GitHub Issues（#41）</dd>
-            <dt>当前状态</dt><dd>〔等你决定〕2 档 · 第 2/7 站 to-spec 已完成</dd>
-            <dt>下一步</dt><dd>下一站 <b>to-tickets</b>（把需求拆成能单独演示的任务卡），因为需求已经定了。你要做的：回复<span class="say">好</span></dd>
+            <dt>当前状态</dt><dd>〔等你决定〕2 档 · 第 2 站「写需求文档」已完成（后面还有：拆任务卡、逐张实现、复盘）</dd>
+            <dt>下一步</dt><dd>下一站「拆任务卡」（<code>to-tickets</code>：把需求拆成能单独演示的任务卡），因为需求已经定了。你要做的：回复 <span class="cmd"><span class="nw">/mattpocock-skills:</span><wbr><span class="nw">to-tickets</span></span>（回<span class="say">好</span>也行）</dd>
           </dl>
         </div>
         <div class="blk-k" style="margin-top:40px"><span class="bk-t">手动叫</span><span class="bk-d">想自己指定时</span></div>
         <div class="manual">
           <div class="mrow"><b>打斜杠搜索</b><div><p>在输入框打 <span class="cmd">/</span> 再打几个字，比如 <span class="cmd">/grill</span>，列表里选 <code>mattpocock-skills:grill-me</code>。</p></div></div>
-          <div class="mrow"><b>直接说名字</b><div><p><span class="say">用 to-spec 整理成需求文档</span>，Claude 会去调用。</p></div></div>
-          <div class="mrow"><b>让它重新带路</b><div><p>说<span class="say">下一步呢</span>，它会先查清走到哪站再告诉你；或打 <span class="cmd">/matt-flow</span>。</p></div></div>
+          <div class="mrow"><b>卡片里的命令</b><div><p>只能手动叫的技能，Claude 会在下一站卡片里写好命令，比如 <span class="cmd"><span class="nw">/mattpocock-skills:</span><wbr><span class="nw">to-spec</span></span>，复制发出就行。</p></div></div>
+          <div class="mrow"><b>直接说名字</b><div><p>说<span class="say">用 to-spec 整理成需求文档</span>也行，等于你同意进这一站。</p></div></div>
+          <div class="mrow"><b>隔几天再接着</b><div><p>说<span class="say">下一步呢</span>。它会查进度文件 <code>CURRENT.md</code>、做到一半的分支和开着的 PR，找出走到哪站；同时有几件事在做，就列出来让你挑。也可以打 <span class="cmd">/matt-flow</span>。</p></div></div>
           <div class="mrow"><b>审查选对版本</b><div><p>打 <span class="cmd">/code-review</span> 会出来两个：选 <code>mattpocock-skills:code-review</code>。不带前缀的是 Claude Code 自带的另一种审查。</p></div></div>
         </div>
       </div>
@@ -696,7 +711,7 @@ mark{background:var(--s1t);color:var(--s1d);padding:0 1px}
 
     <div class="setup">
       <div><span class="k">项目第一次走 2、3 档前 · 还没有 AGENTS.md</span><b>先用 project-starter 铺骨架</b><p>常浩自建的「项目起步」技能。它把协作规矩和 Matt 流程要的东西（任务卡放哪、标签、术语表位置）一次铺好。说<span class="say">给这个项目铺协作骨架</span>。铺完但不建 GitHub 仓库的，任务卡也放本地 <code>.scratch/</code>。</p></div>
-      <div><span class="k">项目第一次走 2、3 档前 · 已经有 AGENTS.md</span><b>跑一次 setup-matt-pocock-skills</b><p>只补 Matt 流程要的配置。任务卡放哪：有 GitHub 的项目放 GitHub Issues，没有的放本地 <code>.scratch/</code> 文件夹。说 <span class="cmd">/setup-matt-pocock-skills</span>。</p></div>
+      <div><span class="k">项目第一次走 2、3 档前 · 已经有 AGENTS.md</span><b>跑一次 setup-matt-pocock-skills</b><p>只补 Matt 流程缺的配置。任务卡放哪，Claude 会在开头那句话里告诉你：有 GitHub 的项目放 GitHub Issues；没有的，建不建仓库到那一站由你定，不建就放本地 <code>.scratch/</code> 文件夹。说 <span class="cmd"><span class="nw">/mattpocock-skills:</span><wbr><span class="nw">setup-matt-pocock-skills</span></span>。</p></div>
     </div>
   </div>
 </section>
@@ -704,7 +719,7 @@ mark{background:var(--s1t);color:var(--s1d);padding:0 1px}
 <!-- 05 半路入口 -->
 <section class="sec white" id="ramps">
   <div class="wrap">
-    <div class="sec-head"><span class="sec-num">05</span><div><span class="k">半路入口</span><h2 class="h2">不是每次都从头开始</h2><p class="lead">先找你现在的情况，从对应那站上车。半路上车不判档，也不问「开始吗」，Claude 说一句「从 X 这站接上」就开始；要对外发布的那一步照样先问你。</p></div></div>
+    <div class="sec-head"><span class="sec-num">05</span><div><span class="k">半路入口</span><h2 class="h2">不是每次都从头开始</h2><p class="lead">先找你现在的情况，从对应那站上车。Claude 会先查前面的站有没有产出、够不够格，再说一句「从 X 这站接上」就开始，不判档，也不问「开始吗」；要对外发布的那一步照样先问你。</p></div></div>
     <div class="ramp" id="ramp-list"></div>
   </div>
 </section>
@@ -712,7 +727,7 @@ mark{background:var(--s1t);color:var(--s1d);padding:0 1px}
 <!-- 06 技能卡片 -->
 <section class="sec" id="skills">
   <div class="wrap">
-    <div class="sec-head"><span class="sec-num">06</span><div><span class="k">技能卡片</span><h2 class="h2">每个技能做什么、怎么叫</h2><p class="lead">常用的在前面，冷门的收在最后。标着「Claude 会自动用」的，你说出意思它自己会调；标着「只能手动叫」的，要么你点名，要么由 matt-flow 带路时替你调。</p></div></div>
+    <div class="sec-head"><span class="sec-num">06</span><div><span class="k">技能卡片</span><h2 class="h2">每个技能做什么、怎么叫</h2><p class="lead">常用的在前面，冷门的收在最后。标着「Claude 会自动用」的，你说出意思它自己会调；标着「只能手动叫」的，Claude 不会自己用：你点名，或者 matt-flow 在下一站卡片里把命令写好，你发出命令或回「好」都行。</p></div></div>
     <div class="tools">
       <label class="search" for="sk-q"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="sk-q" type="search" placeholder="搜技能名或用途，如 bug、需求、原型" autocomplete="off"></label>
       <div class="fchips" id="sk-f" role="group" aria-label="按阶段筛选">
@@ -749,7 +764,7 @@ mark{background:var(--s1t);color:var(--s1d);padding:0 1px}
 <footer class="foot">
   <div class="wrap">
     <div class="next">
-      <p>下次有想法，直接跟 Claude 说。它判好档、问你一句，你回「好」就行；听不懂随时说「用大白话重讲」。</p>
+      <p>下次有想法，直接跟 Claude 说。它判好档、问你一句，你回「好」或它给的那行命令就行；听不懂随时说「用大白话重讲」。</p>
       <div class="bars" aria-hidden="true"><b style="background:var(--s1)">1</b><b style="background:var(--s2)">2</b><b style="background:var(--s3)">3</b><b style="background:var(--s4)">4</b></div>
     </div>
     <div class="foot-grid">
@@ -763,7 +778,7 @@ mark{background:var(--s1t);color:var(--s1d);padding:0 1px}
       </div>
       <div class="disc">
         <p>技能说明按 2026-11-10 本机安装的版本原文改写成白话，作者更新后以原文为准。「会不会自动用」以技能文件里是否禁止 Claude 自行调用为准。</p>
-        <p>牛马之家、驿窗等例子用来说明档位，是示意，不代表这些功能已立项。档位划分、下一站卡片和半路入口是常浩这边的约定，和配套技能 matt-flow 1.0.0（my-skills PR #84）保持一致；交接用常浩规则里的交接卡，不用 Matt 的 /handoff、/clear。</p>
+        <p>牛马之家、驿窗等例子用来说明档位，是示意，不代表这些功能已立项。档位划分、下一站卡片和半路入口是常浩这边的约定，和配套技能 matt-flow 2.0.0（my-skills PR #87，待合并）保持一致；交接用常浩规则里的交接卡，不用 Matt 的 /handoff、/clear。</p>
       </div>
     </div>
   </div>
@@ -776,23 +791,29 @@ var RM=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 /* 文本里 `x` 渲染成代码，「x」保留 */
 function fmt(s){return esc(s).replace(/`([^`]+)`/g,'<code>$1</code>')}
-/* 「你可以这样说」：斜杠命令显示成命令块，后面的话再加引号 */
-function say(s){if(s.charAt(0)!=='/')return '<span class="say">'+esc(s)+'</span>';var i=s.indexOf(' '),c=i<0?s:s.slice(0,i),r=i<0?'':s.slice(i+1);return '<span class="cmd">'+esc(c)+'</span>'+(r?' <span class="say">'+esc(r)+'</span>':'')}
+/* 插件外（~/.claude/skills/）的原版技能，命令不带 mattpocock-skills: 前缀 */
+var OUT=['claude-handoff','loop-me','writing-fragments','writing-shape','writing-beats','setup-ts-deep-modules','setup-pre-commit','git-guardrails-claude-code','migrate-to-shoehorn','scaffold-exercises'];
+function cmdOf(id){return OUT.indexOf(id)>-1?'/'+id:'/mattpocock-skills:'+id}
+/* 显示命令：前缀和技能名各自不断开，只在两者之间换行 */
+function cmdHTML(c){var i=c.indexOf(':');return i<0?'<span class="nw">'+esc(c)+'</span>':'<span class="nw">'+esc(c.slice(0,i+1))+'</span><wbr><span class="nw">'+esc(c.slice(i+1))+'</span>'}
+/* 「你可以这样说」：斜杠命令显示成命令块（补全前缀），后面的话再加引号 */
+function say(s){if(s.charAt(0)!=='/')return '<span class="say">'+esc(s)+'</span>';var i=s.indexOf(' '),c=cmdOf((i<0?s:s.slice(0,i)).slice(1).replace('mattpocock-skills:','')),r=i<0?'':s.slice(i+1);return '<span class="cmd">'+cmdHTML(c)+'</span>'+(r?' <span class="say">'+esc(r)+'</span>':'')}
 
 /* ---------- 半路入口 ---------- */
 var RAMPS=[
  ['想法已经聊清楚了','to-spec','p2','聊清楚了，整理成需求文档','to-tickets 拆卡，再一张张做'],
  ['手上已经有一份需求文档','to-tickets','p2','把这份需求拆成任务卡','implement 或 implement-spec'],
- ['已经有拆好的任务卡','implement','p3','做 #12 这张卡','按先后一张张做；全做完 code-review、pr'],
- ['代码已经写完了','code-review','p4','对比 main 审一下这次改动','pr 开改动申请，合并后 retro 复盘'],
- ['出 bug 了：报错、结果不对、变慢','diagnosing-bugs','p0','折线图悬停的数值不对，诊断一下','修好留回归测试，再 retro 问「怎样能早点防住」'],
+ ['已经有拆好的任务卡','implement','p3','做 #12 这张卡','一张卡一个分支、一个 PR（实现里自带审查）；全做完 retro 复盘'],
+ ['代码已经写完了','code-review','p4','对比 main 审一下这次改动','要提交、合并时再开 PR；之后 retro 复盘'],
+ ['出 bug 了：报错、结果不对、变慢','diagnosing-bugs','p0','折线图悬停的数值不对，诊断一下','修好留回归测试，再 retro；正在做的功能里刚冒出来的 bug，算当前那站的事'],
  ['别人提的问题和需求堆了一堆','triage','p0','/triage 看看哪些需要我处理','整理成可交给 agent 的说明，再 implement'],
- ['代码越来越乱，改一处要碰好多文件','improve-codebase-architecture','p0','看看驿窗哪里最该整理','挑一处，进 grill-with-docs 从头追问'],
- ['Claude 刚才说的我没听懂','wait-what','p0','没听懂，用大白话重讲','也可以直接打 `/wait-what`；讲明白后回到原来那一步'],
- ['要我亲手去后台注册、拿密钥','wizard','p0','这几步做个向导带我走','向导把值写进 .env 或 GitHub 密钥，回到原流程'],
- ['要先查资料、看官方文档','research','p0','后台查一下 XX 的限制，写成笔记','把笔记带进 grill-with-docs'],
+ ['代码越来越乱，改一处要碰好多文件','improve-codebase-architecture','p0','看看驿窗哪里最该整理','要扫全库，Claude 先问一句；挑一处，进 grill-with-docs 从头追问'],
+ ['Claude 刚才说的我没听懂','wait-what','p0','没听懂，用大白话重讲','也可以打 `/mattpocock-skills:wait-what`；讲明白后回到原来那一步'],
+ ['要我亲手去后台注册、拿密钥','wizard','p0','这几步做个向导带我走','向导把值写进 .env 或 GitHub 密钥，回到原来那一站'],
+ ['开发要用的资料，得先查官方文档','research','p0','后台查一下 XX 的限制，写成笔记','把笔记带进 grill-with-docs；流程中途绕过来的，查完回原站'],
  ['关键信息在同事或客户手里','to-questionnaire','p0','/to-questionnaire 我要问运营几个口径','收回答案，带进 grill-with-docs 或 to-spec'],
- ['想学懂一个概念','teach','p0','/teach 我想搞懂 git 分支','分几次课学；学完不接开发流程，要做东西时再判档']
+ ['想系统学一个开发概念','teach','p0','/teach 我想搞懂 git 分支','在 `~/Sandbox/` 的学习目录里分几次课；一句话能答的直接问就行'],
+ ['隔了几天，不记得做到哪了','查进度','p0','下一步呢','查进度文件、做到一半的分支和开着的 PR；几件事同时在做就列出来让你挑']
 ];
 $('#ramp-list').innerHTML='<div class="rp-h"><span>我现在的情况</span><span>从这站开始</span><span>你可以这样说</span><span>之后接到</span></div>'+RAMPS.map(function(r){
   return '<div class="rp-r '+r[2]+'"><div class="sit">'+esc(r[0])+'</div><div class="st"><code>'+esc(r[1])+'</code></div><div>'+say(r[3])+'</div><div class="then">'+fmt(r[4])+'</div></div>';
@@ -808,28 +829,28 @@ var SK=[
   when:'不在项目文件夹里，只想把计划、文章或决定想清楚。',prev:'一个模糊的想法',next:'见第 03 节：想清楚就结束；要做成功能接 to-spec',say:'用 grill-me 拷问一下我这个想法：……'},
  {g:'main',ph:'p1',id:'grilling',cn:'追问本体',auto:1,cmd:'/grilling',
   what:'grill-me 和 grill-with-docs 背后真正干活的那套追问。每轮把眼下能问的问题一次问完、编号、附推荐答案；查得到的事实它自己查，只把决定留给你。',
-  when:'1 档的第一步；你说「帮我想想」「拷问一下」时 Claude 会自己用。',prev:'一个想法',next:'1 档接 tdd；更大的接 to-spec',say:'先别写代码，拷问我一下这个改动'},
+  when:'你说「帮我想想」「拷问一下」时 Claude 会自己用。1 档 matt-flow 只借它的问法：一轮，最多 3 题。',prev:'一个想法',next:'1 档接 tdd；更大的接 to-spec',say:'先别写代码，拷问我一下这个改动'},
  {g:'main',ph:'p1',id:'grill-with-docs',cn:'追问 + 留记录',auto:0,cmd:'/grill-with-docs',
   what:'和 grill-me 一样追问，但边问边把定下来的叫法写进 `GLOSSARY.md`，把难以反悔的决定写成 ADR。在项目里优先用它。',
-  when:'2 档第一步；在项目里想做一个新功能。',prev:'想法、体检找到的改进点、research 的笔记',next:'要看实物接 prototype；聊清了接 to-spec（别清空对话）',say:'/grill-with-docs 我想给驿窗加一个会话接力面板'},
+  when:'2 档第一步；在项目里想做一个新功能。',prev:'想法、体检找到的改进点、research 的笔记',next:'问完 Claude 判断：一次对话做得完就直接 implement；做不完接 prototype 或 to-spec（别换对话）',say:'/grill-with-docs 我想给驿窗加一个会话接力面板'},
  {g:'main',ph:'p1',id:'prototype',cn:'原型',auto:1,cmd:'/prototype',
-  what:'写一段用完就扔的小程序，回答一个纸上说不清的问题：这套逻辑对不对，或者界面该长什么样（会出几个截然不同的版本让你切换着看）。',
+  what:'写一段用完就扔的小程序，回答一个纸上说不清的问题：这套逻辑对不对，或者界面该长什么样（会出三版明显不同的方案，放进一个网页让你切换着挑）。',
   when:'追问时碰到「得看到才知道」。',prev:'grill-with-docs',next:'结论带回原对话，接 to-spec；原型留在单独分支存档',say:'这个界面先做个原型，给我看几种样子'},
  {g:'main',ph:'p1',id:'wayfinder',cn:'画地图',auto:0,cmd:'/wayfinder',
   what:'给大到一次对话装不下、连路都看不清的事画一张「地图」：一张总卡下面挂很多「决定卡」，每张回答一个问题，一张张解决，直到路清楚。只出决定，不出成品。',
   when:'3 档：新应用从零开始，或一个特别大的功能。',prev:'一个很大的想法',next:'路清楚后接 to-spec',say:'这事太大了，先用 wayfinder 画张地图'},
  {g:'main',ph:'p2',id:'to-spec',cn:'需求文档',auto:0,cmd:'/to-spec',
-  what:'不再提问，把聊过的内容整理成需求文档：要解决的问题、方案、一长串「作为…我想要…以便…」的用户故事、实现和测试决定、明确不做什么。动笔前先跟你确认从哪几处检查功能。',
+  what:'不再提问，把聊过的内容整理成需求文档：要解决的问题、方案、一长串「作为…我想要…以便…」的用户故事、实现和测试决定、明确不做什么。matt-flow 会先给你看草稿，再一次确认测试接缝、发不发、补的默认值。',
   when:'想法聊清了；wayfinder 的地图走通了。',prev:'grill-with-docs、prototype、wayfinder',next:'to-tickets',say:'聊清楚了，整理成需求文档'},
  {g:'main',ph:'p2',id:'to-tickets',cn:'拆任务卡',auto:0,cmd:'/to-tickets',
-  what:'把需求切成一张张任务卡。每张卡从界面到数据整条打通，做完就能演示；卡上写明要等哪几张先做完。先给你看拆法，你点头才发布。',
+  what:'把需求切成一张张任务卡。每张卡从界面到数据整条打通，做完就能演示；卡上写明要等哪几张先做完。拆法、发哪几张、一张张做还是多个 AI 并行做完，一次问你。',
   when:'有了需求文档。卡发到 GitHub Issues，或本地 `.scratch/功能名/issues/`。',prev:'to-spec',next:'implement 或 implement-spec',say:'拆成任务卡；第 3 张太大，再拆细一点'},
  {g:'main',ph:'p3',id:'implement',cn:'按卡实现',auto:0,cmd:'/implement',
   what:'按一张任务卡写代码：在约定的检查点用 tdd 一小步一小步做，常跑检查和测试，最后自己跑一遍 code-review，提交到当前分支。',
-  when:'有任务卡了，按先后一张张做；或小活在同一对话里直接做。',prev:'to-tickets、triage',next:'它会自己跑 code-review，之后 pr',say:'做 #12 这张卡'},
- {g:'main',ph:'p3',id:'implement-spec',cn:'整份一起做',auto:0,cmd:'/implement-spec',
-  what:'整份需求一次做完：把任务卡看成一张先后关系图，同时派多个子 agent 各做一张能开工的卡，合到一条集成分支，最后统一审查。',
-  when:'卡很多、你不想一张张盯着。',prev:'to-tickets',next:'pr',say:'整份需求一起做，用 implement-spec'},
+  when:'有任务卡了，按先后一张张做，一张卡一个分支、一个 PR；或 2 档问完发现一次对话做得完，直接实现。',prev:'to-tickets、triage',next:'它会自己跑 code-review，之后开 PR（先问你）',say:'做 #12 这张卡'},
+ {g:'main',ph:'p3',id:'implement-spec',cn:'多个 AI 并行做完',auto:0,cmd:'/implement-spec',
+  what:'多个 AI 同时做：把任务卡看成一张先后关系图，同时派多个子 agent 各做一张能开工的卡，合到一条集成分支，最后统一审查。',
+  when:'卡很多、彼此独立，你不想一张张盯着。',prev:'to-tickets',next:'开一个 PR 关闭全部卡（先问你）',say:'多个 AI 并行做完吧'},
  {g:'main',ph:'p3',id:'tdd',cn:'测试先行',auto:1,cmd:'/tdd',
   what:'先写一个会失败的测试（红），再写刚好让它通过的代码（绿），一次只做一小片。开始前和你约定在哪几处检查。',
   when:'implement 内部自动用；1 档直接用；修 bug 时补测试。',prev:'grilling、implement',next:'code-review',say:'用测试先行的方式做'},
@@ -838,10 +859,10 @@ var SK=[
   when:'代码写完；implement 做完会自己跑。',prev:'implement、tdd',next:'修掉问题后 pr',say:'对比 main 审一下这次改动'},
  {g:'main',ph:'p4',id:'pr',cn:'PR 说明',auto:1,cmd:'/pr',
   what:'写 PR 说明的模板：用最小的一张图说清改了什么，附改前改后的证据，标明合并风险：能轻松撤回的「双向门」，还是难回头的「单向门」，影响多大。',
-  when:'Claude 写 PR 时自己套用。',prev:'code-review',next:'你批准合并，然后 retro',say:'开个 PR'},
+  when:'Claude 写 PR 时自己套用；开 PR 之前会先问你。',prev:'code-review',next:'你批准合并，然后 retro',say:'开个 PR'},
  {g:'main',ph:'p4',id:'retro',cn:'复盘',auto:0,cmd:'/retro',
   what:'回头看这次对话哪里绕了路，建议改的是「环境」不是代码：加文件导航、自动检查、审查规矩，精简 AGENTS.md。机械性错误变成自动检查，靠判断的写成审查规矩。',
-  when:'一次开发结束，尤其是走歪了的；修完 bug 后。在同一个对话里跑，它要看这次的原始过程。',prev:'pr、diagnosing-bugs',next:'下一个想法',say:'复盘一下这次对话'},
+  when:'整个流程走完、PR 合并以后；修完 bug 也建议做。在同一个对话里跑，它要看这次的原始过程。',prev:'pr、diagnosing-bugs',next:'下一个想法',say:'复盘一下这次对话'},
 
  {g:'tool',ph:'p0',id:'diagnosing-bugs',cn:'诊断 bug',auto:1,cmd:'/diagnosing-bugs',
   what:'修难缠 bug 的纪律：先搭一个能稳定复现问题的「红灯」命令，没有它不许猜原因；然后复现、缩小范围、找原因、修好，并留一个防复发的测试。',
@@ -851,7 +872,7 @@ var SK=[
   when:'问题和需求堆积了。to-tickets 拆出来的卡不用再分流。',prev:'一堆 issue',next:'implement',say:'/triage 看看有什么需要我处理的'},
  {g:'tool',ph:'p0',id:'improve-codebase-architecture',cn:'结构体检',auto:0,cmd:'/improve-codebase-architecture',
   what:'体检代码结构：找出「接口很复杂、里面却没多少东西」的地方，出一份图文报告列出能整理的点，你挑一个再一起追问。',
-  when:'代码越来越乱、改一处要碰很多文件；有空时做保养。',prev:'无',next:'grill-with-docs',say:'看看驿窗哪里最该整理'},
+  when:'代码越来越乱、改一处要碰很多文件；有空时做保养。要扫全库，matt-flow 会先问一句。',prev:'无',next:'grill-with-docs',say:'看看驿窗哪里最该整理'},
  {g:'tool',ph:'p0',id:'wait-what',cn:'没听懂',auto:0,cmd:'/wait-what',
   what:'听不懂时的急刹车：让 Claude 带上必要背景、用简单直白的话，把刚才那段重讲一遍。',
   when:'任何时候，任何技能中途。',prev:'任意',next:'回到原来那一步',say:'没听懂，用大白话重讲'},
@@ -860,13 +881,13 @@ var SK=[
   when:'Claude 碰到它过不去、只能你来的关卡。',prev:'任意',next:'回到原流程',say:'这几步要我自己去后台点，做个向导带我'},
  {g:'tool',ph:'p0',id:'research',cn:'查资料',auto:1,cmd:'/research',
   what:'派一个后台 agent 去查官方文档、源码这类一手资料，写成一份带出处的笔记放进项目。它查的时候你可以接着聊别的。',
-  when:'要先弄清某个外部服务、接口或做法。',prev:'一个问题',next:'带进 grill-with-docs',say:'后台查一下飞书多维表格的接口限制，写成笔记'},
+  when:'开发要用的资料：外部服务、接口或做法。和开发无关的查资料不走这个。',prev:'一个问题',next:'带进 grill-with-docs',say:'后台查一下飞书多维表格的接口限制，写成笔记'},
  {g:'tool',ph:'p0',id:'to-questionnaire',cn:'写问卷',auto:0,cmd:'/to-questionnaire',
   what:'卡住你的信息在别人手里时，先问清「发给谁、要拿回什么」，再写一份问卷让对方填，或开会一起填。',
   when:'决定要等同事、客户提供信息。',prev:'卡住的问题',next:'带进 grill-with-docs 或 to-spec',say:'/to-questionnaire 我要问运营同事几个数据口径'},
  {g:'tool',ph:'p0',id:'teach',cn:'教我',auto:0,cmd:'/teach',
   what:'把当前文件夹当成课堂，分几次教你一个概念：先记下你为什么想学，再做成一节节小课，留下学习记录。',
-  when:'想真正搞懂一个概念，而不只是听一句解释。',prev:'无',next:'无',say:'/teach 我想搞懂 git 分支'},
+  when:'想系统学一个开发概念，要分几次学。matt-flow 会在 `~/Sandbox/` 里开学习目录，不放进项目；一句话能答的直接问就行。',prev:'无',next:'无',say:'/teach 我想搞懂 git 分支'},
  {g:'tool',ph:'p0',id:'handoff',cn:'交接',auto:0,cmd:'/handoff',
   what:'把当前对话压成一份交接文档，给新对话、另一个工具（比如 Codex）或同事接着做。只在换工具、换文件夹、交给别人、岔出一件小事时用。常浩这边流程里不用它，换对话用 Claude 给的交接卡。',
   when:'做原型要换到别的文件夹；换 Codex 来做。',prev:'任意',next:'新对话读这份文档继续',say:'/handoff 下个对话专门做原型'},
@@ -902,7 +923,7 @@ function card(s){
    '<dl><dt>何时用</dt><dd>'+fmt(s.when)+'</dd>'+
    '<dt>上一站</dt><dd>'+fmt(s.prev)+'</dd>'+
    '<dt>下一站</dt><dd>'+fmt(s.next)+'</dd>'+
-   '<dt>手动叫</dt><dd><code>'+esc(s.cmd)+'</code></dd></dl>'+
+   '<dt>手动叫</dt><dd><code>'+cmdHTML(cmdOf(s.id))+'</code></dd></dl>'+
    '<p class="eg"><i>你可以这样说</i>'+say(s.say)+'</p></article>';
 }
 ['main','tool','cold'].forEach(function(g){
@@ -939,17 +960,17 @@ var GL=[
  ['代码与版本','git','版本管理','记录代码每一次改动的工具：能退回、能对比、能分头改。','带无限撤销和存档点的游戏存档。','每一站的产出最后都靠 git 存下来。'],
  ['代码与版本','仓库','repo','一个项目的全部代码，加上它全部的修改历史。','一套房子的全部图纸档案柜。','牛马之家、驿窗各是一个仓库。'],
  ['代码与版本','commit','提交','一次存档：一组改动加一句说明，记进历史。','施工日志里的一条记录。','implement 做完一张卡就提交一次。'],
- ['代码与版本','分支','branch','从主线复制出一条平行的修改线，改好了再并回去。','先在样板间试装修，不动正在住的房子。','原型留在 `prototype/` 开头的分支；implement-spec 用一条集成分支。'],
+ ['代码与版本','分支','branch','从主线复制出一条平行的修改线，改好了再并回去。','先在样板间试装修，不动正在住的房子。','0、1 档也在单独分支上改；2 档一张卡一个分支；原型留在 `prototype/` 开头的分支。'],
  ['代码与版本','main','主分支','项目「正式版」所在的那条线。','正在住的那套房子。','审查时说「对比 main」；合并通常就是并进 main。'],
- ['代码与版本','worktree','工作区','同一个仓库在另一个文件夹里再开一份，各自在不同分支上改，互不干扰。','同一套图纸复印两份，两个施工队各改各的。','几个 Claude 对话同时开工时，各开一个 worktree。'],
+ ['代码与版本','worktree','工作区','同一个仓库在另一个文件夹里再开一份，各自在不同分支上改，互不干扰。','同一套图纸复印两份，两个施工队各改各的。','matt-flow 每张卡都从最新的 main 开一个 worktree；几个对话同时开工也互不干扰。'],
  ['代码与版本','diff','差异','两个版本之间改了哪些行：加的标绿，删的标红。','装修前后对比照。','code-review 审的就是 diff；PR 页面也会显示。'],
  ['代码与版本','merge','合并','把一条分支的改动并进另一条，通常并进 main。','样板间验收通过，照着改到正房。','PR 批准后合并，这一步要你拍板。'],
  ['代码与版本','冲突','conflict','两条分支改了同一处，git 不知道听谁的，要有人来选。','两个施工队都改了同一面墙。','并行开发合并时会碰到。Claude 一般能处理，拿不准会问你。'],
  ['代码与版本','remote','远程仓库','存在网上（通常是 GitHub）的那份仓库。','放在公司档案室的正本。','push、pull 都是在和 remote 同步。'],
- ['代码与版本','push','推送','把本机的提交上传到 remote。','把施工日志交到档案室。','开 PR 前要先 push 分支。'],
+ ['代码与版本','push','推送','把本机的提交上传到 remote。','把施工日志交到档案室。','开 PR 前要先 push 分支。推送任何分支之前，Claude 都会先问你。'],
  ['代码与版本','pull','拉取','把 remote 上别人的新提交下载到本机。','去档案室取回最新图纸。','开工前先同步最新代码。'],
  ['协作平台','GitHub','代码托管网站','存放 git 仓库的网站，带任务卡、PR、自动检查等协作功能。','装修公司的项目管理平台。','有 GitHub 的项目，需求文档和任务卡都发到这里。'],
- ['协作平台','PR','pull request','「请把我这条分支并进 main」的申请，附改动说明和对比，等人审查。','验收申请单。','收尾阶段：pr 技能写说明，你批准才合并。'],
+ ['协作平台','PR','pull request','「请把我这条分支并进 main」的申请，附改动说明和对比，等人审查。','验收申请单。','1 档做完、2 档每张卡做完各开一个，开之前问你；你批准才合并。'],
  ['协作平台','review','审查','合并前由人或 AI 逐处看改动、挑问题。','监理验收。','code-review 自动审两路；PR 页面上也能审。'],
  ['协作平台','issue','议题','GitHub 上的一条记录：一个 bug、需求或任务，有编号，能讨论。','物业报修单。','to-spec 和 to-tickets 发出去的就是 issue，编号像 #41。'],
  ['协作平台','ticket','任务卡','拆好的一小块任务：写清做什么、怎样算完成、要等谁先做完。','一张施工工单。','to-tickets 产出，implement 一张张做。'],
@@ -975,6 +996,7 @@ var GL=[
  ['AI 对话','子 agent','subagent','Claude 派出去单独干一件事的分身，有自己干净的脑子，干完交报告。','派一个工人专门去量尺寸。','code-review 派两个同时审；implement-spec 派多个同时写。'],
  ['AI 对话','skill','技能','一份写给 Claude 的做事规程，用到时才加载。','某个工种的操作手册。','本页的每个 Matt 技能都是一个 skill。'],
  ['AI 对话','AGENTS.md / CLAUDE.md','项目说明书','放在项目里、AI 每次都会读的说明：项目规矩和导航。','贴在工地门口的施工须知。','铺设施时建好；retro 常建议精简它。'],
+ ['AI 对话','CURRENT.md','进度文件','项目里记「现在做到哪、下一步是什么」的文件。','工地门口的进度牌。','matt-flow 每站做完把进度写进去；隔几天你问「下一步呢」，它先读这个。'],
  ['AI 对话','handoff','交接','把当前进度写成一份交接文档，让新对话或别的工具接着做。','换班交接单。','换工具、换文件夹时。常浩这边用 Claude 给的交接卡代替 /handoff。']
 ];
 var CATS=[];GL.forEach(function(g){if(CATS.indexOf(g[0])<0)CATS.push(g[0])});
@@ -1027,12 +1049,11 @@ function Demo(root,cfg){
 var G1=[
  {t:'ai',x:'❓ <b>Q7 · 接力面板只列出进行中的会话吗？</b><br>➡️ 推荐：列出「进行中」和「在等你回复」两类，已结束的不列。'},
  {t:'me',x:'是'},
- {t:'ai',x:'问题都问完了，术语表里记下了「接力」「等你回复」两个词。我们对「会话接力面板」的理解一致了吗？'},
- {t:'me',x:'一致'},
- {t:'card',x:'<div class="ln"><i>本次完成</i><span>grill-with-docs 追问完成，定下 7 个决定</span></div><div class="ln"><i>当前状态</i><span>〔等你决定〕2 档 · 第 1/7 站已完成</span></div><div class="ln"><i>下一步</i><span>下一站 <b>to-spec</b>（把聊过的整理成需求文档），因为想法已经聊清。你要做的：回复「好」</span></div>',trk:{0:'done',1:'now'}},
- {t:'me',x:'好'},
- {t:'ai',x:'需求文档草稿写好了：问题、方案、18 条用户故事、不做什么。要发到 GitHub Issues 吗？发出去别人就能看到。'},
- {t:'me',x:'发'}
+ {t:'ai',x:'问题都问完了，术语表里记下了「接力」「等你回复」。确认两件事：① 我们对「会话接力面板」的理解一致吗？② 它要改侧栏和会话列表两处，一次对话做不完，我建议写需求文档、拆卡来做。'},
+ {t:'card',x:'<div class="ln"><i>本次完成</i><span>问透想法（grill-with-docs），定下 7 个决定</span></div><div class="ln"><i>当前状态</i><span>〔等你决定〕2 档 · 第 1 站「问透想法」已完成（后面还有：写需求文档、拆任务卡、逐张实现、复盘）</span></div><div class="ln"><i>下一步</i><span>下一站「写需求文档」（<code>to-spec</code>：把聊过的整理成需求文档），因为一次对话做不完。你要做的：回复 <span class="cmd"><span class="nw">/mattpocock-skills:</span><wbr><span class="nw">to-spec</span></span>（回「好」也行）</span></div>',trk:{0:'done',1:'now'}},
+ {t:'me',x:'一致，好'},
+ {t:'ai',x:'需求文档草稿写好了。发布前一次确认三件事：① 从这两处检查功能对不对：侧栏列表、点「接着做」后打开的会话；② 发到 GitHub Issues 吗？③ 我补了一个默认值：列表最多显示 10 条。'},
+ {t:'me',x:'都按推荐'}
 ];
 var chat=$('#g1-chat'),trks=$$('#g1-track .trk');
 new Demo($('[data-demo=g1]'),{total:G1.length,
