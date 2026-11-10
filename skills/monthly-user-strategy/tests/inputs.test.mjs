@@ -56,9 +56,10 @@ test('P1-02 打法卡解析元信息与定位句，摘要要求读原文', () =>
   const c = parsePlaybookCard(P0901, 'P0901-老学员续报价.md');
   assert.deepEqual(c, { id: 'P0901', name: '老学员续报价', file: 'P0901-老学员续报价.md', stage: '续费', barriers: ['B1', 'A2'], mechanisms: ['M19', 'M16'], position: '老学员续报价是给在读或刚结课的学员一个低于公开价的专属价格。' });
   const { text } = summarize({ month: '2026-12', promos: [], skus: [], card: null, playbook: [c], playbookDir: '/x/打法库' });
-  assert.match(text, /\| P0901 \| 老学员续报价 \| 续费 \| B1 嫌贵；A2 觉得还来得及 \| M19 M16 \| 老学员续报价是给在读或刚结课的学员一个低于公开价的专属价格。 \| P0901-老学员续报价.md \|/);
+  assert.match(text, /\| P0901 \| 老学员续报价 \| 续费 \| B1 嫌贵（BR-C1；续费近似 BR-R5）；A2 觉得还来得及（BR-M2） \| M19 M16 \| 老学员续报价是给在读或刚结课的学员一个低于公开价的专属价格。 \| P0901-老学员续报价.md \|/);
   assert.match(text, /进入候选的卡必须读原文\*\*（`\/x\/打法库\/<文件>`）/);
   assert.match(text, /候选卡核对表/);
+  assert.match(text, /BR-M5、BR-F1、BR-R3、BR-R4 没有对应旧编号/);
 });
 
 test('P1-02 元信息缺失的卡不报错，标「未标」', () => {

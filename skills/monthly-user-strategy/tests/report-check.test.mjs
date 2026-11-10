@@ -125,6 +125,14 @@ test('提示：满篇「可能」、没有可信程度标注、空话、章节�
   assert.match(w, /「第八章 关键假设与验证事项」占正文/);
 });
 
+test('章节比重偏离 30% 以上就提示（第六章写到约 1.5 倍）', () => {
+  const r = checkReport(report({ ch6: fill(700, '促销约束要写清楚，避免与现行活动叠加') }));
+  assert.deepEqual(r.errors, []);
+  const six = r.stats.shares.find(x => x.name.startsWith('第六章'));
+  assert.ok(six.share > six.target * 1.3 && six.share < six.target * 1.8, JSON.stringify(six));
+  assert.match(r.warnings.join('\n'), /「第六章 营销主张与促销策略」占正文 \d+%，规格建议约 12%（偏离 30% 以上/);
+});
+
 test('P1-05 / P2 灌水反例：各章用同一句话反复填充，结构齐全也拦', () => {
   const pad = '本月我们将围绕用户需求持续优化服务体验并提升转化效率。'.repeat(160);
   const r = checkReport(report({ body: pad }));

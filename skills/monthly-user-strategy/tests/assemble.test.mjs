@@ -128,7 +128,11 @@ test('命令行：预检不过时退出码 2 且不写提交参数；digest 能�
   writeFileSync(join(dir, 'good.json'), JSON.stringify(draft()));
   const script = join(here, '..', 'scripts', 'assemble.mjs');
   assert.throws(() => execFileSync('node', [script, join(dir, 'facts.json'), join(dir, 'bad.json'), '--out-dir', join(dir, 'bad')], { stdio: 'pipe' }), e => e.status === 2);
-  execFileSync('node', [script, join(dir, 'facts.json'), join(dir, 'good.json'), '--out-dir', join(dir, 'good')], { stdio: 'pipe' });
+  // 默认只写 document.json，不留能直接提交的参数；带 --submit-args 才写
+  execFileSync('node', [script, join(dir, 'facts.json'), join(dir, 'good.json'), '--out-dir', join(dir, 'plain')], { stdio: 'pipe' });
+  assert.ok(existsSync(join(dir, 'plain', 'document.json')));
+  assert.ok(!existsSync(join(dir, 'plain', 'submit-args.json')));
+  execFileSync('node', [script, join(dir, 'facts.json'), join(dir, 'good.json'), '--out-dir', join(dir, 'good'), '--submit-args'], { stdio: 'pipe' });
   assert.equal(JSON.parse(readFileSync(join(dir, 'good', 'submit-args.json'), 'utf8')).month, M);
   const md = execFileSync('node', [join(here, '..', 'scripts', 'digest.mjs'), join(dir, 'facts.json')], { encoding: 'utf8' });
   assert.match(md, /## 英国（uk）/);
@@ -221,7 +225,7 @@ test('E10 同一目录先成功再失败：不留下可误用的旧参数', () =
   writeFileSync(join(dir, 'good.json'), JSON.stringify(draft()));
   writeFileSync(join(dir, 'bad.json'), JSON.stringify(withClaim(0, { evidenceRefs: ['EV-madeup'] })));
   const script = join(here, '..', 'scripts', 'assemble.mjs');
-  execFileSync('node', [script, join(dir, 'facts.json'), join(dir, 'good.json'), '--out-dir', join(dir, 'out')], { stdio: 'pipe' });
+  execFileSync('node', [script, join(dir, 'facts.json'), join(dir, 'good.json'), '--out-dir', join(dir, 'out'), '--submit-args'], { stdio: 'pipe' });
   assert.ok(existsSync(join(dir, 'out', 'submit-args.json')));
   assert.throws(() => execFileSync('node', [script, join(dir, 'facts.json'), join(dir, 'bad.json'), '--out-dir', join(dir, 'out')], { stdio: 'pipe' }), e => e.status === 2);
   assert.ok(!existsSync(join(dir, 'out', 'submit-args.json')));
@@ -336,7 +340,7 @@ test('P1-03 输入不是合法 JSON：先清掉旧产出，写错误文件，非
   writeFileSync(join(dir, 'good.json'), JSON.stringify(draft()));
   writeFileSync(join(dir, 'broken.json'), '{ "month": "2026-12", ');
   const script = join(here, '..', 'scripts', 'assemble.mjs');
-  execFileSync('node', [script, join(dir, 'facts.json'), join(dir, 'good.json'), '--out-dir', join(dir, 'out')], { stdio: 'pipe' });
+  execFileSync('node', [script, join(dir, 'facts.json'), join(dir, 'good.json'), '--out-dir', join(dir, 'out'), '--submit-args'], { stdio: 'pipe' });
   assert.ok(existsSync(join(dir, 'out', 'submit-args.json')));
   assert.throws(() => execFileSync('node', [script, join(dir, 'facts.json'), join(dir, 'broken.json'), '--out-dir', join(dir, 'out')], { stdio: 'pipe' }), e => e.status !== 0);
   assert.ok(!existsSync(join(dir, 'out', 'submit-args.json')));

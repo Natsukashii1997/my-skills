@@ -318,7 +318,8 @@ export function checkReport(text, { month, synthesis, design, digest, products }
   const shares = CHAPTERS.map(([name, target]) => {
     const n = size(get(name));
     const share = total ? n / total : 0;
-    if (total && (share < target * 0.5 || share > target * 1.8)) warnings.push(`「${name}」占正文 ${(share * 100).toFixed(0)}%，规格建议约 ${(target * 100).toFixed(0)}%`);
+    // 偏离规格比重 ±30% 就提示（原来 0.5–1.8 倍太宽：12 月模拟第六章 17% 对 12% 没提示）
+    if (total && (share < target * 0.7 || share > target * 1.3)) warnings.push(`「${name}」占正文 ${(share * 100).toFixed(0)}%，规格建议约 ${(target * 100).toFixed(0)}%（偏离 30% 以上：压缩或调整，确实需要就在答复里写理由）`);
     return { name, chars: n, share: Number(share.toFixed(3)), target };
   });
   const hedges = (body.match(HEDGE) || []).length;

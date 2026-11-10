@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // 把研判稿（draft.json）组装成 schema 2.1 月度文档，补齐机械字段，做本地预检，写出 strategy_submit 的参数。只读写本地文件，不调用接口。
-//   node assemble.mjs <facts.json> <draft.json> --out-dir <目录> [--prev-facts <研判时用的旧底稿>]
-// 产出：全部通过才写 <目录>/document.json、<目录>/submit-args.json；每次开始先删掉这两个旧文件，
+//   node assemble.mjs <facts.json> <draft.json> --out-dir <目录> [--prev-facts <研判时用的旧底稿>] [--submit-args]
+// 产出：全部通过才写 <目录>/document.json；带 --submit-args（要提交时）才另写 <目录>/submit-args.json。
+// 2.1.0 起默认不写提交参数：试写期默认不提交，目录里不留能直接提交的参数（12 月模拟试跑发现）。每次开始先删掉这两个旧文件，
 // 预检有拦截项时只写 <目录>/assemble-errors.txt，退出码 2（不会留下看起来能提交的旧参数）。
 //
 // 机械字段（不要在研判稿里手写）：schemaVersion、window、inputs、producedBy、regions[].activity（照抄服务端覆盖率）、
@@ -297,7 +298,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const take = name => { const i = args.indexOf(name); return i >= 0 ? args.splice(i, 2)[1] : null; };
   const dir = take('--out-dir'), prev = take('--prev-facts');
-  if (args.length < 2 || !dir) { console.error('用法：node assemble.mjs <facts.json> <draft.json> --out-dir <目录> [--prev-facts <研判时用的旧底稿>]'); process.exit(1); }
+  const wantArgs = args.includes('--submit-args');
+  if (wantArgs) args.splice(args.indexOf('--submit-args'), 1);
+  if (args.length < 2 || !dir) { console.error('用法：node assemble.mjs <facts.json> <draft.json> --out-dir <目录> [--prev-facts <研判时用的旧底稿>] [--submit-args]'); process.exit(1); }
   // 先让旧产出失效，再读输入：输入读不了、不是合法 JSON、组装抛错，目录里都不会留下可误用的旧参数（GPT 1.1.0 定向验收 P1-03）。
   mkdirSync(dir, { recursive: true });
   for (const f of ['document.json', 'submit-args.json', 'assemble-errors.txt']) rmSync(join(dir, f), { force: true });
@@ -320,6 +323,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exit(2);
   }
   writeFileSync(join(dir, 'document.json'), `${JSON.stringify(document, null, 2)}\n`);
-  writeFileSync(join(dir, 'submit-args.json'), `${JSON.stringify(submitArgs, null, 2)}\n`);
-  console.log(`预检通过（提示 ${warnings.length} 条）。情境 ${document.scenarios.length}、Claim ${document.claims.length}。\nidempotencyKey：${submitArgs.idempotencyKey}\n已写 ${join(dir, 'document.json')}、${join(dir, 'submit-args.json')}`);
+  if (wantArgs) writeFileSync(join(dir, 'submit-args.json'), `${JSON.stringify(submitArgs, null, 2)}\n`);
+  console.log(`预检通过（提示 ${warnings.length} 条）。情境 ${document.scenarios.length}、Claim ${document.claims.length}。\nidempotencyKey：${submitArgs.idempotencyKey}\n已写 ${join(dir, 'document.json')}${wantArgs ? `、${join(dir, 'submit-args.json')}` : '（没写提交参数；要提交时加 --submit-args 重跑）'}`);
 }

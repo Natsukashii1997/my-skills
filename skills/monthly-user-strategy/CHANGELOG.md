@@ -19,6 +19,14 @@
 - 新增（P1-05）：evals E12（证据较充分）、E13（地区错峰、用户证据冲突、交付限制），夹具 `facts-e13-conflict.json`、`products-e12.md`、`products-e13.md`（占位内容）；E9 改为研究假设版并带四个内部文件跑检查；`products-e9.md` 换成新格式。真正运行 E9 / E12 / E13 与 12 月真实试写是下一步（批 C），本版未运行。
 - 新增：单元测试 `tests/inputs.test.mjs`（输入链路 8 项），`report-check.test.mjs` 改写并扩充（共 22 项）；全量见 PR。
 - 修复（2026-11-10 用 12 月真实输入模拟试跑发现）：`digest.mjs` 结束日分旬按学校计数（同校两段日期曾被算成两所）；`report-check.mjs` 方案名带「（候选待确认）」时追溯表写不写后缀都能对上，正文出现打法卡卡号、`undefined` 等程序残留拦截；`product-context.mjs` 输出目录不存在时自动建。模拟记录在 `~/Library/Application Support/NiumaHome/evidence/strategy-2026-12-20261110-1654/`（报告研究假设版，独立审核 18/30 → 返修后 21/30）。
+- 改动（同一次模拟的其余 6 条，常浩 2026-11-10 定修）：
+  - **行为变化**：`assemble.mjs` 默认只写 `document.json`，加 `--submit-args` 才写 `submit-args.json`（原来通过就写，试写期目录里会留一份能直接提交的参数）；`submit.md` 改为提交前带这个参数重跑。
+  - **行为变化**：`report-check.mjs` 章节比重偏离规格 ±30% 就提示（原来 0.5–1.8 倍）；改不了的在交付答复里写理由。
+  - **行为变化**：`products.md` 打法卡索引的障碍列加对应 v2 编码（规则 02 第 3 节，含续费近似），并说明 BR-M5、BR-F1、BR-R3、BR-R4 没有自动候选卡；`design.md` 第 4 节同步。
+  - `design.md` 第 2 节：能力卡没填时主推只能按「机会主题需要的服务类型 + 名称用途 + 价格档案」暂定，三条都对不上可以不设主推；`report-spec.md` 第 4 节同步。
+  - `design.md` 第 1 节、`research.md` 第 5 步：研究层 priority（主战场 / 次要 / 平稳）与报告主攻 / 培育 / 观察的关系与默认对应，可以不同但要写理由。
+  - `research.md` 第 1 步、`lifecycle-bizcard.md`：核实日期与原表差三天及以上或跨旬、跨月，强度照常，但列为时间线疑点请常浩核对（本 skill 的报告口径）。
+  - `design.md` 第 3 节、`report-spec.md` 写法第 8 条、`quality-content.md` 视角二：主张对机会主题里每个子群体都要成立，不把最紧迫子群体的说法推给整个主题。
 
 ## 2.0.0 - 2026-11-09
 

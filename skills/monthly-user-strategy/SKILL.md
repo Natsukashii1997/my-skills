@@ -90,7 +90,7 @@ metadata:
 
 照 `references/report-spec.md` 写 `report.md`：八章 + 附录，二级标题一字不差，比重按规格，**第一章最后写**。正文写段落和必要表格，结论先行，地区分析用「结论 → 论证 → 行动含义」，关键判断标可信程度，边界集中写在节末、第八章和附录。正文不出现 Claim / Evidence 编号、状态码、障碍编码；附录可以有。
 
-写完跑 `node scripts/report-check.mjs report.md --month <月份> --synthesis synthesis.md --design design.md --digest digest.md --products products.md --out report-check.txt`（后四个文件用来核对决策追溯和报告等级）：退出码 2 就按拦截逐条改，直到通过；提示逐条看，能改就改。
+写完跑 `node scripts/report-check.mjs report.md --month <月份> --synthesis synthesis.md --design design.md --digest digest.md --products products.md --out report-check.txt`（后四个文件用来核对决策追溯和报告等级）：退出码 2 就按拦截逐条改，直到通过；提示逐条看，能改就改，章节比重提示改不了的在交付答复里写理由。
 
 ### 第 5 轮 · 独立质量审核
 

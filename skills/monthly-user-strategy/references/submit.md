@@ -4,7 +4,7 @@
 
 ### 第 7 步 · 提交（阶段 08）
 
-`strategy_submit`，参数就是 `submit-args.json`（MCP 方式再加 `_caller`）；结果存为 `submit-result.json`。
+先用 `node scripts/assemble.mjs facts.json draft.json --out-dir <工作目录> --submit-args` 重跑组装，写出 `submit-args.json`（2.1.0 起默认不写）。`strategy_submit`，参数就是 `submit-args.json`（MCP 方式再加 `_caller`）；结果存为 `submit-result.json`。
 
 | 结果 | 怎么办 |
 |---|---|

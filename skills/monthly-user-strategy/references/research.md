@@ -1,6 +1,6 @@
 # 第 1 轮 · 完整研究（SCOUT 阶段 01–05 与组装预检）
 
-从 1.2.0 SKILL.md 第 3 节第 1–6 步原样移来（2.0.0 起是五轮里的第 1 轮）。产出研究层的结构化资产：`facts.json`、`digest.md`、`draft.json`、组装预检通过的 `document.json` / `submit-args.json`。这些是报告的研究底座，**不是报告本身**；第 1 轮只负责研究，不做洞察综合、商业设计和写作。
+从 1.2.0 SKILL.md 第 3 节第 1–6 步原样移来（2.0.0 起是五轮里的第 1 轮）。产出研究层的结构化资产：`facts.json`、`digest.md`、`draft.json`、组装预检通过的 `document.json`（要提交时另加 `--submit-args` 写出 `submit-args.json`）。这些是报告的研究底座，**不是报告本身**；第 1 轮只负责研究，不做洞察综合、商业设计和写作。
 
 本文的「第 N 步」指第 1 轮内部的步骤；「第 8 步」「第 7 步」等提交相关的内容见 `submit.md`。
 
@@ -13,6 +13,7 @@
 3. 记下 `inputFingerprint`、`baseRevision`、各地区覆盖率与默认优先级、背景卡哪些字段有内容、正式版本里有没有常浩手写的 Claim。
 4. 列出不确定性：推测、冲突未决、只有月份、锚点不明、`ambiguous`。这些不能当精确日期用。摘要最后一列是原格原文：同一格写了几个日期、跨年日期段被解析成「仅月份」、列名和内容对不上的，记为时间线疑点。
    - `verification=verified` / `ruled` 而原格原文（`source.raw`）写着「推测」「AI推测」、日期还差一两天，是**正常的**：官网核实、人工裁定本来就是来纠正原表推测的，生效日期以核实结果为准，强度照常 strong，不降级、不当疑点。
+   - 核实日期与原表**差三天及以上，或跨了旬、跨了月**：强度照常（以核实结果为准），但记为时间线疑点（本 skill 的报告口径，不是规则原文）：原表可能填错，也可能核实的是另一场考试。附录和交付答复里列出，请常浩到时间线页核对；正文按核实日期写，标「待核对」。
 
 阶段要求见 `references/scout-generate.md`，窗口与覆盖率怎么读见 `references/lifecycle-bizcard.md`。
 
@@ -56,7 +57,7 @@
 研判稿要求的 `priority`、一句话判断、`brief` 是研究层字段（组装脚本和服务端要它们）。报告第一、二、四章另外在第 2–4 轮重写，不照抄这里；但两边的事实与地区结论要一致。
 
 
-- 六个地区都给 `priority`：默认矩阵（摘要里已算好）只是参考；与默认不同写 `reason`。覆盖率高不等于付费需求大，样本很小、日期质量差时可以调档。
+- 六个地区都给 `priority`：默认矩阵（摘要里已算好）只是参考；与默认不同写 `reason`。覆盖率高不等于付费需求大，样本很小、日期质量差时可以调档。这是研究阶段的判断，不是本月的经营结论：报告第四章的主攻 / 培育 / 观察在第 3 轮按洞察另定，可以和这里不同（对应关系与写法见 `design.md` 第 1 节）。
 - 一句话月度判断：不超过 100 字，引用至少一条本稿 Claim。
 - **地区概括要核对例外**，范围是所有写地区结论的地方：一句话判断、`brief.diff`、`brief.external`、情境的 `phase` / `keyTask`、Claim 正文，以及给常浩的答复。做法：先按地区写 `brief.diff`，每个地区回到摘要事件表逐校看一遍，把例外写进去；**一句话判断从 `diff` 压缩出来，压缩时保留「多数 / 部分」这类限定词，或带上例外**，不能在压缩时把例外丢掉（例：diff 写了「UNSW 期末至 12 月 10 日」，判断就不能写「澳洲已转入出分与补考」）。用了「均、都、全部、已结束、基本、普遍」这类说法，要么确实没有例外，要么写出例外学校（例：「多数已进入出分与补考阶段，UNSW 期末持续到 12 月 10 日」），要么改成限定说法（「多所学校…，部分持续至下旬」）。引用了真实 Evidence 不等于归纳出的文字就对。
 - **「上旬 / 中旬 / 下旬」按日期算**：1–10 日上旬、11–20 日中旬、21 日到月底下旬。写「某组学校上旬考完」前，对照摘要每个地区的「结束日分旬」，逐校看结束日；跨两个旬的写日期段（例：UC 四校 12 月 11–12 日结束，写「中旬初」或「12 月 11–12 日」，不写「上旬」）。
@@ -68,10 +69,10 @@
 1. 按 `references/schema.md` 第 5 节写 `draft.json`：`basedOnFingerprint` 写研判时底稿的 `inputFingerprint`（digest.md 顶部），`declared.executor` 写当前执行方（Claude 或 Codex），`model` 写当前模型。
 2. 按 `references/quality.md` 第 1 节逐项自检，结论写进 `research.selfCheck`；逐条对照第 3 节的四个反例。「事实与来源核验」带上 `regionCheck`：每个有情境的地区一句，写核过哪些学校、例外是哪几所、落到了哪句话里（没有例外就写「逐校核过 N 所，无例外」），脚本缺了会拦截。
 3. `node scripts/assemble.mjs facts.json draft.json --out-dir <工作目录>`。
-   - 脚本每次先删掉目录里旧的 `document.json`、`submit-args.json`；全部通过才写新的，失败只写 `assemble-errors.txt`。所以目录里有 `submit-args.json`，就一定是最近一次通过的那份。
+   - 脚本每次先删掉目录里旧的 `document.json`、`submit-args.json`；全部通过才写新的 `document.json`，失败只写 `assemble-errors.txt`。**默认不写 `submit-args.json`**（试写期默认不提交，目录里不留能直接提交的参数）；要提交时按 `submit.md` 加 `--submit-args` 重跑，目录里有 `submit-args.json` 就一定是最近一次通过的那份。
    - 退出码 2：按「拦截」逐条改研判稿，重跑，直到通过。「提示」逐条看，能改就改。拦截项包括：每个情境缺四类需求 Claim 之一、缺该人群的 readiness（判断不了写 unknown）、购买判断没有行为证据却超过 inferred + weak、observed 痛点没引用用户观察、业务证据的适用范围（`countries`、`relation`）没填或对不上本处、弱证据主障碍没标「暂定研究重点」、自检缺某个有情境地区的 `regionCheck`。
    - 提示「背景卡待补范围」：研判稿引用了没填范围的事实记录、业务观察。脚本已把它们写进 `research.notes`；相关判断照「范围不明」写（最高 `inferred + weak`），自检「购买障碍论证」判「待确认」，`fix` 写「待常浩在背景卡补适用范围」。
    - 退出码 1：输入读不了或不是合法 JSON（原因写在 `assemble-errors.txt`），修好文件后重跑；旧的 document.json、submit-args.json 同样已删除。
-   - 通过后得到 `document.json`、`submit-args.json` 和 `idempotencyKey`（由月份、输入指纹和内容哈希决定：内容不变，键就不变）。
+   - 通过后得到 `document.json` 和 `idempotencyKey`（由月份、输入指纹和内容哈希决定：内容不变，键就不变）；带 `--submit-args` 时另有 `submit-args.json`。
 4. 组装通过即完成第 1 轮。要提交结构化版本时（默认不提交），按 `submit.md`：提交前重取底稿比 `inputFingerprint`，变了按其中「底稿变了」处理。
 

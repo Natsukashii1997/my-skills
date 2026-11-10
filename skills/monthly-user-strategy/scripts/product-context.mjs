@@ -48,6 +48,8 @@ export function parseCardExtras(text) {
 
 // 打法卡：首行「# 名称 · 类别名」，第二行元信息「<!-- P0901 | 类别 9 | 阶段 续费 | 障碍 B1 ; A2 | 机制 M19 M16 -->」，「**定位**：」取第一句
 export const BARRIERS = { A1: '没意识到需要', A2: '觉得还来得及', A3: '不信任效果', A4: '有替代品', B1: '嫌贵', B2: '怕选错', B3: '没时间', B4: '需要家长同意', C1: '没被触达' };
+// 打法卡元信息仍用旧编号；对应的 v2 编码按 niuma-home 规则 02（barrier-v2.1）第 1、3 节，「近似」只用于续费栏
+export const BARRIERS_V2 = { A1: 'BR-M1；续费近似 BR-R2', A2: 'BR-M2', A3: 'BR-M3；续费近似 BR-R1', A4: 'BR-M4', B1: 'BR-C1；续费近似 BR-R5', B2: 'BR-C2', B3: 'BR-C3', B4: 'BR-C4', C1: 'BR-O1' };
 export function parsePlaybookCard(text, file = '') {
   const lines = String(text || '').split('\n');
   const name = (lines.find(l => /^#\s/.test(l)) || '').replace(/^#\s+/, '').split(' · ')[0].trim();
@@ -117,8 +119,8 @@ export function summarize({ month, promos, plan, skus, card, cardExtras = { vers
   else {
     lines.push(`${playbook.length} 张卡，是第六章的候选机制池（按 references/design.md 第 4 节选用）。下表只是索引：**进入候选的卡必须读原文**（\`${playbookDir}/<文件>\`），在 design.md 的「候选卡核对表」写清适用人群、期限、产品条件、叠加限制、业务边界和生效 / 失效条件；只看这张表不能定方案。`, '');
     lines.push('| 卡号 | 名称 | 阶段（适用人群） | 针对的障碍 | 机制 | 定位 | 文件 |', '|---|---|---|---|---|---|---|');
-    for (const c of playbook) lines.push(`| ${c.id} | ${cellText(c.name)} | ${c.stage} | ${c.barriers.map(b => `${b} ${BARRIERS[b] ?? ''}`.trim()).join('；') || '未标'} | ${c.mechanisms.join(' ') || '未标'} | ${cellText(c.position) || '（没有定位句）'} | ${c.file} |`);
-    lines.push('', '阶段「新签」的卡不能用于续费，「续费」的卡不能用于新签；「通用」两者都可，但仍要过六个匹配条件。');
+    for (const c of playbook) lines.push(`| ${c.id} | ${cellText(c.name)} | ${c.stage} | ${c.barriers.map(b => `${b} ${BARRIERS[b] ?? ''}${BARRIERS_V2[b] ? `（${BARRIERS_V2[b]}）` : ''}`.trim()).join('；') || '未标'} | ${c.mechanisms.join(' ') || '未标'} | ${cellText(c.position) || '（没有定位句）'} | ${c.file} |`);
+    lines.push('', '阶段「新签」的卡不能用于续费，「续费」的卡不能用于新签；「通用」两者都可，但仍要过六个匹配条件。', '「针对的障碍」是卡片上的旧编号，括号里是对应的 v2 编码（规则 02 第 3 节）；BR-M5、BR-F1、BR-R3、BR-R4 没有对应旧编号，没有自动候选卡，要手工提名并写明作用方式，或判断促销不是主要解法。');
   }
   return { base, text: lines.join('\n') + '\n' };
 }
