@@ -1,0 +1,342 @@
+<title>AI 学习路径</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700;900&display=swap">
+<style>
+/* 细线（Hairline）：冷灰底、1px 细线、方角；每一站一种识别色，按站序轮换；只做浅色一套 */
+:root{
+  --bg:#F3F4F6; --surface:#FFFFFF; --surface2:#FAFAFB; --ink:#101318; --ink2:#434A55; --ink3:#5F6672; --rule:#D7DAE0; --rule2:#E6E8EC;
+  --ink4:#7A818C;
+  --dark:#15181D; --dark2:#1D2128; --darkrule:#2E343D; --dink:#ECEEF2; --dink2:#A7AEBA;
+  --s1:#DD5129; --s1t:#FBE8E1; --s1d:#AE3714; --s1k:#F08560;
+  --s2:#2D53D2; --s2t:#E6ECFB; --s2d:#1D3BA3; --s2k:#8EA6F0;
+  --s3:#0A8470; --s3t:#DBF0EA; --s3d:#05604F; --s3k:#3CC4A6;
+  --s4:#7B3FC4; --s4t:#EFE7FA; --s4d:#5A2A97; --s4k:#B994F2;
+  --cur:#F2F4F7;
+  --c:var(--ink); --ct:var(--rule2); --cd:var(--ink);
+  --ease:cubic-bezier(.22,.7,.2,1);
+  --sans:'Noto Sans SC',-apple-system,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+  --mono:'JetBrains Mono','SFMono-Regular',Menlo,Consolas,'Noto Sans SC',monospace;
+  --num:'Archivo','Helvetica Neue',Arial,'Noto Sans SC',sans-serif;
+  --w:1240px; --g:40px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:#F3F4F6;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.75;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+h1,h2,h3,h4,p{margin:0}
+a{color:inherit}
+button,input{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.88em}
+:focus-visible{outline:2px solid var(--c,var(--ink));outline-offset:3px}
+.wrap{max-width:var(--w);margin:0 auto;padding-left:max(var(--g),env(safe-area-inset-left,0px));padding-right:max(var(--g),env(safe-area-inset-right,0px))}
+.k{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.c1{--c:var(--s1);--ct:var(--s1t);--cd:var(--s1d)}
+.c2{--c:var(--s2);--ct:var(--s2t);--cd:var(--s2d)}
+.c3{--c:var(--s3);--ct:var(--s3t);--cd:var(--s3d)}
+.c4{--c:var(--s4);--ct:var(--s4t);--cd:var(--s4d)}
+
+/* ---------- 顶栏 ---------- */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:rgba(243,244,246,.94);backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--rule)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;text-decoration:none;white-space:nowrap}
+.brand i{display:inline-flex;gap:2px}
+.brand i b{width:6px;height:16px;display:block}
+.top nav{display:flex;gap:2px}
+.top nav a{text-decoration:none;font-size:13px;color:var(--ink2);padding:6px 10px;border-radius:3px;white-space:nowrap}
+.top nav a:hover{background:var(--rule2);color:var(--ink)}
+.top nav a span{font-family:var(--mono);font-size:11px;margin-right:5px;color:var(--ink3);font-weight:700}
+
+/* ---------- 首屏 ---------- */
+.hero{position:relative;padding:72px 0 76px;border-bottom:1px solid var(--rule);background-color:var(--bg);background-image:linear-gradient(var(--rule2) 1px,transparent 1px),linear-gradient(90deg,var(--rule2) 1px,transparent 1px);background-size:40px 40px;background-position:-1px -1px}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(243,244,246,0) 0%,rgba(243,244,246,.6) 55%,var(--bg) 100%);pointer-events:none}
+.hero .wrap{position:relative;z-index:1}
+.hero-head{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:56px;align-items:end}
+.eyebrow{display:flex;align-items:center;gap:12px;margin-bottom:28px;flex-wrap:wrap}
+.eyebrow .bars{display:flex;gap:3px}
+.eyebrow .bars b{width:22px;height:4px;display:block}
+.hero h1{font-weight:900;font-size:clamp(42px,6.2vw,84px);line-height:1.06;letter-spacing:-.02em;text-wrap:balance}
+.hero h1 .thin{font-weight:400;color:var(--ink4)}
+.hero .sub{margin-top:28px;font-size:clamp(18px,1.7vw,21px);line-height:1.6;font-weight:500;color:var(--ink2);max-width:36em}
+.hero .sub b{color:var(--ink);font-weight:700;background:linear-gradient(transparent 62%,var(--rule2) 62%)}
+.use{border-top:2px solid var(--ink);margin:0 0 6px}
+.use div{display:grid;grid-template-columns:92px minmax(0,1fr);gap:12px;padding:12px 0;border-bottom:1px solid var(--rule2);font-size:15px;line-height:1.6}
+.use div:last-child{border-bottom:0}
+.use i{font-style:normal;font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--ink3);padding-top:3px}
+.say{font-weight:700}
+.say::before{content:"「"}.say::after{content:"」"}
+
+/* ---------- 通用章节 ---------- */
+.sec{padding:104px 0;border-bottom:1px solid var(--rule)}
+.sec.white{background:var(--surface)}
+.sec-head{display:grid;grid-template-columns:auto minmax(0,1fr);gap:32px;align-items:end;padding-bottom:28px;margin-bottom:44px;border-bottom:1px solid var(--ink)}
+.sec-num{font-family:var(--num);font-weight:800;font-size:clamp(64px,8vw,112px);line-height:.8;letter-spacing:-.05em}
+.sec-head .k{display:block;margin-bottom:10px}
+h2.h2{font-size:clamp(30px,3.6vw,46px);line-height:1.18;font-weight:900;letter-spacing:-.015em;text-wrap:balance}
+.lead{margin-top:14px;font-size:16px;color:var(--ink2);max-width:46em}
+.go{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:700;text-decoration:none;color:var(--surface);background:var(--cd);padding:7px 14px;border-radius:2px;white-space:nowrap}
+.go:hover{background:var(--ink)}
+.meta{font-family:var(--mono);font-size:12px;color:var(--ink3)}
+.parts{display:flex;flex-wrap:wrap;gap:6px}
+.parts span{font-size:12.5px;padding:1px 9px;background:var(--ct);color:var(--cd);font-weight:500}
+.stn-tag{display:inline-block;font-size:12px;padding:0 7px;background:var(--ct);color:var(--cd);font-weight:500;white-space:nowrap}
+
+/* ---------- 词典工具条 ---------- */
+.tools{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;margin-bottom:28px}
+.search{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--ink);padding:0 12px;height:40px;min-width:0;flex:1 1 260px;max-width:420px}
+.search svg{width:15px;height:15px;flex:none;stroke:var(--ink3);fill:none;stroke-width:2}
+.search input{border:0;outline:0;background:transparent;font-size:15px;width:100%;min-width:0;height:100%}
+.search:focus-within{outline:2px solid var(--ink);outline-offset:2px}
+.fchips{display:flex;flex-wrap:wrap;gap:6px}
+.fchips button{background:var(--surface);border:1px solid var(--rule);padding:5px 12px;font-size:13px;cursor:pointer;border-radius:2px;color:var(--ink2)}
+.fchips button:hover{border-color:var(--ink3);color:var(--ink)}
+.fchips button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:var(--surface);font-weight:700}
+.count{font-family:var(--mono);font-size:12px;color:var(--ink3)}
+.empty{display:none;padding:28px;text-align:center;color:var(--ink3);border:1px dashed var(--rule);font-size:14px}
+mark{background:var(--s1t);color:var(--s1d);padding:0 1px}
+
+/* ---------- 01 · 路线（竖排线路图）与 02 · 词典 ---------- */
+.line{list-style:none;margin:0;padding:0}
+.stn{display:grid;grid-template-columns:120px 44px minmax(0,1fr);align-items:stretch}
+.stn .no{font-family:var(--num);font-weight:800;font-size:72px;line-height:.9;letter-spacing:-.04em;color:var(--c);padding-top:18px;text-align:right}
+.stn .rail{position:relative}
+.stn .rail::before{content:"";position:absolute;left:21px;top:0;bottom:0;width:3px;background:var(--ink)}
+.stn:first-child .rail::before{top:34px}
+.stn .rail::after{content:"";position:absolute;left:12px;top:26px;width:21px;height:21px;background:var(--c);border:4px solid var(--bg);box-sizing:border-box;outline:1px solid var(--c)}
+.stn .body{margin:0 0 28px 8px;background:var(--surface);border:1px solid var(--rule);border-top:4px solid var(--c);padding:20px 24px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 28px;align-items:start}
+.stn .body h3{font-size:26px;font-weight:900;letter-spacing:-.01em;line-height:1.3}
+.stn .body h3 small{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink3);margin-left:10px;letter-spacing:.04em}
+.stn .body p{font-size:15.5px;color:var(--ink2);margin-top:6px;max-width:40em}
+.stn .body .parts,.stn .body .meta{grid-column:1/-1}
+.stn .body .side{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.stn.next .no{color:var(--rule);-webkit-text-stroke:1px var(--ink3)}
+.stn.next .rail::before{background:repeating-linear-gradient(var(--ink) 0 6px,transparent 6px 12px);bottom:40px}
+.stn.next .rail::after{background:var(--bg);outline-color:var(--ink3)}
+.stn.next .body{background:transparent;border:1px dashed var(--ink3);border-top-width:1px;display:block}
+.stn.next .body h3{font-size:18px}
+.stn.next .body p{font-size:14.5px}
+.gl-cat+.gl-cat{margin-top:40px}
+.gl-cat h3{font-size:18px;font-weight:900;display:flex;align-items:baseline;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--ink)}
+.gl-cat h3 span{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink3)}
+.gl-h,.gl-r{display:grid;grid-template-columns:170px minmax(0,1.2fr) minmax(0,1fr) minmax(0,1.15fr);gap:0 22px}
+.gl-h{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--ink3);padding:8px 0;border-bottom:1px solid var(--rule)}
+.gl-r{padding:12px 0;border-bottom:1px solid var(--rule2);font-size:14.5px;line-height:1.65}
+.gl-r .t b{display:block;font-size:16px;font-weight:900}
+.gl-r .t small{display:block;font-family:var(--mono);font-size:11.5px;color:var(--ink3)}
+.gl-r .t .stn-tag{margin-top:6px}
+.gl-r .m,.gl-r .w{color:var(--ink2)}
+.gl-r .lab{display:none}
+
+/* ---------- 收尾 ---------- */
+.foot{padding:56px 0 72px;font-size:13.5px;color:var(--ink2)}
+.next-bar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:32px;align-items:center;padding:26px 32px;background:var(--dark);color:var(--surface);margin-bottom:40px}
+.next-bar p{font-size:clamp(17px,1.7vw,21px);font-weight:700;line-height:1.5}
+.next-bar .bars{display:flex;gap:4px}
+.next-bar .bars b{width:30px;height:30px;display:block}
+.foot .disc{font-size:13px;color:var(--ink3);line-height:1.8;max-width:60em}
+.foot .disc p+p{margin-top:6px}
+
+/* ---------- 响应式 ---------- */
+@media (max-width:1080px){
+  :root{--g:28px}
+  .hero-head{grid-template-columns:minmax(0,1fr);gap:36px}
+  .gl-h{display:none}
+  .gl-r{grid-template-columns:150px minmax(0,1fr);gap:4px 18px}
+  .gl-r .t{grid-row:span 3}
+  .gl-r .lab{display:inline;font-family:var(--mono);font-size:11px;color:var(--ink3);margin-right:6px}
+}
+@media (max-width:760px){
+  :root{--g:16px}
+  .hero{padding:44px 0 52px}
+  .sec{padding:68px 0}
+  .sec-head{grid-template-columns:minmax(0,1fr);gap:14px;margin-bottom:32px}
+  .use div{grid-template-columns:minmax(0,1fr);gap:2px}
+  .stn{grid-template-columns:30px minmax(0,1fr)}
+  .stn .no{display:none}
+  .stn .rail::before{left:8px}
+  .stn .rail::after{left:0}
+  .stn .body{margin-left:4px;grid-template-columns:minmax(0,1fr);padding:18px}
+  .stn .body .side{align-items:flex-start}
+  .stn .body h3 small{display:block;margin-left:0}
+  .gl-r{grid-template-columns:minmax(0,1fr)}
+  .gl-r .t{grid-row:auto}
+  .next-bar{grid-template-columns:minmax(0,1fr);padding:22px 20px;gap:16px}
+  .top nav a{padding:6px 8px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  html{scroll-behavior:auto}
+}
+</style>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top"><i aria-hidden="true"><b style="background:var(--s1)"></b><b style="background:var(--s2)"></b><b style="background:var(--s3)"></b><b style="background:var(--s4)"></b></i>AI 学习路径</a>
+    <nav aria-label="页面目录"><a href="#route"><span>01</span>路线</a><a href="#dict"><span>02</span>词典</a></nav>
+  </div>
+</header>
+
+<section class="hero" id="top">
+  <div class="wrap">
+    <div class="hero-head">
+      <div>
+        <div class="eyebrow"><span class="bars" aria-hidden="true"><b style="background:var(--s1)"></b><b style="background:var(--s2)"></b><b style="background:var(--s3)"></b><b style="background:var(--s4)"></b></span><span class="k">常浩的学习总目录</span></div>
+        <h1>学过的东西，<br><span class="thin">一站一站连成路</span></h1>
+        <p class="sub">每学会一样和 AI 一起做事的方法，就在这里<b>加一站</b>。各站讲到的词收进<b>同一本词典</b>，碰到不认识的词，先在这里搜。</p>
+      </div>
+      <div class="use" aria-label="怎么用">
+        <div><i>想复习</i><span>在路线里找到那一站，点开原来的讲解页。</span></div>
+        <div><i>碰到生词</i><span>在词典里搜，一句白话、一个比方、在哪碰到。</span></div>
+        <div><i>学了新东西</i><span>跟 Claude 说<span class="say">把这个加进学习路径</span>，它加一站、补上新词。</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec white" id="route">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">01</span><div><span class="k">路线</span><h2 class="h2">走过的站</h2><p class="lead">按学的先后排。每一站链到它自己的讲解页。</p></div></div>
+    <ol class="line" id="line"></ol>
+  </div>
+</section>
+
+<section class="sec" id="dict">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">02</span><div><span class="k">词典</span><h2 class="h2">听到这些词，知道在说什么</h2><p class="lead">各站术语表里的词都收在这里，可以搜，也可以按类别看；每个词标着它来自哪一站。</p></div></div>
+    <div class="tools">
+      <label class="search" for="gl-q"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="gl-q" type="search" placeholder="搜词，如 PR、LESSONS" autocomplete="off"></label>
+      <div class="fchips" id="gl-f" role="group" aria-label="按类别筛选"></div>
+      <span class="count" id="gl-count" aria-live="polite"></span>
+    </div>
+    <div id="gl-list"></div>
+    <p class="empty" id="gl-empty">没找到这个词。可以直接问 Claude：「XX 是什么意思，用大白话讲」。</p>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="next-bar">
+      <p>下次学了新东西，跟 Claude 说「把这个加进学习路径」。</p>
+      <div class="bars" aria-hidden="true"><b style="background:var(--s1)"></b><b style="background:var(--s2)"></b><b style="background:var(--s3)"></b><b style="background:var(--s4)"></b></div>
+    </div>
+    <div class="disc">
+      <p>每一站链到它自己的讲解页；这里只放目录和词典，不重复讲一遍。词典里的词，原样来自各站的术语表。</p>
+      <p>源文件在 my-skills 仓库 <code>docs/learning-path/</code>；以后怎么加一站，写在同目录的 README.md。</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+var $=function(s,r){return (r||document).querySelector(s)}, $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+/* 文本里 `x` 渲染成代码 */
+function fmt(s){return esc(s).replace(/`([^`]+)`/g,'<code>$1</code>')}
+
+/* ---------- 各站：按学的先后排；c 是识别色，按站序轮换 c1→c4 ----------
+   加一站的做法见同目录 README.md */
+var STATIONS=[
+ {id:'matt',n:1,c:'c1',name:'Matt 技能库',en:'Matt Pocock skills',date:'2026-11-11',
+  what:'让 Claude 先问清再动手：活分四档，主线十站，可以半路上车；每个技能做什么、怎么叫。',
+  parts:['地图','四档','grill-me 之后','带路','半路入口','技能卡片','术语表'],
+  url:'https://claude.ai/artifact/5nhux5aKheQogvH37pdrcy'}
+];
+
+/* ---------- 共用词典 ----------
+   [类别, 术语, 英文/别名, 白话, 比喻, 什么时候碰到, 所属站 id]
+   前六项原样来自各站讲解页的术语表；tests/learning-path-glossary.test.mjs 检查两边一致 */
+var GL=[
+ ['电脑基础','终端','Terminal','一个只能打字、不能点按钮的窗口，用来给电脑下指令。','跟电脑发短信，而不是拿遥控器点菜单。','Claude 跑测试、提交代码都在终端里，你一般只看它输出的结果。','matt'],
+ ['电脑基础','命令行','command line','在终端里一行行敲进去的指令本身。','发出去的那一条条短信。','页面或回复里标着 bash 的代码块就是命令行，桌面应用里可以点 Run 运行。','matt'],
+ ['电脑基础','shell','zsh、bash 等','终端背后真正读懂你的命令、去执行的那个程序。','收短信、替你办事的管家。','一般不用管。看到 zsh、bash，都是 shell 的名字。','matt'],
+ ['电脑基础','bash','Bash 脚本','最常见的一种 shell，也指写给它执行的脚本。','管家里最常见的一位，大家都会说他的话。','wizard 生成的向导就是 bash 脚本，在终端运行后一步步带你操作。','matt'],
+ ['电脑基础','文件夹和路径','path','路径是文件的地址：从最外层文件夹一级级写到文件，用 / 隔开。以 . 开头的是默认隐藏的文件夹。','「某省某市某路 3 号」。','任务卡放在 `.scratch/功能名/issues/` 这样的路径里；技能说明会写文件在哪。','matt'],
+ ['电脑基础','依赖 / npm','dependency','依赖是项目借用的别人写好的代码包；npm 是 JavaScript 项目下载和管理这些包的工具。','装修用的成品门窗，不用自己从砍树做起。','Claude 跑 `npm install` 装依赖，`npm test` 跑测试。','matt'],
+ ['电脑基础','.env','环境变量文件','项目里专门放配置和密钥的文件，不上传到 GitHub。','抽屉里锁着的钥匙清单。','wizard 会把你粘贴的值写进 .env。','matt'],
+ ['电脑基础','密钥','API Key、token','证明「这是你本人」的一串字符，拿到它就能动你的账号。','家门钥匙，丢了别人就能进门。','接第三方服务时要你本人去后台复制。不要发在聊天里，不要进仓库。','matt'],
+ ['代码与版本','git','版本管理','记录代码每一次改动的工具：能退回、能对比、能分头改。','带无限撤销和存档点的游戏存档。','每一站的产出最后都靠 git 存下来。','matt'],
+ ['代码与版本','仓库','repo','一个项目的全部代码，加上它全部的修改历史。','一套房子的全部图纸档案柜。','牛马之家、驿窗各是一个仓库。','matt'],
+ ['代码与版本','commit','提交','一次存档：一组改动加一句说明，记进历史。','施工日志里的一条记录。','implement 做完一张卡就提交一次。','matt'],
+ ['代码与版本','分支','branch','从主线复制出一条平行的修改线，改好了再并回去。','先在样板间试装修，不动正在住的房子。','0、1 档也在单独分支上改；2 档一张卡一个分支；原型留在 `prototype/` 开头的分支。','matt'],
+ ['代码与版本','main','主分支','项目「正式版」所在的那条线。','正在住的那套房子。','审查时说「对比 main」；合并通常就是并进 main。','matt'],
+ ['代码与版本','worktree','工作区','同一个仓库在另一个文件夹里再开一份，各自在不同分支上改，互不干扰。','同一套图纸复印两份，两个施工队各改各的。','matt-flow 每张卡都从最新的 main 开一个 worktree；几个对话同时开工也互不干扰。','matt'],
+ ['代码与版本','diff','差异','两个版本之间改了哪些行：加的标绿，删的标红。','装修前后对比照。','code-review 审的就是 diff；PR 页面也会显示。','matt'],
+ ['代码与版本','merge','合并','把一条分支的改动并进另一条，通常并进 main。','样板间验收通过，照着改到正房。','PR 批准后合并，这一步要你拍板。','matt'],
+ ['代码与版本','冲突','conflict','两条分支改了同一处，git 不知道听谁的，要有人来选。','两个施工队都改了同一面墙。','并行开发合并时会碰到。Claude 一般能处理，拿不准会问你。','matt'],
+ ['代码与版本','remote','远程仓库','存在网上（通常是 GitHub）的那份仓库。','放在公司档案室的正本。','push、pull 都是在和 remote 同步。','matt'],
+ ['代码与版本','push','推送','把本机的提交上传到 remote。','把施工日志交到档案室。','开 PR 前要先 push 分支。推送任何分支之前，Claude 都会先问你。','matt'],
+ ['代码与版本','pull','拉取','把 remote 上别人的新提交下载到本机。','去档案室取回最新图纸。','开工前先同步最新代码。','matt'],
+ ['协作平台','GitHub','代码托管网站','存放 git 仓库的网站，带任务卡、PR、自动检查等协作功能。','装修公司的项目管理平台。','有 GitHub 的项目，需求文档和任务卡都发到这里。','matt'],
+ ['协作平台','PR','pull request','「请把我这条分支并进 main」的申请，附改动说明和对比，等人审查。','验收申请单。','1 档做完、2 档每张卡做完各开一个，开之前问你；你批准才合并。','matt'],
+ ['协作平台','review','审查','合并前由人或 AI 逐处看改动、挑问题。','监理验收。','code-review 自动审两路；PR 页面上也能审。','matt'],
+ ['协作平台','issue','议题','GitHub 上的一条记录：一个 bug、需求或任务，有编号，能讨论。','物业报修单。','to-spec 和 to-tickets 发出去的就是 issue，编号像 #41。','matt'],
+ ['协作平台','ticket','任务卡','拆好的一小块任务：写清做什么、怎样算完成、要等谁先做完。','一张施工工单。','to-tickets 产出，implement 一张张做。','matt'],
+ ['协作平台','label','标签','贴在 issue 上的分类小签，比如 bug、ready-for-agent。','工单上的彩色贴纸。','to-spec 会贴 ready-for-agent，意思是可以交给 AI 做。','matt'],
+ ['协作平台','tracker','任务卡存放处','存放 issue 和任务卡的地方。','工地的工单墙。','有 GitHub 的项目用 GitHub Issues，没有的用本地 `.scratch/` 文件夹。','matt'],
+ ['协作平台','CI','持续集成','每次推送代码，网上自动跑一遍测试和检查，红叉就说明有问题。','每层楼完工自动做一遍水电检测。','PR 页面上的绿勾和红叉；retro 常建议加检查。','matt'],
+ ['协作平台','部署','deploy','把写好的代码放到真正运行的地方，让人用上。','交房入住。','合并之后的事，不在 Matt 主线里，各项目有自己的发布步骤。','matt'],
+ ['需求与设计','spec / PRD','需求文档','写清要解决什么问题、怎么解决、不做什么的文档。','装修设计图纸。','to-spec 的产出。','matt'],
+ ['需求与设计','用户故事','user story','「作为某人，我想要某功能，以便得到某好处」这样一句话的需求。','「作为家有老人的住户，我想要扶手，以便起身更稳」。','需求文档里会列一长串。','matt'],
+ ['需求与设计','ADR','决策记录','记下一个难以反悔的决定：当时有哪些选择、选了哪个、为什么。','「这面是承重墙，不能拆」的备忘。','grill-with-docs 追问时写进 `docs/adr/`。','matt'],
+ ['需求与设计','GLOSSARY','术语表','项目自己的行话词典，统一每样东西叫什么。','装修队内部约定「哪面墙叫 A 墙」。','grill-with-docs 边聊边写进 `GLOSSARY.md`，之后各技能都按它用词。','matt'],
+ ['需求与设计','prototype','原型','用完就扔的小样，只为回答一个问题。','样板间。','追问中碰到「得看到才知道」时。','matt'],
+ ['需求与设计','接缝','seam','代码对外的接口处。测试从这里测，不伸手到内部。','检查水管只看阀门出水，不拆墙。','to-spec 和 tdd 开始前会问你：在哪几处检查。','matt'],
+ ['需求与设计','竖切片','tracer bullet','一张卡从界面到数据整条打通，哪怕很窄，做完就能演示。','先把一间房的水电墙地全部装好，而不是先把所有房间刷一遍墙。','to-tickets 按这个拆卡。','matt'],
+ ['需求与设计','阻塞','blocking','A 卡必须等 B 卡做完才能开工，就说 B 阻塞了 A。所有能开工的卡叫「前沿」。','先铺水管，才能贴瓷砖。','每张任务卡写「Blocked by」；implement-spec 同时做所有能开工的卡。','matt'],
+ ['写代码与质量','测试','test','一段自动检查代码对不对的代码，跑一下就知道过没过。','每次改完自动跑的验收清单。','tdd、implement、CI 都靠它。','matt'],
+ ['写代码与质量','TDD（红绿）','测试先行','先写会失败的测试（红），再写刚好让它通过的代码（绿），一次一小步。','先写验收标准，再施工到刚好达标。','tdd 技能；1 档的核心。','matt'],
+ ['写代码与质量','回归测试','regression test','修好 bug 后补的测试，防它以后又回来。','修好漏水后装个漏水报警器。','diagnosing-bugs 收尾时留下。','matt'],
+ ['写代码与质量','重构','refactor','不改功能，只把代码结构理得更清楚。','房子用途不变，重新理顺管线。','code-review 之后，或结构体检提出的改进。','matt'],
+ ['写代码与质量','类型检查','typecheck','自动检查数据「种类」用得对不对，比如有没有把文字当数字算。','检查插头和插座型号对不对得上。','implement 过程中会经常跑。','matt'],
+ ['AI 对话','上下文窗口','context window','Claude 一次能记在脑子里的对话内容上限，太满了思考会变差。','工作台面，堆太满就乱。','对话太长时，Claude 会给一张交接卡，建议换新对话接着做。','matt'],
+ ['AI 对话','compact / clear','压缩 / 清空','compact 把当前对话压成摘要继续；clear 清空重来。','compact 是把满桌材料整理成一页笔记；clear 是清空桌面。','常浩这边不用手动打。对话太长时 Claude 给交接卡，你点一下开新对话。','matt'],
+ ['AI 对话','子 agent','subagent','Claude 派出去单独干一件事的分身，有自己干净的脑子，干完交报告。','派一个工人专门去量尺寸。','code-review 派两个同时审；implement-spec 派多个同时写。','matt'],
+ ['AI 对话','skill','技能','一份写给 Claude 的做事规程，用到时才加载。','某个工种的操作手册。','本页的每个 Matt 技能都是一个 skill。','matt'],
+ ['AI 对话','AGENTS.md / CLAUDE.md','项目说明书','放在项目里、AI 每次都会读的说明：项目规矩和导航。','贴在工地门口的施工须知。','铺设施时建好；retro 常建议精简它。','matt'],
+ ['AI 对话','CURRENT.md','进度文件','项目里记「现在做到哪、下一步是什么」的文件。','工地门口的进度牌。','matt-flow 每站做完把进度写进去；隔几天你问「下一步呢」，它先读这个。','matt'],
+ ['AI 对话','LESSONS','全局坑 / 项目坑','记录踩过的坑的文件，Claude 和 Codex 动手前先查，免得再踩。全局一份在 agent-kit 里（编号 G-01、G-03……），每个项目还各有一份。','错题本：每个项目一本，所有项目通用的另有一本。','retro 复盘时提议把坑记进来；换个项目也会踩的坑，会提议升为全局 G-xx，你批准才写。','matt'],
+ ['AI 对话','handoff','交接','把当前进度写成一份交接文档，让新对话或别的工具接着做。','换班交接单。','换工具、换文件夹时。常浩这边用 Claude 给的交接卡代替 /handoff。','matt']
+];
+
+var SN={};STATIONS.forEach(function(s){SN[s.id]=s;s.terms=0});
+GL.forEach(function(g){SN[g[6]].terms++});
+var CATS=[];GL.forEach(function(g){if(CATS.indexOf(g[0])<0)CATS.push(g[0])});
+
+/* ---------- 路线 ---------- */
+$('#line').innerHTML=STATIONS.map(function(s){
+  return '<li class="stn '+s.c+'"><div class="no">'+s.n+'</div><div class="rail" aria-hidden="true"></div><div class="body">'+
+   '<div><h3>'+esc(s.name)+'<small>'+esc(s.en)+'</small></h3><p>'+esc(s.what)+'</p></div>'+
+   '<div class="side"><a class="go" href="'+s.url+'" target="_blank" rel="noopener">打开这一站 →</a></div>'+
+   '<div class="parts">'+s.parts.map(function(p){return '<span>'+esc(p)+'</span>'}).join('')+'</div>'+
+   '<div class="meta">'+s.date+' 加入 · 收词 '+s.terms+' 条</div></div></li>';
+}).join('')+'<li class="stn next"><div class="no">'+(STATIONS.length+1)+'</div><div class="rail" aria-hidden="true"></div><div class="body"><h3>下一站</h3><p>学到下一样东西时，加在这里。</p></div></li>';
+
+/* ---------- 词典 ---------- */
+var glF='all';
+$('#gl-f').innerHTML='<button type="button" data-c="all" aria-pressed="true">全部</button>'+CATS.map(function(c){return '<button type="button" data-c="'+c+'" aria-pressed="false">'+c+'</button>'}).join('');
+function hl(s,q){var h=fmt(s);if(!q)return h;var i=h.toLowerCase().indexOf(q);if(i<0||/[<>&]/.test(q))return h;
+  /* 只在不跨标签的位置高亮 */
+  var before=h.slice(0,i),open=before.lastIndexOf('<'),close=before.lastIndexOf('>');if(open>close)return h;
+  return before+'<mark>'+h.slice(i,i+q.length)+'</mark>'+h.slice(i+q.length)}
+function tag(id){var s=SN[id];return '<span class="stn-tag '+s.c+'">第 '+s.n+' 站 · '+esc(s.name)+'</span>'}
+function glRun(){
+  var q=$('#gl-q').value.trim().toLowerCase(),n=0,out='';
+  CATS.forEach(function(c){
+    if(glF!=='all'&&glF!==c)return;
+    var rows=GL.filter(function(g){return g[0]===c&&(!q||g.slice(0,6).join(' ').toLowerCase().indexOf(q)>-1)});
+    if(!rows.length)return;n+=rows.length;
+    out+='<div class="gl-cat"><h3>'+c+'<span>'+rows.length+' 条</span></h3><div class="gl-h"><span>术语</span><span>一句白话</span><span>打个比方</span><span>什么时候碰到</span></div>'+rows.map(function(g){
+      return '<div class="gl-r"><div class="t"><b>'+hl(g[1],q)+'</b><small>'+hl(g[2],q)+'</small>'+tag(g[6])+'</div><div class="p"><span class="lab">白话</span>'+hl(g[3],q)+'</div><div class="m"><span class="lab">比方</span>'+hl(g[4],q)+'</div><div class="w"><span class="lab">碰到</span>'+hl(g[5],q)+'</div></div>';
+    }).join('')+'</div>';
+  });
+  $('#gl-list').innerHTML=out;
+  $('#gl-empty').style.display=n?'none':'block';
+  $('#gl-count').textContent='共 '+n+' 条';
+}
+$('#gl-q').addEventListener('input',glRun);
+$('#gl-f').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;glF=b.dataset.c;
+  $$('#gl-f button').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});glRun()});
+glRun();
+})();
+</script>

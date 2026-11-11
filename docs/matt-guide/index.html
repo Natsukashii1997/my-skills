@@ -61,6 +61,9 @@ code,kbd{font-family:var(--mono);font-size:.88em}
 .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(243,244,246,0) 0%,rgba(243,244,246,.6) 55%,var(--bg) 100%);pointer-events:none}
 .hero .wrap{position:relative;z-index:1}
 .hero-head{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:56px;align-items:end}
+.lp-back{display:inline-flex;align-items:center;gap:10px;margin-bottom:22px;padding:4px 12px;background:var(--surface);border:1px solid var(--rule);font-size:13px;color:var(--ink2);text-decoration:none;border-radius:2px;transition:border-color .2s var(--ease),color .2s var(--ease)}
+.lp-back b{font-size:12.5px;color:var(--s1d);font-weight:900}
+.lp-back:hover{border-color:var(--ink3);color:var(--ink)}
 .eyebrow{display:flex;align-items:center;gap:12px;margin-bottom:28px;flex-wrap:wrap}
 .eyebrow .bars{display:flex;gap:3px}
 .eyebrow .bars b{width:22px;height:4px;display:block}
@@ -428,6 +431,7 @@ mark{background:var(--s1t);color:var(--s1d);padding:0 1px}
   <div class="wrap">
     <div class="hero-head">
       <div>
+        <a class="lp-back" href="https://claude.ai/artifact/PA1Zoa5EcKU3twHuNopsZV" target="_blank" rel="noopener"><b>第 1 站</b>属于「AI 学习路径」，回总目录 →</a>
         <div class="eyebrow"><span class="bars" aria-hidden="true"><b style="background:var(--s1)"></b><b style="background:var(--s2)"></b><b style="background:var(--s3)"></b><b style="background:var(--s4)"></b></span><span class="k">Matt Pocock 技能库 · 给不写代码的人</span></div>
         <h1>像装修一样，<span class="thin">让 Claude 先问清再动手</span></h1>
         <p class="sub">Matt 技能库是一套给 Claude 用的做事规程：<b>写代码之前先把你的想法问透、写成文档、拆成小任务</b>，再一小步一小步地做、审、复盘。你不用懂技术，只在几个关键处拍板。</p>
@@ -997,6 +1001,7 @@ var GL=[
  ['AI 对话','skill','技能','一份写给 Claude 的做事规程，用到时才加载。','某个工种的操作手册。','本页的每个 Matt 技能都是一个 skill。'],
  ['AI 对话','AGENTS.md / CLAUDE.md','项目说明书','放在项目里、AI 每次都会读的说明：项目规矩和导航。','贴在工地门口的施工须知。','铺设施时建好；retro 常建议精简它。'],
  ['AI 对话','CURRENT.md','进度文件','项目里记「现在做到哪、下一步是什么」的文件。','工地门口的进度牌。','matt-flow 每站做完把进度写进去；隔几天你问「下一步呢」，它先读这个。'],
+ ['AI 对话','LESSONS','全局坑 / 项目坑','记录踩过的坑的文件，Claude 和 Codex 动手前先查，免得再踩。全局一份在 agent-kit 里（编号 G-01、G-03……），每个项目还各有一份。','错题本：每个项目一本，所有项目通用的另有一本。','retro 复盘时提议把坑记进来；换个项目也会踩的坑，会提议升为全局 G-xx，你批准才写。'],
  ['AI 对话','handoff','交接','把当前进度写成一份交接文档，让新对话或别的工具接着做。','换班交接单。','换工具、换文件夹时。常浩这边用 Claude 给的交接卡代替 /handoff。']
 ];
 var CATS=[];GL.forEach(function(g){if(CATS.indexOf(g[0])<0)CATS.push(g[0])});
