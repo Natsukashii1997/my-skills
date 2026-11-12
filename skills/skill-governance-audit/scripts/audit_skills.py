@@ -485,8 +485,16 @@ def _is_skipped(relative: Path) -> bool:
     return any(part in SKIP_PARTS or part.startswith(".") for part in relative.parts[:-1])
 
 
+def _entry_identity(path: Path) -> Path:
+    path = path.expanduser()
+    # 目录别名可以合并；描述文件链接不能把技能的源码根替换为链接目标。
+    if path.name == "SKILL.md":
+        return path.parent.resolve() / path.name
+    return path.resolve()
+
+
 def discover_skill_files(root: Path, diagnostics: list[Diagnostic] | None = None) -> list[Path]:
-    root = root.expanduser().resolve()
+    root = _entry_identity(root)
     if root.is_file():
         return [root] if root.name == "SKILL.md" else []
     if not root.is_dir():
@@ -524,7 +532,7 @@ def discover_skill_files(root: Path, diagnostics: list[Diagnostic] | None = None
         for directory, dirs, files in os.walk(search_root, followlinks=False, onerror=walk_error):
             dirs[:] = [name for name in dirs if not _is_skipped(Path(name) / "SKILL.md")]
             if "SKILL.md" in files:
-                skill_file = (Path(directory) / "SKILL.md").resolve()
+                skill_file = _entry_identity(Path(directory) / "SKILL.md")
                 found[str(skill_file)] = skill_file
     return [found[key] for key in sorted(found)]
 
@@ -2629,14 +2637,14 @@ def audit(
     acknowledgements = tuple(
         sorted({code.strip() for code in ack_warnings if isinstance(code, str) and code.strip()})
     )
-    scanned_roots = [str(path.expanduser().resolve()) for path in (*candidate_roots, *installed_roots)]
+    scanned_roots = [str(_entry_identity(path)) for path in (*candidate_roots, *installed_roots)]
 
     seen_files: set[str] = set()
     root_specs = [(path, "candidate") for path in candidate_roots] + [
         (path, "installed") for path in installed_roots
     ]
     for root, origin in root_specs:
-        resolved = root.expanduser().resolve()
+        resolved = _entry_identity(root)
         if not resolved.exists():
             diagnostics.append(
                 Diagnostic(
@@ -2658,7 +2666,7 @@ def audit(
                 )
             )
         for skill_file in skill_files:
-            real = str(skill_file.resolve())
+            real = str(_entry_identity(skill_file))
             if real in seen_files:
                 continue
             seen_files.add(real)

@@ -962,7 +962,8 @@ def cmd_prune(cfg: Config, state: State, args) -> int:
         if not ok:
             say(f"[{t.name}] 跳过：{why}")
             continue
-        extra = ["--prune"] if args.apply else ["--dry-run"]
+        extra = [] if args.apply else ["--dry-run"]
+        forgotten = False
         for src in cfg.sources:
             # backup_one 每次只备份一个源；共享仓库中的其他标签和源不归本配置清理。
             plan = rs.run(t, ["forget", "--host", cfg.host, "--tag", "vault-backup",
@@ -995,6 +996,16 @@ def cmd_prune(cfg: Config, state: State, args) -> int:
                 say("  " + ln)
             if r.returncode != 0:
                 say("  ✗ " + rs.explain(r))
+                failed += 1
+            elif args.apply:
+                forgotten = True
+        # prune 是全仓库回收；本目标的各源处理完后只运行一次。
+        if forgotten:
+            r = rs.run(t, ["prune"])
+            for ln in r.stdout.strip().splitlines()[-25:]:
+                say("  " + ln)
+            if r.returncode != 0:
+                say(f"[{t.name}] ✗ " + rs.explain(r))
                 failed += 1
     if not args.apply:
         say(f"\n保留规则：每天 {cfg.keep['daily']}、每周 {cfg.keep['weekly']}、每月 {cfg.keep['monthly']}、"

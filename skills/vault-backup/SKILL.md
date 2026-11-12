@@ -2,6 +2,7 @@
 name: vault-backup
 description: 「知识库备份」：给常浩的 Obsidian 知识库和只在本机的 Git 项目做加密、增量、可异地的备份（restic），并能检查完整性、演练恢复。用户说「备份一下」「检查备份」「演练恢复」「备份状态」「设置备份」「定时备份」，或问知识库有没有备份、坏了怎么找回时使用。只备份和演练，不覆盖原文件；密码只放钥匙串或环境变量。
 metadata:
+  version: "0.2.0"
   governance:
     network: optional
     external-writes: required
