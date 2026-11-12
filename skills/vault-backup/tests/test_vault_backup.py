@@ -108,6 +108,62 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(data["StartCalendarInterval"], [{"Hour": 9, "Minute": 5}, {"Hour": 21, "Minute": 30}])
 
 
+@unittest.skipUnless(RESTIC, "未安装 restic，跳过本地快照清理回归")
+class PruneScopeTests(unittest.TestCase):
+    def test_prune_preserves_snapshots_outside_configured_ownership(self):
+        with tempfile.TemporaryDirectory(prefix="vb-prune-") as td:
+            root = Path(td)
+            repo = root / "repository"
+            sources = [root / name for name in ("源 A", "源 B", "其他源")]
+            env = dict(os.environ, RESTIC_PASSWORD=PASSWORD,
+                       VAULT_BACKUP_PASSWORD=PASSWORD, RESTIC_CACHE_DIR=str(root / "cache"))
+
+            def restic(*args):
+                result = subprocess.run([RESTIC, "-r", str(repo), *args], env=env,
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                return result.stdout
+
+            restic("init")
+            for source in sources:
+                source.mkdir()
+                (source / "note.md").write_text("合成备份\n", encoding="utf-8")
+            for source, tag, host in (
+                (sources[0], "vault-backup", "test-host"),
+                (sources[1], "vault-backup", "test-host"),
+                (sources[0], "manual-other", "test-host"),
+                (sources[2], "vault-backup", "test-host"),
+                (sources[0], "vault-backup", "other-host"),
+                ([sources[0], sources[2]], "vault-backup", "test-host"),
+            ):
+                for day in (1, 2):
+                    restic("backup", "--host", host, "--tag", tag,
+                           "--time", f"2026-11-0{day} 12:00:00",
+                           *[str(p) for p in (source if isinstance(source, list) else [source])])
+            before = json.loads(restic("snapshots", "--json"))
+            protected = {s["id"] for s in before if s["hostname"] != "test-host"
+                         or "vault-backup" not in s.get("tags", [])
+                         or s["paths"] not in [[str(p)] for p in sources[:2]]}
+            config = root / "config.txt"
+            config.write_text(f"source = {sources[0]}\nsource = {sources[1]}\n"
+                              f"target = 本地 | {repo}\nhost = test-host\n"
+                              "keep_daily = 1\nkeep_weekly = 0\nkeep_monthly = 0\nkeep_yearly = 0\n",
+                              encoding="utf-8")
+            for apply in (False, True):
+                result = subprocess.run(
+                    [sys.executable, str(SCRIPT), "--config", str(config), "prune"]
+                    + (["--apply"] if apply else []), env=env, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                after = json.loads(restic("snapshots", "--json"))
+                remaining = {s["id"] for s in after}
+                self.assertTrue(protected <= remaining, "清理删除了配置范围外的快照")
+                self.assertEqual(len(after), 10 if apply else 12)
+                for source in sources[:2]:
+                    owned = [s for s in after if s["hostname"] == "test-host"
+                             and "vault-backup" in s.get("tags", []) and s["paths"] == [str(source)]]
+                    self.assertEqual(len(owned), 1 if apply else 2)
+
+
 class ScheduleStateTests(unittest.TestCase):
     """status 里的「定时备份」：文件在不等于已启用，要实际问 launchd。"""
 

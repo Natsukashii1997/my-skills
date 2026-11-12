@@ -25,11 +25,32 @@ function frontmatter(text) {
   if (!m) return {};
   const fm = m[1];
   const field = (re) => (fm.match(re) || [])[1]?.trim() ?? null;
+  let version = null;
+  let governance = false;
+  let inMetadata = false;
+  let childIndent = null;
+  // 逐行界定 metadata 及其直接子字段，缺 version 时也只扫描一次。
+  for (const line of fm.split('\n')) {
+    if (/^metadata:[ \t]*$/.test(line)) {
+      inMetadata = true;
+      childIndent = null;
+      continue;
+    }
+    if (!inMetadata || !line.trim() || /^[ \t]*#/.test(line)) continue;
+    const indent = line.match(/^[ \t]+/);
+    if (!indent) { inMetadata = false; continue; }
+    childIndent ??= indent[0].length;
+    if (indent[0].length !== childIndent) continue;
+    const value = line.slice(childIndent);
+    const match = value.match(/^version:[ \t]*["']?([^"'\s]+)["']?/);
+    if (match) version = match[1];
+    if (/^governance:/.test(value)) governance = true;
+  }
   return {
     name: field(/^name:\s*(.+)$/m),
     description: field(/^description:\s*(.+)$/m),
-    version: field(/^metadata:\s*\n(?:[ \t]+.*\n)*?[ \t]+version:\s*["']?([^"'\s]+)["']?/m),
-    governance: /^metadata:\s*\n(?:[ \t]+.*\n)*?[ \t]+governance:/m.test(fm),
+    version,
+    governance,
   };
 }
 

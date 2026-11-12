@@ -963,14 +963,39 @@ def cmd_prune(cfg: Config, state: State, args) -> int:
             say(f"[{t.name}] 跳过：{why}")
             continue
         extra = ["--prune"] if args.apply else ["--dry-run"]
-        r = rs.run(t, ["forget", "--host", cfg.host] + keep + extra)
-        say(f"[{t.name}] {'已清理' if args.apply else '预演（没删任何东西）'}：")
-        out = r.stdout.strip().splitlines()
-        for ln in out[-25:]:
-            say("  " + ln)
-        if r.returncode != 0:
-            say("  ✗ " + rs.explain(r))
-            failed += 1
+        for src in cfg.sources:
+            # backup_one 每次只备份一个源；共享仓库中的其他标签和源不归本配置清理。
+            plan = rs.run(t, ["forget", "--host", cfg.host, "--tag", "vault-backup",
+                              "--path", str(src), "--json", "--dry-run"] + keep)
+            if plan.returncode != 0:
+                say(f"[{t.name}] ✗ " + rs.explain(plan))
+                failed += 1
+                continue
+            # restic 的 --path 是包含匹配，混合了其他源的快照不能归本配置删除。
+            # 先用原保留策略生成计划，再只对核实过归属的完整 ID 预演或执行。
+            try:
+                groups = json.loads(plan.stdout)
+                remove = [snap for group in groups for snap in (group.get("remove") or [])]
+                ids = [snap["id"] for snap in remove
+                       if snap["hostname"] == cfg.host and snap["paths"] == [str(src)]
+                       and "vault-backup" in snap.get("tags", [])]
+                if any(not re.fullmatch(r"[0-9a-f]{64}", sid) for sid in ids):
+                    raise ValueError("invalid snapshot ID")
+            except (ValueError, TypeError, KeyError, AttributeError):
+                say(f"[{t.name}] ✗ 清理计划无法完整读取，未删除任何快照。")
+                failed += 1
+                continue
+            say(f"[{t.name}] {'已清理' if args.apply else '预演（没删任何东西）'}：")
+            if not ids:
+                say("  没有需要清理的快照。")
+                continue
+            r = rs.run(t, ["forget"] + extra + ids)
+            out = r.stdout.strip().splitlines()
+            for ln in out[-25:]:
+                say("  " + ln)
+            if r.returncode != 0:
+                say("  ✗ " + rs.explain(r))
+                failed += 1
     if not args.apply:
         say(f"\n保留规则：每天 {cfg.keep['daily']}、每周 {cfg.keep['weekly']}、每月 {cfg.keep['monthly']}、"
             f"每年 {cfg.keep['yearly']} 个版本。确认没问题再加 --apply 真正清理。")

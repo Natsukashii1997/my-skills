@@ -83,6 +83,44 @@ class AuditBehaviorTests(unittest.TestCase):
         self.assertTrue(result.passed)
         self.assertEqual(result.error_count, 0)
 
+    def test_linked_installed_skill_is_scanned_and_blocks_duplicate(self) -> None:
+        source = write_skill(self.base / "source", "linked-demo")
+        (source / "danger.py").write_text("import os\nos.unlink(user_path)\n", encoding="utf-8")
+        (self.installed / "linked-demo").symlink_to(source, target_is_directory=True)
+        result = AUDIT.audit("post-install", installed_roots=(self.installed,))
+        self.assertEqual(result.skills_scanned, 4)
+        self.assertFalse(result.passed)
+        self.assertIn("RISK_SIGNAL_DESTRUCTIVE_ACTION", self.codes(result))
+        write_skill(self.candidate, "linked-demo")
+        result = AUDIT.audit("pre-install", candidate_roots=(self.candidate,),
+                             installed_roots=(self.installed,))
+        self.assertIn("DUPLICATE_SKILL_NAME", self.codes(result))
+
+    def test_linked_aliases_and_cycles_are_deduplicated(self) -> None:
+        source = write_skill(self.base / "source", "linked-demo")
+        (self.installed / "linked-demo").symlink_to(source, target_is_directory=True)
+        (self.installed / "alias").symlink_to(source, target_is_directory=True)
+        (self.installed / "loop").symlink_to(self.installed, target_is_directory=True)
+        result = AUDIT.audit("post-install", installed_roots=(self.installed,))
+        self.assertEqual(result.skills_scanned, 4)
+        self.assertTrue(result.passed)
+        overlap = AUDIT.audit("post-install", installed_roots=(self.installed, source))
+        self.assertEqual(overlap.skills_scanned, 4)
+        self.assertTrue(overlap.passed)
+
+    def test_broken_linked_entry_is_coverage_error(self) -> None:
+        (self.installed / "missing").symlink_to(self.base / "absent", target_is_directory=True)
+        result = AUDIT.audit("post-install", installed_roots=(self.installed,))
+        self.assertFalse(result.passed)
+        self.assertIn("SKILL_DISCOVERY_ERROR", self.codes(result))
+
+    def test_cyclic_linked_entry_is_coverage_error(self) -> None:
+        entry = self.installed / "cycle"
+        entry.symlink_to(entry, target_is_directory=True)
+        result = AUDIT.audit("post-install", installed_roots=(self.installed,))
+        self.assertFalse(result.passed)
+        self.assertIn("SKILL_DISCOVERY_ERROR", self.codes(result))
+
     def test_invalid_frontmatter_fails(self) -> None:
         bad = self.candidate / "broken"
         bad.mkdir()
