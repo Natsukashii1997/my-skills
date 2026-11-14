@@ -8,7 +8,7 @@
 |---|---|---|---|
 | **to-spec** 想法已聊清 | 新会话里交来已聊定的材料，或常浩说「写成需求吧」 | 问题、方案、取舍都说定了；还有没拍板的 → 回 grill-with-docs 只补问那几项。2 / 3 档前置检查（SKILL.md 第 5 节）；发 issue 前确认 | thinking-review 检查节点 → to-tickets |
 | **to-tickets** 已有需求文档 | 常浩给了需求文档、spec issue、PRD 路径 | 读全文和评论；文档里还有待定问题、或缺「做到什么样算完」 → 先补（回 grill-with-docs 或 to-spec）；前置检查；发卡前确认 | 一张张做或多个 AI 并行做完 |
-| **implement** 已有任务卡 | issue 编号、`.scratch/<功能>/issues/` 下的卡、「做第 3 张」 | 卡有验收标准、标了 ready-for-agent；被别的卡挡着的先做挡着它的；内容不全 → 回 to-tickets 补 | 下一张卡；全部做完 → retro |
+| **implement** 已有任务卡 | issue 编号、`.scratch/<功能>/issues/` 下的卡、「做第 3 张」 | 卡有验收标准、标了 ready-for-agent；被别的卡挡着的先做挡着它的；内容不全 → 回 to-tickets 补；开工前做撞卡检查（tiers.md 2 档），别的会话在做的先问常浩 | 下一张卡；全部做完 → retro |
 | **code-review** 代码已写完 | 「写完了」「帮我看看」「准备合并」 | 先看改动提交了没有：没提交的先在本地分支提交；比较起点自己找（分支起点、`origin/main`），不问常浩；需求来源找 issue、需求文档或本会话结论 | 他要提交、合并时再开 PR（先确认）；之后 retro |
 | **diagnosing-bugs** 出 bug | 报错、点了没反应、结果不对、变慢、时好时坏、「昨天还好好的」 | 原因一眼看得出、改一处就好的，按 0 档；本机定时任务、后台服务、机器人没反应，先用 automation-checkup；流程进行中冒出的 bug，按 SKILL.md 第 3 节 | 修好后 retro（问「怎样能早点防住」）；发现是结构问题 → improve-codebase-architecture |
 | **triage** 反馈积压 | 一堆别人提的 issue、bug 报告、功能请求没分类 | 前置检查（要分流标签）；只分流**不是** to-tickets 产出的 issue；改标签、发评论、关 issue 前列清单确认 | 标成 ready-for-agent 的 → implement |
@@ -26,7 +26,7 @@
    - 主目录 `CURRENT.md`、`HANDOFF.md`，以及 `.scratch/*/flow.md`；
    - `git worktree list`、`git branch --no-merged origin/main`（看有没有在别的 worktree 里做到一半的卡）；
    - `gh pr list`、`gh issue list`（没接 GitHub 的看 `.scratch/` 下的卡，哪些勾完了）。
-2. 找到一条进行中的流程：按它的档位路线找下一站，写下一站卡片。
+2. 找到一条进行中的流程：按它的档位路线找下一站，写下一站卡片。半成品在别的 worktree 里的，按 tiers.md 的撞卡检查处理：说明可能有别的会话正在做，「接着做」就是接手（留言算对外写入，要确认），和换卡、等它做完一起给常浩选，不默认推荐进那个 worktree 接着改。
 3. 找到不止一条：列出来（每条一句：做什么、到哪一站），请常浩挑。
 4. 一条都没有：说明「没有进行中的开发流程」，问常浩想做什么。这一步不判档，他说了新任务再判。
 5. `CURRENT.md` 写的「唯一下一步」和查出来的流程进度对不上时，两样都告诉常浩，让他定先做哪个。
