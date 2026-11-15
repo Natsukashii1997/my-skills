@@ -15,7 +15,7 @@
   --card:#FFFFFF; --soft:#F2F3F5; --line:#E3E6EB; --sand:#E2D7BF;
   /* 字 */
   --ink:#22262E; --ink2:#4B5260; --mut:#5E6571; --bar:#9AA1AD;
-  /* 荧光：唯一彩色，只做底 */
+  /* 主色：一页只用一种，只做底。默认黄，另有天蓝、珊瑚、薄荷、淡紫（见下方 data-hl），新页面把选定那种的四个值写在这里 */
   --hl:#F5BC3B;        /* 标签实底、3px 下划、编号圆点、关键条形 */
   --hl-band:#F8D27E;   /* 标题荧光带（比实底浅一档，读起来像笔迹） */
   --hl-soft:#FCE9B4;   /* 正文荧光 */
@@ -37,6 +37,11 @@
   --f-mono:"JetBrains Mono","Noto Sans SC",ui-monospace,Menlo,monospace;
   --ease:cubic-bezier(.16,1,.3,1); --ease-draw:cubic-bezier(.65,0,.35,1);
 }
+/* 另外四种主色：结构和黄色一样，四个令牌一起换（--inv-hl 是反白段里的暗色带） */
+:root[data-hl="sky"]   {--hl:#62BDF0;--hl-band:#A3D8F6;--hl-soft:#D6EDFB;--inv-hl:#1F5D85}
+:root[data-hl="coral"] {--hl:#FF946B;--hl-band:#FFBEA3;--hl-soft:#FFE1D4;--inv-hl:#8E3A1C}
+:root[data-hl="mint"]  {--hl:#4FD1BA;--hl-band:#98E4D6;--hl-soft:#D0F4ED;--inv-hl:#16695C}
+:root[data-hl="violet"]{--hl:#B39DF5;--hl-band:#CFC2F9;--hl-soft:#E9E3FC;--inv-hl:#5940A6}
 *{box-sizing:border-box}
 html{scroll-padding-top:84px}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-sans);font-size:16px;line-height:1.7;font-variant-numeric:tabular-nums}
@@ -297,7 +302,7 @@ a{color:inherit}
 .mk-quota .tr u{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--hl)}
 .mk-quota .v{font-family:var(--f-mono);font-weight:800;font-size:17px;text-align:right}
 .mk-quota .rs{grid-column:2/4;font-size:12px;color:var(--mut)}.mk-quota .rs.warn{color:var(--bad)}
-/* 27 迷你甘特（可演示：「现在」线前进，结果回来亮黄点） */
+/* 27 迷你甘特（可演示：「现在」线前进，结果回来亮主色圆点） */
 .mk-gantt{position:relative;display:grid;gap:8px}
 .mk-gantt .axis,.mk-gantt .r{display:grid;grid-template-columns:96px minmax(0,1fr);align-items:center;font-size:13px;color:var(--ink2)}
 .mk-gantt .axis div{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:12px;color:var(--mut)}
@@ -331,7 +336,7 @@ a{color:inherit}
 .mk-table tbody tr:last-child td{border-bottom:0}
 .mk-table td.n,.mk-table th.n{text-align:right;font-family:var(--f-mono)}
 .mk-table tbody tr:hover{background:var(--soft)}
-/* 31 方案对比矩阵：推荐列顶上一道黄条 */
+/* 31 方案对比矩阵：推荐列顶上一道主色条 */
 .mk-matrix{overflow-x:auto}
 .mk-matrix table{width:100%;min-width:640px;border-collapse:separate;border-spacing:0;font-size:14px}
 .mk-matrix th,.mk-matrix td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
@@ -463,6 +468,12 @@ a{color:inherit}
 .sw a{color:var(--ink2);text-decoration:none;padding:4px 12px;border-radius:999px;background:var(--glass)}
 .sw a[aria-current="page"]{background:var(--ink);color:var(--card)}
 .view[hidden]{display:none!important}
+.sw-hl{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
+.sw-hl button{display:inline-flex;align-items:center;gap:6px;border:0;cursor:pointer;border-radius:999px;padding:4px 10px;font-size:13px;background:var(--glass);color:var(--ink2)}
+.sw-hl button i{width:10px;height:10px;border-radius:3px}
+/* 五个色块只用来标按钮，是外壳里唯一写死的色值 */
+.sw-hl [data-hl="yellow"] i{background:#F5BC3B}.sw-hl [data-hl="sky"] i{background:#62BDF0}.sw-hl [data-hl="coral"] i{background:#FF946B}.sw-hl [data-hl="mint"] i{background:#4FD1BA}.sw-hl [data-hl="violet"] i{background:#B39DF5}
+.sw-hl button[aria-pressed="true"]{background:var(--ink);color:var(--card)}
 .kit-cell{display:flex;flex-direction:column;gap:14px;border-radius:18px;padding:18px;background:var(--glass);box-shadow:inset 0 0 0 1px var(--glass2)}
 .kit-cell>header{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .kit-cell>header b{font-family:var(--f-mono);font-weight:800;color:var(--mut);font-size:13px}
@@ -493,6 +504,7 @@ a{color:inherit}
   <nav class="sw" aria-label="样张视图">
     <b>荧光笔 · 参考页</b>
     <a href="#kit">组件与动效</a><a href="#explain">甲 讲解长页</a><a href="#launch">乙 发布专题页</a><a href="#review">丙 复盘报告页</a><a href="#compare">丁 对比评审页</a><a href="#social">戊 社媒长图</a>
+    <span class="sw-hl" role="group" aria-label="主色"><button type="button" data-hl="yellow" aria-pressed="true"><i></i>黄</button><button type="button" data-hl="sky" aria-pressed="false"><i></i>天蓝</button><button type="button" data-hl="coral" aria-pressed="false"><i></i>珊瑚</button><button type="button" data-hl="mint" aria-pressed="false"><i></i>薄荷</button><button type="button" data-hl="violet" aria-pressed="false"><i></i>淡紫</button></span>
   </nav>
 </div>
 
@@ -506,25 +518,31 @@ a{color:inherit}
       <div class="c7">
         <span class="mk-kicker"><b>13</b>UI 风格库 · marker</span>
         <h1 class="mk-h1">浅底、深墨，<span class="nb">一支只压<span class="mk-hl">结论</span>的笔</span></h1>
-        <p class="mk-lead">整页只有一种彩色。它不串主线、不当字色，只在每个标题里压住一个结论词；产品界面是唯一带投影的东西。</p>
+        <p class="mk-lead">整页只有一种主色，从黄、天蓝、珊瑚、薄荷、淡紫里选。它不串主线、不当字色，只在每个标题里压住一个结论词；产品界面是唯一带投影的东西。</p>
       </div>
       <div class="c5"><div class="mk-quote"><blockquote>只读高亮的词，就能说出<span class="nb">这一段的<span class="mk-hl">结论</span>。</span></blockquote><footer>判断高亮放对没有的唯一标准</footer></div></div>
     </header>
 
     <section class="mk-sec" id="k-base">
-      <div class="mk-r"><span class="mk-kicker"><b>00</b>基础</span><h2 class="mk-h2">令牌里只有<span class="mk-hl">一种彩色</span></h2></div>
+      <div class="mk-r"><span class="mk-kicker"><b>00</b>基础</span><h2 class="mk-h2">每页只用<span class="mk-hl">一种主色</span></h2></div>
       <div class="swatches mt32">
         <div class="swatch"><i style="background:var(--bg)"></i><div><b>--bg</b>页面底</div></div>
         <div class="swatch"><i style="background:linear-gradient(135deg,var(--aur-cool),var(--aur-warm))"></i><div><b>--aur-*</b>两团柔光，固定</div></div>
         <div class="swatch"><i style="background:var(--ink)"></i><div><b>--ink</b>#22262E</div></div>
         <div class="swatch"><i style="background:var(--ink2)"></i><div><b>--ink2</b>#4B5260</div></div>
         <div class="swatch"><i style="background:var(--mut)"></i><div><b>--mut</b>#5E6571</div></div>
-        <div class="swatch"><i style="background:var(--hl)"></i><div><b>--hl</b>实底·下划</div></div>
+        <div class="swatch"><i style="background:var(--hl)"></i><div><b>--hl</b>主色实底·下划</div></div>
         <div class="swatch"><i style="background:var(--hl-band)"></i><div><b>--hl-band</b>标题荧光带</div></div>
         <div class="swatch"><i style="background:var(--hl-soft)"></i><div><b>--hl-soft</b>正文荧光</div></div>
         <div class="swatch"><i style="background:var(--sand)"></i><div><b>--sand</b>子任务条</div></div>
         <div class="swatch"><i style="background:var(--inv-bg)"></i><div><b>--inv-bg</b>反白段</div></div>
       </div>
+      <div class="mk-tablewrap mt16"><table class="mk-table"><thead><tr><th>主色</th><th>data-hl</th><th>--hl / --hl-band / --hl-soft / --inv-hl</th><th>先推荐给</th><th>要留意</th></tr></thead><tbody>
+        <tr><td><b>黄</b>（默认）</td><td class="mk-num">yellow</td><td class="mk-num">#F5BC3B · #F8D27E · #FCE9B4 · #7A5C16</td><td>产品发布、功能介绍、讲解页；拿不准时</td><td>和「需要你回答」琥珀同色系</td></tr>
+        <tr><td><b>天蓝</b></td><td class="mk-num">sky</td><td class="mk-num">#62BDF0 · #A3D8F6 · #D6EDFB · #1F5D85</td><td>技术方案、数据复盘、工程向的说明</td><td>和「运行中」蓝、左上角冷色柔光同色系</td></tr>
+        <tr><td><b>珊瑚</b></td><td class="mk-num">coral</td><td class="mk-num">#FF946B · #FFBEA3 · #FFE1D4 · #8E3A1C</td><td>对外活动、招募、培训分享、热闹的发布</td><td>和「异常」红同属暖色，状态标签要靠深浅分</td></tr>
+        <tr><td><b>薄荷</b></td><td class="mk-num">mint</td><td class="mk-num">#4FD1BA · #98E4D6 · #D0F4ED · #16695C</td><td>流程改进、效率成果、工具上手指南</td><td>和「完成」绿同属绿色系，但更偏青</td></tr>
+        <tr><td><b>淡紫</b></td><td class="mk-num">violet</td><td class="mk-num">#B39DF5 · #CFC2F9 · #E9E3FC · #5940A6</td><td>给管理层的报告、方案评审、策略和 AI 方向的讨论</td><td>荧光感最弱；实底上深墨字 6.5 : 1，五种里最低</td></tr></tbody></table></div>
       <div class="kit-grid mt16">
         <div class="mk-panel"><h3 class="mk-h3">字号阶梯</h3>
           <div class="type-row"><code>h1 64/800</code><span class="mk-h2">标题 <span class="mk-hl">结论词</span></span></div>
@@ -554,19 +572,19 @@ a{color:inherit}
           <p class="how"><b>h1 / h2 / blockquote 各最多一处，20px 以下不用。</b>带厚 h1 .36em、h2 .42em，词不折行；首次滚到时划出。</p></div>
         <div class="kit-cell"><header><b>02</b><h3>正文荧光</h3><code>.mk-hl-soft</code></header>
           <p class="mk-body">回信会先核对原文，<span class="mk-hl-soft">对不上就不收</span>，免得把别的提问当成审查结论。</p>
-          <p class="how"><b>一段最多一处。</b>淡黄盖下半截，不动。</p></div>
+          <p class="how"><b>一段最多一处。</b>浅一档的主色盖下半截，不动。</p></div>
         <div class="kit-cell"><header><b>03</b><h3>下划荧光</h3><code>.mk-ul</code></header>
           <p class="mk-body">打开 <span class="mk-ul">设置 → AI 接入</span> 切换执行方。</p>
           <p class="how"><b>链接和按钮里的关键字。</b>3px，偏移 5px。</p></div>
         <div class="kit-cell"><header><b>04</b><h3>问题标签</h3><code>.mk-tag</code></header>
           <ul class="mk-tags"><li><span class="mk-tag">干等</span>它在忙，下一件发不出去</li><li><span class="mk-tag">答串</span>回一句「修」，它问是哪个</li><li><span class="mk-tag">失忆</span>聊久了，前面的事就忘了</li></ul>
-          <p class="how"><b>同组字数相同。</b>黄实底 6px，右侧一句灰字。</p></div>
+          <p class="how"><b>同组字数相同。</b>主色实底 6px，右侧一句灰字。</p></div>
         <div class="kit-cell"><header><b>05</b><h3>行内数字</h3><code>.mk-num</code></header>
           <p class="mk-body">合并 <span class="mk-num">216</span> 个 PR，Rust 测试 <span class="mk-num">987</span> 条全过，用时 <span class="mk-num">11</span> 天。</p>
           <p class="how"><b>数字、版本、时间换等宽。</b>含中文的标签不用等宽。</p></div>
         <div class="kit-cell"><header><b>✕</b><h3>不要这样</h3><code>反例</code></header>
-          <p class="mk-h3"><span class="kit-bad-fill">整句涂黄</span>、<span class="mk-hl">两处</span>都<span class="mk-hl">高亮</span>、<span class="kit-bad-color">黄色当字色</span></p>
-          <p class="how">涂满就没有重点；黄字在白底上只有 1.7 : 1。</p></div>
+          <p class="mk-h3"><span class="kit-bad-fill">整句涂满</span>、<span class="mk-hl">两处</span>都<span class="mk-hl">高亮</span>、<span class="kit-bad-color">主色当字色</span></p>
+          <p class="how">涂满就没有重点；五种主色当字色，在白底上只有 1.7–2.3 : 1。</p></div>
       </div>
     </section>
 
@@ -575,7 +593,7 @@ a{color:inherit}
       <div class="kit-grid k3 mt32">
         <div class="kit-cell"><header><b>06</b><h3>编号眉题</h3><code>.mk-kicker</code></header>
           <div class="stack"><span><span class="mk-kicker"><b>01</b>重点提炼</span></span><span><span class="mk-kicker"><b>02</b>自适应课堂</span></span></div>
-          <p class="how"><b>同一页的同级 h2 要么都有，要么都没有。</b>编号用黄圆点。</p></div>
+          <p class="how"><b>同一页的同级 h2 要么都有，要么都没有。</b>编号用主色圆点。</p></div>
         <div class="kit-cell"><header><b>07</b><h3>来源注</h3><code>.mk-src</code></header>
           <div class="mk-src"><span class="mk-time">11-14 23:04</span><span class="mk-note">按当晚实机截屏重画 · 会话标题已改写</span></div>
           <p class="how">演示旁写清时间、数据从哪来、改了什么。</p></div>
@@ -585,7 +603,7 @@ a{color:inherit}
             <div class="mk-feat on cur"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg></i><div><b>连回原文</b><span>每个要点都能对照原文</span></div></div>
             <div class="mk-feat"><i><svg viewBox="0 0 24 24"><path d="M6 4h9l3 3v13H6z"/><path d="M9 12h6M9 16h4"/></svg></i><div><b>哪里不会点哪里</b><span>点卡点生成讲解</span></div></div>
           </div>
-          <p class="how"><b>演示：</b>随旁边演示逐条点亮，没到的 40% 透明，当前一条图标格变黄。</p></div>
+          <p class="how"><b>演示：</b>随旁边演示逐条点亮，没到的 40% 透明，当前一条图标格变成主色。</p></div>
       </div>
     </section>
 
@@ -632,9 +650,9 @@ a{color:inherit}
           <p class="how"><b>演示：</b>原文句子先被荧光划出，虚线连过去，判断卡再出现。每个判断都能追到原话。</p></div>
         <div class="kit-cell"><header><b>13</b><h3>金句卡</h3><code>.mk-quote</code></header>
           <div class="mk-quote"><blockquote>规范要先在<span class="mk-hl">样板上</span>做到。</blockquote><footer>ui-styles 0.3.0 第 3 轮盲测的教训</footer></div>
-          <p class="how">一页最多两张；顶边一段黄短条是唯一装饰。</p></div>
+          <p class="how">一页最多两张；顶边一段主色短条是唯一装饰。</p></div>
         <div class="kit-cell"><header><b>14</b><h3>问答折叠</h3><code>.mk-faq</code></header>
-          <div class="mk-faq"><details open><summary>高亮能不能放两处？</summary><div class="a">不能。真有两个结论，拆成两个标题。</div></details><details><summary>为什么黄色不能当字色？</summary><div class="a">#F5BC3B 在白底上只有 1.7 : 1。</div></details></div>
+          <div class="mk-faq"><details open><summary>高亮能不能放两处？</summary><div class="a">不能。真有两个结论，拆成两个标题。</div></details><details><summary>为什么主色不能当字色？</summary><div class="a">五种主色在白底上只有 1.7–2.3 : 1，读不清。</div></details></div>
           <p class="how">线分隔，不套卡；加号旋转 45°，0.25s。</p></div>
         <div class="kit-cell w"><header><b>16</b><h3>场景卡</h3><code>.mk-scene</code></header>
           <div class="mk-grid">
@@ -711,7 +729,7 @@ a{color:inherit}
             <div class="q"><span class="nm">5 小时</span><span class="tr"><i style="width:13%"></i></span><span class="v">13%</span><span class="rs">5 分钟后重置</span></div>
             <div class="q"><span class="nm">每周</span><span class="tr"><i class="warn" style="width:18%"></i><u style="left:12%"></u></span><span class="v">18%</span><span class="rs warn">照现在的速度，约 67 小时后用完</span></div>
           </div>
-          <p class="how">黄短竖线 = 平均该到的位置；超速变红。</p></div>
+          <p class="how">主色短竖线 = 平均该到的位置；超速变红。</p></div>
         <div class="kit-cell" data-demo="gantt" data-n="4"><header><b>27</b><h3>迷你甘特</h3><code>.mk-gantt</code></header>
           <div class="mk-gantt" style="--now:1">
             <div class="axis"><span></span><div><span>19:26</span><span>19:35</span><span>19:45</span></div></div>
@@ -722,10 +740,10 @@ a{color:inherit}
             <i class="now" aria-hidden="true"></i>
           </div>
           <div class="mk-ctl"><button class="mk-btn pri" data-a="play" type="button">播放</button><button class="mk-btn" data-a="again" type="button">重播</button><button class="mk-btn" data-a="next" type="button">逐步 →</button><span class="mk-prog">0 / 4</span></div>
-          <p class="mk-democap">深色 = 主会话在干活，米色 = 子任务，黄点 = 结果回来。示例数据。</p></div>
+          <p class="mk-democap">深色 = 主会话在干活，米色 = 子任务，主色圆点 = 结果回来。示例数据。</p></div>
         <div class="kit-cell"><header><b>28</b><h3>对比条形</h3><code>.mk-bars</code></header>
           <div class="mk-bars"><div class="r"><span>第 1 轮</span><div class="tr"><i style="width:80%"></i></div><span class="v">4/5</span></div><div class="r"><span>第 3 轮</span><div class="tr"><i style="width:80%"></i></div><span class="v">4/5</span></div><div class="r key"><span>第 4 轮</span><div class="tr"><i style="width:100%"></i></div><span class="v">5/5</span></div></div>
-          <p class="how">其余中灰，关键一条荧光黄。</p></div>
+          <p class="how">其余中灰，关键一条用主色。</p></div>
         <div class="kit-cell"><header><b>29</b><h3>前后对比</h3><code>.mk-delta</code></header>
           <div class="mk-delta" style="--n:2"><div><span class="k">要看的窗口</span><div class="v"><s>5</s><b>1</b><em>−4</em></div></div><div><span class="k">E1 盲测</span><div class="v"><s>4/5</s><b>5/5</b><em>第 4 轮</em></div></div></div>
           <p class="how">划掉的旧值 → 粗体新值 → 变化量。</p></div>
@@ -740,7 +758,7 @@ a{color:inherit}
             <tr><th scope="row">共用底线与截图脚本</th><td class="pick"><span class="mk-yes">直接复用</span></td><td><span class="mk-yes">复用</span></td><td><span class="mk-no">要重写</span></td></tr>
             <tr><th scope="row">和已定内容冲突</th><td class="pick"><span class="mk-yes">无</span></td><td><span class="mk-no">撞柔光禁区 4、6</span></td><td><span class="mk-yes">无</span></td></tr>
             <tr><th scope="row">触发是否清楚</th><td class="pick"><span class="mk-yes">点名就用</span></td><td><span class="mk-mid">要记变体名</span></td><td><span class="mk-mid">和 ui-styles 抢触发</span></td></tr></tbody></table></div>
-          <p class="how">推荐列白底，顶上一道黄条加「推荐」标签；结论词用状态色加粗。</p></div>
+          <p class="how">推荐列白底，顶上一道主色条加「推荐」标签；结论词用状态色加粗。</p></div>
       </div>
     </section>
 
@@ -760,7 +778,7 @@ a{color:inherit}
         <div class="kit-cell"><header><b>34</b><h3>提示条</h3><code>.mk-callout</code></header>
           <div class="mk-callout"><span><b>生成需要时间，</b>重要信息请对照原文核实。</span></div>
           <div class="mk-callout warn"><span><b>超过 60 页</b>时只取连续页面。</span></div>
-          <p class="how">左侧 4px 竖条：黄 = 提示，红 = 注意；浅灰底，不加投影。</p></div>
+          <p class="how">左侧 4px 竖条：主色 = 提示，红 = 注意；浅灰底，不加投影。</p></div>
         <div class="kit-cell"><header><b>35</b><h3>代码 / 提示词块</h3><code>.mk-code</code></header>
           <div class="mk-code"><div class="h">提示词 · 访谈提纲<button class="mk-btn" type="button" data-copy>复制</button></div><pre>你是一线业务访谈设计者。对象是<span class="slot">{角色}</span>，
 入职<span class="slot">{年限}</span>，负责<span class="slot">{业务线}</span>。
@@ -773,11 +791,11 @@ a{color:inherit}
       <div class="mk-r"><span class="mk-kicker"><b>G</b>外壳与行动 36–39</span><h2 class="mk-h2">页面的头、按钮和<span class="mk-hl">图注</span></h2></div>
       <div class="kit-grid k3 mt32">
         <div class="kit-cell"><header><b>36</b><h3>吸附目录</h3><code>.mk-nav</code></header>
-          <p class="mk-body t15">就是本页顶上那条：居中毛玻璃胶囊，当前章节下面一道黄短线（离散切换）。窄屏右侧渐隐提示可横滑。</p></div>
+          <p class="mk-body t15">就是本页顶上那条：居中毛玻璃胶囊，当前章节下面一道主色短线（离散切换）。窄屏右侧渐隐提示可横滑。</p></div>
         <div class="kit-cell"><header><b>37 · 38</b><h3>主行动 / 次按钮 / 文字链</h3><code>.mk-cta · .mk-btn · .mk-link</code></header>
           <div class="mk-acts"><a class="mk-cta" href="#launch">看发布页 →</a><a class="mk-btn" href="#review">复盘页</a></div>
           <p class="mk-body t15">或者读一下 <a class="mk-link" href="#explain">讲解长页</a>。</p>
-          <p class="how">主行动每屏一个；次按钮白底线框；文字链悬停时下划线变黄。</p></div>
+          <p class="how">主行动每屏一个；次按钮白底线框；文字链悬停时下划线变成主色。</p></div>
         <div class="kit-cell"><header><b>39</b><h3>图注</h3><code>.mk-fig</code></header>
           <figure class="mk-fig"><div class="mk-ph" style="height:96px"></div><figcaption><b>图 1</b>截图用灰色占位；图注写清这张图说明什么。</figcaption></figure></div>
       </div>
@@ -789,7 +807,7 @@ a{color:inherit}
         <div class="kit-cell"><header><b>40</b><h3>全宽舞台</h3><code>.mk-stage</code></header>
           <p class="mk-body t15">左上标题和副题，右上时间戳 + 来源注；下面可选甘特条，再下面一到两块铺满 12 栏的产品窗口（内部带一点 <b>--sand</b> 暖色渐层）。<b>每页最多 2 次。</b>播放版见「乙」首屏。</p></div>
         <div class="kit-cell"><header><b>41</b><h3>反白段</h3><code>.mk-invert</code></header>
-          <p class="mk-body t15">一整段换成近黑底，荧光带换成暗金 <b>--inv-hl</b>（白字 5.7 : 1）。用来给一页换一次节奏。<b>每页最多 1 次</b>，放在产品演示最强的那一段。见「乙」的接力一段。</p></div>
+          <p class="mk-body t15">一整段换成近黑底，荧光带换成主色的暗色版 <b>--inv-hl</b>（白字 5.7–7.0 : 1）。用来给一页换一次节奏。<b>每页最多 1 次</b>，放在产品演示最强的那一段。见「乙」的接力一段。</p></div>
       </div>
     </section>
 
@@ -1219,10 +1237,17 @@ a{color:inherit}
     secs.forEach(function(s){io.observe(s)});
   }
 
+  /* ---------- 主色切换（查看用外壳）：按钮，或地址 #视图-主色（如 #launch-mint） ---------- */
+  var HL=['yellow','sky','coral','mint','violet'];
+  function setHl(c){if(HL.indexOf(c)<0)return;if(c==='yellow')document.documentElement.removeAttribute('data-hl');else document.documentElement.setAttribute('data-hl',c);
+    $$('.sw-hl button').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.hl===c?'true':'false')})}
+  $$('.sw-hl button').forEach(function(b){b.addEventListener('click',function(){setHl(b.dataset.hl)})});
+
   /* ---------- 视图切换（查看用外壳） ---------- */
   var views=$$('.view'),spied={},cur=null;
   function show(){
-    var h=location.hash.slice(1),name=null,anchor=null;
+    var h=location.hash.slice(1),name=null,anchor=null,mm=h.match(/^([a-z]+)-(yellow|sky|coral|mint|violet)$/);
+    if(mm){setHl(mm[2]);h=mm[1]}
     if(views.some(function(v){return v.dataset.view===h}))name=h;
     else{var el=h&&document.getElementById(h),host=el&&el.closest('.view');if(host){name=host.dataset.view;anchor=el}else name='kit'}
     if(name===cur&&anchor)return;
