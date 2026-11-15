@@ -2,7 +2,7 @@
 name: ui-styles
 description: 「UI 风格库」：做任何给人看的网页或界面（讲解页、方案页、报告页、专题页、产品页、数据页，单文件 HTML 或 Artifact）时优先用它。先选风格，再照该风格的令牌、字体、组件和参考页面做；共 13 种定稿风格：细线（Hairline，默认）、终端、柔光、精密暗色、文档站、瑞士网格、便当卡片、数据表格、玻璃拟态、Material 层级、色块拼接、大字动效、荧光笔，没指定就用细线。用户说「用细线 / Hairline / 柔光 / 精密暗色 / 终端 / 文档站 / 荧光笔风格」「马克笔高亮」「黄色高亮那种」「做成上次那种网页质感」「做个有质感的页面」，或要把流程、方法、方案做成给团队看的页面时使用。只管页面长什么样、怎么组织，内容本身按任务来。不管：飞书或 Excel 表格的配色美化（用 excel-aura）、PPT 幻灯片、数据分析本身。
 metadata:
-  version: "1.2.0"
+  version: "2.0.0"
   governance:
     network: optional
     external-writes: optional
