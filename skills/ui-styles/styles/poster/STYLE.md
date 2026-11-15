@@ -111,7 +111,7 @@
 
 ## 进场方式
 
-这是全库唯一被允许的「风格自带进场」：内容块在第一次滚到时上浮一次，之后不再动。
+这是符合 SKILL.md 第三节条件的「风格自带进场」之一：内容块在第一次滚到时上浮一次，之后不再动。
 
 - 带 `.px-r` 的元素：首屏的标签、h1、`.px-hb`；首页的 `.px-quote`、`.px-facts`、每个 `.px-sh`、每个 `.px-row`；内容页的 `.px-g2`、`.px-g3`、每个 `.px-jd`、`.px-dr`、`.px-fxr`、`.px-eq`、`.px-pbar`、每个 `.px-sg`、`.px-dm`、`.px-g5`、`.px-rep`、每个 `.px-num`、`.px-toc`。粒度是「一块」，不拆到每个字、每张卡。
 - 过渡：`.px-r` 上写 `opacity` 和 `transform` 两项过渡，各 .9s，曲线 `cubic-bezier(.16,1,.3,1)`。隐藏态 `.px-wait` 是 `opacity:0` 加 `translateY(56px)`。不加延迟，不做依次错开。
