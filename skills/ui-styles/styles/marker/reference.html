@@ -1,0 +1,1241 @@
+<title>荧光笔 参考页</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600;700;800&family=Noto+Sans+SC:wght@400;500;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap">
+<style>
+/* 荧光笔（marker）参考页
+   一句话：浅色柔光底、深墨标题、一支荧光笔只压结论词；产品界面是唯一带投影的东西。
+   版式：12 栏、24px 列距；字号 12/13/14/15/16/17/20 + 标题；圆角 6/10/14/18/999；区块间距 96/64/40。
+   视图：#kit 组件总览、#explain 讲解长页、#launch 发布专题页、#review 复盘报告页、#compare 对比评审页、#social 社媒长图与封面。
+   查看用外壳（不属于风格，不要抄进页面）：CSS 末尾「以下是查看用外壳」之后的全部规则（.sw .view .kit-* .swatch .type-row .lv .mlist），
+   脚本里标了「查看用外壳」的视图切换，以及组件总览里每格的 .kit-cell 框和 .how 说明。 */
+:root{
+  color-scheme:light;
+  /* 底与面 */
+  --bg:#F6F7F9; --aur-cool:#DCE6F8; --aur-warm:#F6EBD8;
+  --card:#FFFFFF; --soft:#F2F3F5; --line:#E3E6EB; --sand:#E2D7BF;
+  /* 字 */
+  --ink:#22262E; --ink2:#4B5260; --mut:#5E6571; --bar:#9AA1AD;
+  /* 荧光：唯一彩色，只做底 */
+  --hl:#F5BC3B;        /* 标签实底、3px 下划、编号圆点、关键条形 */
+  --hl-band:#F8D27E;   /* 标题荧光带（比实底浅一档，读起来像笔迹） */
+  --hl-soft:#FCE9B4;   /* 正文荧光 */
+  /* 状态：只表示状态，用在哪见 STYLE.md */
+  --ok:#1F6E3E; --ok-t:#E6F4EA; --run:#2F67B8; --run-t:#E7EFFB;
+  --ask:#8A5A0F; --ask-t:#FDF3E1; --ask-b:#EBC98A; --ask-bg:#FFFCF6;
+  --bad:#A33A26; --bad-t:#FBEAE6;
+  /* 反白段 */
+  --inv-bg:#15171C; --inv-card:#1F232B; --inv-soft:#22262E; --inv-line:#2E333D; --inv-ink:#F3F4F6; --inv-ink2:#B9BEC8; --inv-hl:#7A5C16;
+  /* 半透明面与占位 */
+  --glass:rgba(255,255,255,.6); --glass2:rgba(255,255,255,.86); --sand-t:#FBF8F1; --ph2:#ECEDF0;
+  /* 投影：只给产品界面和浮层 */
+  --sh-chip:0 1px 2px rgba(30,40,60,.06),0 4px 12px -6px rgba(30,40,60,.14);
+  --sh-win:0 28px 64px -28px rgba(30,40,60,.26),0 2px 6px rgba(30,40,60,.05);
+  --sh-flat:0 1px 2px rgba(30,40,60,.06);
+  /* 字体 */
+  --f-head:"Inter Tight","Noto Sans SC","PingFang SC",system-ui,sans-serif;
+  --f-sans:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono","Noto Sans SC",ui-monospace,Menlo,monospace;
+  --ease:cubic-bezier(.16,1,.3,1); --ease-draw:cubic-bezier(.65,0,.35,1);
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:84px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-sans);font-size:16px;line-height:1.7;font-variant-numeric:tabular-nums}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(60% 45% at 0% 0%,var(--aur-cool),transparent 70%),radial-gradient(55% 40% at 100% 100%,var(--aur-warm),transparent 70%)}
+h1,h2,h3,h4{margin:0;font-family:var(--f-head);text-wrap:balance}
+p{margin:0}
+ul,ol{margin:0;padding:0;list-style:none}
+button,input{font:inherit;color:inherit}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--run);outline-offset:2px;border-radius:6px}
+
+/* ---------- 版式 ---------- */
+.mk-wrap{max-width:1180px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.mk-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:24px;row-gap:24px}
+.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c7{grid-column:span 7}.c8{grid-column:span 8}.c12{grid-column:1/-1}
+.mid{align-items:center}.top{align-items:start}
+@media (max-width:860px){.mk-grid>*{grid-column:1/-1}.mk-flip>:last-child{order:-1}}
+.mk-sec{padding-block:96px 0}
+.mk-sub{padding-block:64px 0}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mt24{margin-top:24px}.mt32{margin-top:32px}.mt40{margin-top:40px}
+.stack{display:grid;gap:12px}.stack16{display:grid;gap:16px}.tc{text-align:center}
+
+/* ---------- 字号 ---------- */
+.mk-h1{font-size:clamp(38px,5vw,64px);line-height:1.12;font-weight:800;letter-spacing:-.025em}
+.mk-h2{font-size:clamp(28px,3.2vw,42px);line-height:1.2;font-weight:800;letter-spacing:-.02em}
+.mk-h3{font-size:20px;line-height:1.4;font-weight:700;letter-spacing:-.01em}
+.mk-h4{font-size:17px;line-height:1.45;font-weight:700}
+.mk-lead{font-size:17px;color:var(--ink2);max-width:38em}
+.mk-body{font-size:16px;color:var(--ink2)}
+.t15{font-size:15px}.t14{font-size:14px}.t13{font-size:13px}.t12{font-size:12px}
+.mut{color:var(--mut)}.ink2{color:var(--ink2)}
+.nb{white-space:nowrap} /* 中文标题里不该拆开的词组，免得窄屏在词中间断行 */
+.mk-kicker+.mk-h1,.mk-kicker+.mk-h2{margin-top:16px}
+.mk-h1+.mk-lead,.mk-h2+.mk-lead{margin-top:14px}
+
+/* ===== A 文字强调 ===== */
+/* 01 标题荧光：带厚随字号，词不折行；首次滚到时划出 */
+.mk-hl{background:linear-gradient(var(--hl-band),var(--hl-band)) no-repeat 0 calc(100% - .06em)/100% var(--hl-h,.42em);padding:0 .05em;white-space:nowrap;transition:background-size .6s var(--ease-draw)}
+.mk-h1 .mk-hl{--hl-h:.36em}.mk-h2 .mk-hl{--hl-h:.42em}.mk-nums .mk-hl{--hl-h:.34em}
+.mk-hl.mk-wait{background-size:0% var(--hl-h,.42em);transition:none}
+/* 02 正文荧光 */
+.mk-hl-soft{background:linear-gradient(transparent 52%,var(--hl-soft) 52%);padding:0 .08em;color:var(--ink);-webkit-box-decoration-break:clone;box-decoration-break:clone}
+/* 03 下划荧光 */
+.mk-ul{color:var(--ink);font-weight:700;text-decoration:underline;text-decoration-color:var(--hl);text-decoration-thickness:3px;text-underline-offset:5px}
+/* 04 问题标签 */
+.mk-tag{flex:none;display:inline-block;background:var(--hl);color:var(--ink);font-weight:800;border-radius:6px;padding:0 9px;font-size:15px;line-height:1.75;white-space:nowrap}
+.mk-tags{display:grid;gap:12px}
+.mk-tags>li{display:flex;gap:12px;align-items:baseline;color:var(--ink2)}
+/* 05 行内数字 */
+.mk-num{font-family:var(--f-mono);font-weight:800;color:var(--ink)}
+
+/* ===== B 标题与导读 ===== */
+/* 06 编号眉题 */
+.mk-kicker{display:inline-flex;align-items:center;gap:8px;background:var(--card);border-radius:999px;padding:4px 14px 4px 5px;box-shadow:var(--sh-chip);font-size:13px;font-weight:700;color:var(--ink2)}
+.mk-kicker b{display:grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:var(--hl);color:var(--ink);font-family:var(--f-mono);font-size:12px;font-weight:800}
+/* 07 来源注 */
+.mk-src{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.mk-src.r{align-items:flex-end}
+.mk-time{background:var(--card);border-radius:10px;padding:4px 14px;font-family:var(--f-mono);font-weight:800;font-size:20px;box-shadow:var(--sh-chip)}
+.mk-note{font-size:13px;color:var(--mut);background:var(--glass);border-radius:6px;padding:2px 10px}
+@media (max-width:860px){.mk-src.r{align-items:flex-start}}
+/* 08 要点列表（可随演示点亮） */
+.mk-feats{display:grid;gap:18px}
+.mk-feat{display:grid;grid-template-columns:40px minmax(0,1fr);gap:14px;align-items:start;transition:opacity .3s}
+.mk-feat i{width:40px;height:40px;border-radius:10px;background:var(--card);box-shadow:var(--sh-chip);display:grid;place-items:center;color:var(--ink)}
+.mk-feat i svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mk-feat b{display:block;font-size:16px}
+.mk-feat span{display:block;font-size:14px;color:var(--ink2);margin-top:2px}
+.mk-feats.sync .mk-feat{opacity:.4}
+.mk-feats.sync .mk-feat.on{opacity:1}
+.mk-feats.sync .mk-feat.cur i{background:var(--hl)}
+
+/* ===== C 叙事结构 ===== */
+.mk-panel{background:var(--soft);border-radius:14px;padding:20px 22px}
+.mk-panel.line{background:transparent;box-shadow:inset 0 0 0 1px var(--line)}
+/* 09 痛点 → 解法 */
+.mk-pair{display:grid;grid-template-columns:minmax(0,1fr) 32px minmax(0,1fr);gap:8px;align-items:stretch}
+.mk-pair>div{border-radius:14px;padding:16px 18px}
+.mk-pair .p{background:var(--soft)}
+.mk-pair .s{box-shadow:inset 0 0 0 1.5px var(--ink);background:var(--glass)}
+.mk-pair .ar{display:grid;place-items:center;padding:0;color:var(--mut);font-weight:800}
+.mk-pair .k{font-family:var(--f-mono);font-size:12px;font-weight:800;color:var(--mut)}
+.mk-pair b{display:block;font-size:16px;margin-top:2px}
+.mk-pair p{font-size:14px;color:var(--ink2);margin-top:4px}
+@media (max-width:620px){.mk-pair{grid-template-columns:minmax(0,1fr)}.mk-pair .ar{transform:rotate(90deg);height:20px}}
+/* 10 同画面改前 / 改后 */
+.mk-ba{position:relative;border-radius:14px;overflow:hidden;--x:50%;box-shadow:inset 0 0 0 1px var(--line)}
+.mk-ba .lay{padding:44px 24px 24px;background:var(--card)}
+.mk-ba .aft{position:absolute;inset:0;clip-path:inset(0 0 0 var(--x))}
+.mk-ba .lbl{position:absolute;top:12px;font-family:var(--f-mono);font-size:12px;font-weight:800;background:var(--soft);border-radius:6px;padding:0 8px}
+.mk-ba .bef .lbl{left:12px}.mk-ba .aft .lbl{right:12px;background:var(--hl)}
+.mk-ba .line{position:absolute;top:0;bottom:0;left:var(--x);width:2px;margin-left:-1px;background:var(--ink);pointer-events:none}
+.mk-ba .line::after{content:"⇆";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:50%;background:var(--ink);color:var(--card);display:grid;place-items:center;font-size:14px}
+.mk-ba input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:ew-resize;touch-action:pan-y}
+.mk-ba:focus-within{outline:2px solid var(--run);outline-offset:3px}
+/* 11 步骤链 */
+.mk-steps{display:grid}
+.mk-step{display:grid;grid-template-columns:40px minmax(0,1fr);gap:16px;position:relative;padding-bottom:24px}
+.mk-step:not(:last-child)::before{content:"";position:absolute;left:19px;top:44px;bottom:4px;width:2px;background:var(--line)}
+.mk-step .n{width:40px;height:40px;border-radius:10px;background:var(--card);box-shadow:var(--sh-chip);display:grid;place-items:center;font-family:var(--f-mono);font-weight:800;transition:background .3s,color .3s}
+.mk-step.done .n{background:var(--ink);color:var(--card)}
+.mk-step h4{padding-top:8px}
+.mk-step ul{display:grid;gap:6px;margin-top:8px}
+.mk-step li{display:flex;gap:10px;align-items:baseline;font-size:15px;color:var(--ink2)}
+.mk-step li i{flex:none;width:16px;height:16px;border-radius:6px;border:1.5px solid var(--bar);display:grid;place-items:center;font-style:normal;font-size:11px;font-weight:800;color:transparent;transform:translateY(2px);transition:background .25s,border-color .25s,color .25s}
+.mk-step li.on i{background:var(--ok);border-color:var(--ok);color:var(--card)}
+/* 12 时间轴 */
+.mk-tl{--n:5}
+.mk-tl .rail{position:relative;height:4px;border-radius:2px;background:var(--line);margin:34px calc(50% / var(--n)) 0}
+.mk-tl .fill{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--ink);width:var(--p,0%);transition:width .6s var(--ease)}
+.mk-tl .ptr{position:absolute;top:-32px;left:var(--p,0%);transform:translateX(-50%);transition:left .6s var(--ease);font-family:var(--f-mono);font-size:12px;font-weight:800;background:var(--ink);color:var(--card);border-radius:6px;padding:1px 7px;white-space:nowrap}
+.mk-tl .ptr::after{content:"";position:absolute;left:50%;bottom:-5px;margin-left:-5px;border:5px solid transparent;border-bottom:0;border-top-color:var(--ink)}
+.mk-tl .nodes{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));margin-top:-10px}
+.mk-tl .node{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:0 4px}
+.mk-tl .node>i{width:16px;height:16px;border-radius:50%;background:var(--card);border:3px solid var(--line);transition:border-color .3s,background .3s}
+.mk-tl .node.on>i{border-color:var(--ink);background:var(--hl)}
+.mk-tl .node b{font-family:var(--f-mono);font-size:13px}
+.mk-tl .node span{font-size:13px;color:var(--ink2);line-height:1.5}
+.mk-tl .node .mk-st{opacity:.25;transition:opacity .3s}
+.mk-tl .node.on .mk-st{opacity:1}
+@media (max-width:620px){
+  .mk-tl .rail{display:none}
+  .mk-tl .nodes{grid-template-columns:minmax(0,1fr);margin:0;gap:0}
+  .mk-tl .node{display:grid;grid-template-columns:16px 64px minmax(0,1fr);gap:4px 12px;align-items:center;text-align:left;padding:0 0 18px;position:relative}
+  .mk-tl .node:not(:last-child)::before{content:"";position:absolute;left:7px;top:18px;bottom:0;width:2px;background:var(--line)}
+  .mk-tl .node.on:not(:last-child)::before{background:var(--ink)}
+  .mk-tl .node span{grid-column:3}.mk-tl .node .mk-st{grid-column:3;justify-self:start}
+  .mk-tl .node b{grid-column:2;grid-row:1}.mk-tl .node span:not(.mk-st){grid-row:1}
+}
+/* 13 金句卡 */
+.mk-quote{position:relative;background:var(--card);border-radius:18px;box-shadow:var(--sh-win);padding:30px 32px 24px}
+.mk-quote::before{content:"";position:absolute;top:-3px;left:32px;width:44px;height:6px;border-radius:3px;background:var(--hl)}
+.mk-quote blockquote{margin:0;font-family:var(--f-head);font-size:24px;font-weight:800;line-height:1.45;letter-spacing:-.01em}
+.mk-quote footer{margin-top:14px;font-size:14px;color:var(--mut)}
+/* 14 问答折叠 */
+.mk-faq{display:grid;gap:0;border-top:1px solid var(--line)}
+.mk-faq details{border-bottom:1px solid var(--line)}
+.mk-faq summary{list-style:none;cursor:pointer;padding:16px 44px 16px 0;font-weight:700;position:relative}
+.mk-faq summary::-webkit-details-marker{display:none}
+.mk-faq summary::after{content:"+";position:absolute;right:6px;top:50%;transform:translateY(-50%);font-family:var(--f-mono);font-size:20px;color:var(--mut);transition:transform .25s var(--ease)}
+.mk-faq details[open] summary::after{transform:translateY(-50%) rotate(45deg)}
+.mk-faq .a{padding:0 0 16px;color:var(--ink2);font-size:15px}
+/* 15 原文对照 */
+.mk-trace{display:grid;gap:14px}
+.mk-trace .row{display:grid;grid-template-columns:minmax(0,1.15fr) 56px minmax(0,1fr);align-items:center}
+.mk-trace .src{font-size:15px;color:var(--ink2);padding:10px 14px;border-radius:10px;background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}
+.mk-trace .src em{font-style:normal;background:linear-gradient(transparent 52%,var(--hl-soft) 52%);background-size:0% 100%;background-repeat:no-repeat;color:var(--ink);transition:background-size .5s var(--ease-draw)}
+.mk-trace .src small{display:block;font-family:var(--f-mono);font-size:12px;color:var(--mut)}
+.mk-trace .wire{height:2px;background:repeating-linear-gradient(90deg,var(--bar) 0 4px,transparent 4px 8px);transform-origin:left;transform:scaleX(0);transition:transform .4s var(--ease)}
+.mk-trace .note{background:var(--card);border-radius:14px;box-shadow:var(--sh-chip);padding:10px 14px;transition:opacity .42s var(--ease),transform .42s var(--ease)}
+.mk-trace .note b{display:block;font-size:15px}
+.mk-trace .note span{font-size:13px;color:var(--ink2)}
+.mk-trace .note .k{display:inline-block;font-family:var(--f-mono);font-size:12px;font-weight:800;background:var(--hl);border-radius:6px;padding:0 6px;margin-right:6px}
+.mk-trace .row.on .src em{background-size:100% 100%}
+.mk-trace .row.on .wire{transform:scaleX(1)}
+.mk-trace .row:not(.on) .note{opacity:0;transform:translateY(8px)}
+@media (max-width:620px){.mk-trace .row{grid-template-columns:minmax(0,1fr)}.mk-trace .wire{width:2px;height:16px;margin-left:24px;background:repeating-linear-gradient(180deg,var(--bar) 0 4px,transparent 4px 8px);transform-origin:top;transform:scaleY(0)}.mk-trace .row.on .wire{transform:scaleY(1)}}
+/* 16 场景卡 */
+.mk-scene{border-radius:14px;box-shadow:inset 0 0 0 1px var(--line);background:var(--glass);padding:20px 22px;display:flex;flex-direction:column;gap:10px}
+.mk-scene ol{counter-reset:s;display:grid;gap:6px}
+.mk-scene ol li{counter-increment:s;display:flex;gap:10px;font-size:14px;color:var(--ink2)}
+.mk-scene ol li::before{content:counter(s);flex:none;width:20px;height:20px;border-radius:6px;background:var(--soft);display:grid;place-items:center;font-family:var(--f-mono);font-size:12px;font-weight:800;color:var(--ink)}
+.mk-scene .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:6px}
+.mk-chip{font-size:12px;border-radius:999px;padding:1px 10px;background:var(--soft);color:var(--ink2);white-space:nowrap}
+
+/* ===== D 产品展示（唯一带投影的一组） ===== */
+/* 17 窗口 */
+.mk-win{background:var(--card);border-radius:18px;box-shadow:var(--sh-win);overflow:hidden}
+.mk-win>.bar{height:40px;display:flex;gap:7px;align-items:center;padding:0 14px;border-bottom:1px solid var(--line)}
+.mk-win>.bar>i{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.mk-win>.bar .url{flex:1;min-width:0;max-width:380px;margin-left:10px;background:var(--soft);border-radius:999px;padding:2px 12px;font-family:var(--f-mono);font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mk-win>.bar .r{margin-left:auto}
+.mk-win .body{position:relative;transition:transform .7s var(--ease)}
+.mk-win.sand .body{background:linear-gradient(180deg,var(--card),var(--sand-t))}
+.mk-dim{transition:opacity .4s}
+.zooming .mk-dim{opacity:.45}
+/* 18 对话流 */
+.mk-chat{padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--soft)}
+.mk-msg{position:relative;max-width:86%;background:var(--card);border-radius:14px;padding:9px 13px;font-size:14px;line-height:1.6;box-shadow:var(--sh-flat);transition:opacity .42s var(--ease),transform .42s var(--ease)}
+.mk-msg.me{align-self:flex-end;background:var(--ink);color:var(--card)}
+.mk-msg.sys{align-self:center;background:transparent;box-shadow:none;color:var(--mut);font-size:12px;padding:2px 10px;border:1px dashed var(--bar);border-radius:999px}
+.mk-msg .who{display:block;font-family:var(--f-mono);font-size:12px;font-weight:800;color:var(--mut);margin-bottom:2px}
+.mk-msg.me .who{color:var(--line)}
+.mk-msg .rest{opacity:0}
+.mk-caret{display:inline-block;width:2px;height:1em;background:currentColor;vertical-align:-2px;margin-left:1px}
+.mk-msg .mk-gen{position:absolute;left:13px;bottom:10px}
+.mk-gen[hidden]{display:none}
+.mk-gen{display:inline-block;font-size:13px;font-weight:700;color:var(--ink2);background:linear-gradient(90deg,var(--soft) 0%,var(--card) 50%,var(--soft) 100%) 0 0/200% 100%;border-radius:6px;padding:0 8px;animation:mk-shim 1.4s linear infinite}
+@keyframes mk-shim{to{background-position:-200% 0}}
+.mk-off{opacity:0;transform:translateY(8px)}
+/* 19 任务卡 + 状态 */
+.mk-st{display:inline-flex;align-items:center;gap:5px;border-radius:6px;padding:0 8px;font-size:12px;font-weight:700;line-height:1.9;white-space:nowrap;transition:background .3s,color .3s}
+.mk-st::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.mk-st.ok{color:var(--ok);background:var(--ok-t)}.mk-st.run{color:var(--run);background:var(--run-t)}.mk-st.ask{color:var(--ask);background:var(--ask-t)}.mk-st.bad{color:var(--bad);background:var(--bad-t)}
+.mk-tasks{display:grid;gap:10px;padding:14px;background:var(--soft)}
+.mk-task{background:var(--card);border-radius:14px;padding:12px 16px;border:1.5px solid transparent;box-shadow:var(--sh-flat);transition:border-color .3s,background .3s,transform .2s var(--ease),box-shadow .2s}
+.mk-task.need{border-color:var(--ask-b);background:var(--ask-bg)}
+.mk-task .t{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.mk-task .t b{font-size:15px}
+.mk-task .tm{margin-left:auto;font-family:var(--f-mono);font-size:12px;color:var(--mut);white-space:nowrap}
+.mk-task .res{font-size:14px;color:var(--ink2);margin-top:6px;transition:opacity .42s var(--ease),transform .42s var(--ease)}
+.mk-lift:hover{transform:translateY(-2px);box-shadow:var(--sh-win)}
+/* 20 看板 */
+.mk-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:14px;background:var(--soft)}
+.mk-col{display:grid;gap:8px;align-content:start}
+.mk-col h5{margin:0 0 4px;display:flex;align-items:center;gap:8px;font-size:13px}
+.mk-col h5 em{font-style:normal;font-family:var(--f-mono);color:var(--mut);margin-left:auto}
+.mk-col .mk-task{padding:10px 12px}.mk-col .mk-task b{font-size:14px}
+@media (max-width:620px){.mk-board{grid-template-columns:minmax(0,1fr)}}
+/* 21 差异卡 */
+.mk-diff{background:var(--card);border-radius:14px;box-shadow:var(--sh-chip);overflow:hidden;font-family:var(--f-mono);font-size:13px;line-height:1.7}
+.mk-diff .h{display:flex;gap:10px;align-items:center;padding:9px 14px;border-bottom:1px solid var(--line);font-weight:700;font-size:12px;color:var(--ink2)}
+.mk-diff .h em{font-style:normal;margin-left:auto;color:var(--ok)}.mk-diff .h em+em{margin-left:6px;color:var(--bad)}
+.mk-diff pre{margin:0;padding:8px 0;overflow-x:auto}
+.mk-diff code{display:block;padding:0 14px;white-space:pre}
+.mk-diff .add{background:var(--ok-t);color:var(--ok)}.mk-diff .del{background:var(--bad-t);color:var(--bad)}
+/* 22 通知条 */
+.mk-toast{display:inline-flex;align-items:center;gap:10px;background:var(--ink);color:var(--card);border-radius:10px;padding:10px 16px;font-size:14px;box-shadow:var(--sh-win);transition:opacity .3s var(--ease),transform .3s var(--ease)}
+.mk-toast::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--hl);flex:none}
+.mk-toast.fixed{position:fixed;z-index:40;right:max(20px,env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));max-width:calc(100% - 40px)}
+.mk-toast.mk-off{pointer-events:none}
+/* 23 命令面板 */
+.mk-cmd{background:var(--card);border-radius:18px;box-shadow:var(--sh-win);overflow:hidden}
+.mk-cmd label{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.mk-cmd label:focus-within{box-shadow:inset 0 0 0 2px var(--run)}
+.mk-cmd label span{font-family:var(--f-mono);font-size:13px;color:var(--mut)}
+.mk-cmd input{flex:1;min-width:0;border:0;outline:0;font-size:15px;background:transparent}
+.mk-cmd ul{padding:6px;max-height:236px;overflow:auto}
+.mk-cmd li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;font-size:14px;cursor:pointer}
+.mk-cmd li[hidden]{display:none}
+.mk-cmd li[aria-selected="true"]{background:var(--soft)}
+.mk-cmd kbd{margin-left:auto;font-family:var(--f-mono);font-size:12px;color:var(--mut);box-shadow:inset 0 0 0 1px var(--line);border-radius:6px;padding:0 6px}
+.mk-cmd .empty{padding:10px;color:var(--mut);font-size:14px}
+
+/* ===== E 数据 ===== */
+/* 24 数字条（标题下 2–4 项；多一行时改成格子） */
+.mk-stats{display:inline-flex;flex-wrap:wrap;background:var(--card);border-radius:14px;box-shadow:var(--sh-chip);padding:12px 4px}
+.mk-stats>div{display:flex;align-items:baseline;gap:8px;padding:2px 22px;border-left:2px solid var(--hl)}
+.mk-stats>div:first-child{border-left:0}
+.mk-stats b{font-family:var(--f-mono);font-weight:800;font-size:clamp(26px,3vw,36px);line-height:1.15}
+.mk-stats span{color:var(--ink2);font-size:14px}
+.mk-stats.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:16px 4px}
+.mk-stats.grid>div{flex-direction:column;gap:0}
+@media (max-width:620px){.mk-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));row-gap:12px}.mk-stats>div{border-left:0;padding:2px 14px}.mk-stats>div:nth-child(even){border-left:2px solid var(--hl)}.mk-stats.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* 25 数字墙（一页一次，只高亮一个） */
+.mk-nums{display:grid;grid-template-columns:repeat(var(--n,4),minmax(0,1fr));gap:12px}
+.mk-nums b{display:inline-block;font-family:var(--f-mono);font-weight:800;font-size:clamp(40px,6.4vw,84px);line-height:1.05;letter-spacing:-.03em}
+.mk-nums span{display:block;color:var(--ink2);font-size:15px;margin-top:6px}
+@media (max-width:720px){.mk-nums:not(.n3){grid-template-columns:repeat(2,minmax(0,1fr));row-gap:22px}}
+/* 26 额度条 */
+.mk-quota{display:grid;gap:14px}
+.mk-quota .q{display:grid;grid-template-columns:84px minmax(0,1fr) 56px;gap:2px 14px;align-items:center}
+.mk-quota .nm{font-weight:700;font-size:14px}
+.mk-quota .tr{position:relative;height:8px;border-radius:6px;background:var(--soft);overflow:hidden}
+.mk-quota .tr i{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:var(--ink)}
+.mk-quota .tr i.warn{background:var(--bad)}
+.mk-quota .tr u{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--hl)}
+.mk-quota .v{font-family:var(--f-mono);font-weight:800;font-size:17px;text-align:right}
+.mk-quota .rs{grid-column:2/4;font-size:12px;color:var(--mut)}.mk-quota .rs.warn{color:var(--bad)}
+/* 27 迷你甘特（可演示：「现在」线前进，结果回来亮黄点） */
+.mk-gantt{position:relative;display:grid;gap:8px}
+.mk-gantt .axis,.mk-gantt .r{display:grid;grid-template-columns:96px minmax(0,1fr);align-items:center;font-size:13px;color:var(--ink2)}
+.mk-gantt .axis div{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:12px;color:var(--mut)}
+.mk-gantt .t{position:relative;height:12px;border-radius:6px;background:var(--soft)}
+.mk-gantt .t i{position:absolute;top:0;bottom:0;border-radius:6px;background:var(--sand);transition:width .6s var(--ease)}
+.mk-gantt .t i.m{background:var(--ink)}
+.mk-gantt .t i.e::after{content:"";position:absolute;right:-6px;top:-3px;width:18px;height:18px;border-radius:50%;background:var(--hl);border:3px solid var(--card);transform:scale(0);transition:transform .3s var(--ease)}
+.mk-gantt .t i.e.done::after{transform:scale(1)}
+.mk-gantt .now{position:absolute;top:22px;bottom:-4px;width:2px;background:var(--ink);left:calc(96px + (100% - 96px) * var(--now,1));transition:left .6s var(--ease)}
+/* 28 对比条形 */
+.mk-bars{display:grid;gap:10px}
+.mk-bars .r{display:grid;grid-template-columns:110px minmax(0,1fr) 48px;gap:12px;align-items:center;font-size:14px}
+.mk-bars .tr{height:14px;border-radius:7px;background:var(--soft);overflow:hidden}
+.mk-bars .tr i{display:block;height:100%;border-radius:7px;background:var(--bar)}
+.mk-bars .r.key{font-weight:700}.mk-bars .r.key .tr i{background:var(--hl)}
+.mk-bars .v{font-family:var(--f-mono);font-weight:800;text-align:right}
+/* 29 前后对比 */
+.mk-delta{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:12px}
+.mk-delta>div{border-radius:14px;box-shadow:inset 0 0 0 1px var(--line);padding:16px 18px}
+.mk-delta .k{font-size:13px;color:var(--mut)}
+.mk-delta .v{display:flex;align-items:baseline;gap:10px;margin-top:4px;flex-wrap:wrap}
+.mk-delta s{font-family:var(--f-mono);font-size:17px;color:var(--mut);text-decoration-color:var(--bar)}
+.mk-delta b{font-family:var(--f-mono);font-size:30px;font-weight:800}
+.mk-delta em{font-style:normal;font-size:13px;font-weight:700;color:var(--ok)}
+@media (max-width:720px){.mk-delta{grid-template-columns:minmax(0,1fr)}}
+/* 30 基础表格 */
+.mk-tablewrap{overflow-x:auto;border-radius:14px;box-shadow:inset 0 0 0 1px var(--line)}
+.mk-table{width:100%;min-width:560px;border-collapse:collapse;font-size:14px}
+.mk-table th,.mk-table td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+.mk-table thead th{font-size:12px;font-weight:700;color:var(--mut);background:var(--soft)}
+.mk-table tbody tr:last-child td{border-bottom:0}
+.mk-table td.n,.mk-table th.n{text-align:right;font-family:var(--f-mono)}
+.mk-table tbody tr:hover{background:var(--soft)}
+/* 31 方案对比矩阵：推荐列顶上一道黄条 */
+.mk-matrix{overflow-x:auto}
+.mk-matrix table{width:100%;min-width:640px;border-collapse:separate;border-spacing:0;font-size:14px}
+.mk-matrix th,.mk-matrix td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.mk-matrix thead th{font-size:15px;padding-top:18px;position:relative}
+.mk-matrix thead th.pick{background:var(--card);border-radius:14px 14px 0 0}
+.mk-matrix thead th.pick::before{content:"";position:absolute;left:14px;right:14px;top:0;height:4px;border-radius:0 0 3px 3px;background:var(--hl)}
+.mk-matrix td.pick{background:var(--card)}
+.mk-matrix tbody tr:last-child td.pick{border-radius:0 0 14px 14px}
+.mk-matrix th[scope=row]{font-weight:700;font-size:13px;color:var(--ink2);width:22%}
+.mk-yes{color:var(--ok);font-weight:700}.mk-no{color:var(--bad);font-weight:700}.mk-mid{color:var(--ask);font-weight:700}
+
+/* ===== F 结论与行动 ===== */
+/* 32 结论判定 */
+.mk-verdict{display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px;align-items:start;border-radius:18px;padding:22px 24px;background:var(--card);box-shadow:inset 0 0 0 1.5px var(--ink)}
+.mk-verdict .stamp{font-family:var(--f-mono);font-size:13px;font-weight:800;background:var(--ink);color:var(--card);border-radius:10px;padding:8px 12px;text-align:center;line-height:1.3}
+.mk-verdict .stamp b{display:block;margin-top:4px;font-size:20px;background:var(--hl);color:var(--ink);border-radius:6px;padding:0 6px}
+.mk-verdict h3{font-size:20px}
+.mk-verdict p{color:var(--ink2);font-size:15px;margin-top:6px}
+/* 33 行动项 */
+.mk-actions{display:grid;border-top:1px solid var(--line)}
+.mk-actions li{display:grid;grid-template-columns:22px minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);font-size:15px}
+.mk-actions li i{width:18px;height:18px;border-radius:6px;border:1.5px solid var(--bar)}
+.mk-actions li.done i{background:var(--ok);border-color:var(--ok)}
+.mk-actions li.done span:first-of-type{color:var(--mut);text-decoration:line-through}
+.mk-actions .who{font-size:13px;color:var(--ink2);background:var(--soft);border-radius:999px;padding:0 10px}
+.mk-actions .due{font-family:var(--f-mono);font-size:12px;color:var(--mut)}
+@media (max-width:620px){.mk-actions li{grid-template-columns:22px minmax(0,1fr) auto}.mk-actions .due{display:none}}
+/* 34 提示条 */
+.mk-callout{display:grid;grid-template-columns:4px minmax(0,1fr);gap:14px;background:var(--soft);border-radius:14px;padding:14px 18px 14px 14px;font-size:15px;color:var(--ink2)}
+.mk-callout::before{content:"";border-radius:2px;background:var(--hl)}
+.mk-callout.warn::before{background:var(--bad)}
+.mk-callout b{color:var(--ink)}
+/* 35 代码 / 提示词块 */
+.mk-code{background:var(--card);border-radius:14px;box-shadow:inset 0 0 0 1px var(--line);overflow:hidden}
+.mk-code .h{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 16px;border-bottom:1px solid var(--line);font-size:13px;color:var(--mut)}
+.mk-code .h button{margin-left:auto}
+.mk-code pre{margin:0;padding:14px 16px;overflow-x:auto;font-family:var(--f-mono);font-size:13px;line-height:1.75;white-space:pre-wrap}
+.mk-code .slot{background:var(--hl-soft);border-radius:4px;padding:0 4px;color:var(--ink)}
+
+/* ===== G 外壳与行动 ===== */
+/* 36 吸附目录 */
+.mk-nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;padding-top:10px}
+.mk-nav .in{display:flex;align-items:center;gap:2px;max-width:880px;margin:0 auto;background:var(--glass2);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-radius:999px;box-shadow:var(--sh-chip);padding:5px;overflow-x:auto;scrollbar-width:none}
+.mk-nav .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;padding:0 12px 0 4px;white-space:nowrap}
+.mk-nav .brand i{width:24px;height:24px;border-radius:7px;background:var(--ink)}
+.mk-nav a{position:relative;text-decoration:none;color:var(--ink2);font-size:14px;padding:5px 12px;border-radius:999px;white-space:nowrap;transition:background .2s,color .2s}
+.mk-nav a:hover{background:var(--soft)}
+.mk-nav a.on{color:var(--ink);font-weight:700}
+.mk-nav a.on::after{content:"";position:absolute;left:50%;bottom:1px;width:14px;margin-left:-7px;height:3px;border-radius:2px;background:var(--hl)}
+@media (max-width:620px){.mk-nav::after{content:"";position:absolute;right:0;top:10px;bottom:0;width:36px;border-radius:0 999px 999px 0;background:linear-gradient(90deg,transparent,var(--card));pointer-events:none}}
+/* 37 主行动 / 38 次按钮与文字链 */
+.mk-cta{display:inline-flex;align-items:center;gap:10px;background:var(--ink);color:var(--card);border-radius:999px;padding:12px 24px;font-weight:700;text-decoration:none;box-shadow:var(--sh-chip);transition:transform .2s var(--ease)}
+.mk-cta:hover{transform:translateY(-2px)}
+.mk-cta code{font-family:var(--f-mono);font-size:14px;font-weight:700;text-decoration:underline;text-decoration-color:var(--hl);text-decoration-thickness:3px;text-underline-offset:5px}
+.mk-btn{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:7px 16px;font-size:14px;font-weight:700;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);cursor:pointer;text-decoration:none;transition:background .2s,transform .15s}
+.mk-btn:hover{background:var(--soft)}
+.mk-btn:active{transform:scale(.97)}
+.mk-btn.pri{background:var(--ink);color:var(--card);box-shadow:none}
+.mk-link{font-weight:700;text-decoration:underline;text-decoration-color:var(--bar);text-underline-offset:4px;transition:text-decoration-color .2s}
+.mk-link:hover{text-decoration-color:var(--hl)}
+.mk-acts{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+/* 39 图注 */
+.mk-fig{margin:0}
+.mk-fig figcaption{display:flex;gap:8px;margin-top:10px;font-size:13px;color:var(--mut)}
+.mk-fig figcaption b{font-family:var(--f-mono);color:var(--ink2)}
+.mk-ph{background:repeating-linear-gradient(135deg,var(--soft) 0 10px,var(--ph2) 10px 20px);border-radius:10px}
+
+/* ===== H 版式模式 ===== */
+/* 40 全宽舞台：每页最多 2 次 */
+.mk-stage .head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}
+.mk-stage .head>div:first-child{max-width:720px}
+.mk-stage .floor{margin-top:28px}
+/* 41 反白段：每页最多 1 次 */
+.mk-invert{background:var(--inv-bg);color:var(--inv-ink);margin-top:96px;padding-block:88px}
+.mk-invert .mk-win{color:var(--ink)}
+.mk-invert .mk-lead,.mk-invert .mk-body,.mk-invert .ink2,.mk-invert .mk-feat span{color:var(--inv-ink2)}
+.mk-invert .mk-hl{--hl-band:var(--inv-hl)}
+.mk-invert .mk-kicker{background:var(--inv-card);color:var(--inv-ink2);box-shadow:none}
+.mk-invert .mk-feat i{background:var(--inv-card);color:var(--inv-ink);box-shadow:none}
+.mk-invert .mk-btn{background:var(--inv-card);color:var(--inv-ink);box-shadow:inset 0 0 0 1px var(--inv-line)}
+.mk-invert .mk-btn.pri{background:var(--inv-ink);color:var(--inv-bg)}
+.mk-invert .mut,.mk-invert .mk-prog{color:var(--inv-ink2)}
+.mk-invert .mk-note{background:var(--inv-card);color:var(--inv-ink2)}
+
+/* ===== I 导出成图：社媒长图 / 封面（设计宽 1080，按容器缩放；不带演示和进场） ===== */
+.art{container-type:inline-size;width:100%;max-width:540px;margin:0 auto;border-radius:14px;overflow:hidden;box-shadow:var(--sh-win);background:var(--bg);position:relative}
+.art::before{content:"";position:absolute;inset:0;background:radial-gradient(70% 30% at 0% 0%,var(--aur-cool),transparent 70%),radial-gradient(70% 25% at 100% 100%,var(--aur-warm),transparent 70%);pointer-events:none}
+.art>*{position:relative}
+.art .pad{padding:8cqw 7cqw}
+.art .k{font-family:var(--f-mono);font-size:2.6cqw;font-weight:800;color:var(--mut)}
+.art h2{font-size:9cqw;line-height:1.15;font-weight:800;letter-spacing:-.025em;margin-top:3cqw}
+.art .lead{font-size:3.6cqw;color:var(--ink2);margin-top:3cqw}
+.art .row3{display:grid;grid-template-columns:repeat(3,1fr);gap:2cqw;margin-top:6cqw}
+.art .row3 div{background:var(--card);border-radius:2.4cqw;padding:3cqw;box-shadow:var(--sh-chip)}
+.art .row3 b{display:block;font-family:var(--f-mono);font-size:7cqw;line-height:1.1}
+.art .row3 span{font-size:2.8cqw;color:var(--ink2)}
+.art .pt{display:grid;grid-template-columns:7cqw minmax(0,1fr);gap:3cqw;margin-top:5cqw;align-items:start}
+.art .pt i{font-style:normal;width:7cqw;height:7cqw;border-radius:2cqw;background:var(--hl);display:grid;place-items:center;font-family:var(--f-mono);font-weight:800;font-size:3.2cqw}
+.art .pt b{display:block;font-size:4.4cqw}
+.art .pt span{font-size:3.2cqw;color:var(--ink2)}
+.art .foot{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding:4cqw 7cqw;font-size:2.8cqw;color:var(--mut)}
+.art .foot b{font-family:var(--f-mono);color:var(--ink)}
+.art.cover{aspect-ratio:4/5;display:flex;flex-direction:column}
+.art.cover .pad{flex:1;display:flex;flex-direction:column;justify-content:center}
+.art .mk-hl{transition:none}
+
+/* ---------- 演示控制 ---------- */
+.mk-ctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px}
+.mk-prog{font-family:var(--f-mono);font-size:12px;color:var(--mut);margin-left:auto}
+.mk-concl{margin-top:12px;font-weight:700;font-size:16px;transition:opacity .3s}
+.mk-concl.mk-off{transform:none}
+.mk-democap{font-size:13px;color:var(--mut);margin-top:10px}
+
+/* ---------- 进场：块浮现（每节最多 2 块）+ 荧光划出 ---------- */
+.mk-r{transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.mk-r.mk-wait{opacity:0;transform:translateY(24px);transition:none}
+.mk-r .mk-hl{transition-delay:.35s}
+
+/* ---------- 减少动态效果 ---------- */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition:none!important;animation:none!important}
+  .mk-hl.mk-wait{background-size:100% var(--hl-h,.42em)}
+  .mk-r.mk-wait{opacity:1;transform:none}
+}
+
+/* ===== 以下是查看用外壳，不属于风格 ===== */
+.sw{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding-block:14px;font-size:13px}
+.sw b{font-family:var(--f-mono);color:var(--mut);margin-right:6px}
+.sw a{color:var(--ink2);text-decoration:none;padding:4px 12px;border-radius:999px;background:var(--glass)}
+.sw a[aria-current="page"]{background:var(--ink);color:var(--card)}
+.view[hidden]{display:none!important}
+.kit-cell{display:flex;flex-direction:column;gap:14px;border-radius:18px;padding:18px;background:var(--glass);box-shadow:inset 0 0 0 1px var(--glass2)}
+.kit-cell>header{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.kit-cell>header b{font-family:var(--f-mono);font-weight:800;color:var(--mut);font-size:13px}
+.kit-cell>header h3{font-size:16px;font-weight:700}
+.kit-cell>header code{font-family:var(--f-mono);font-size:12px;color:var(--mut);margin-left:auto}
+.kit-cell .how{font-size:13px;color:var(--mut);border-top:1px dashed var(--bar);padding-top:10px}
+.kit-cell .how b{color:var(--ink2)}
+.kit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.kit-grid.k3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.kit-grid .w{grid-column:1/-1}
+@media (max-width:860px){.kit-grid,.kit-grid.k3{grid-template-columns:minmax(0,1fr)}}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px}
+.swatch{background:var(--card);border-radius:10px;overflow:hidden;font-size:12px;box-shadow:inset 0 0 0 1px var(--line)}
+.swatch i{display:block;height:40px}
+.swatch div{padding:6px 10px}
+.swatch b{display:block;font-family:var(--f-mono)}
+.type-row{display:grid;grid-template-columns:110px minmax(0,1fr);gap:16px;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--line)}
+.type-row code{font-family:var(--f-mono);font-size:12px;color:var(--mut)}
+.lv{font-family:var(--f-mono);font-size:12px;font-weight:800;border-radius:6px;padding:0 7px;white-space:nowrap}
+.lv.a{background:var(--soft);color:var(--ink2)}.lv.b{background:var(--hl);color:var(--ink)}.lv.c{background:var(--bad-t);color:var(--bad)}
+.mlist{display:grid;gap:8px;font-size:14px}
+.mlist div{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:baseline}
+/* 反例：只在组件总览「不要这样」一格里演示错误用法，新页面里禁止 */
+.kit-bad-fill{background:var(--hl)}.kit-bad-color{color:var(--hl)}
+</style>
+
+<div class="mk-wrap">
+  <nav class="sw" aria-label="样张视图">
+    <b>荧光笔 · 参考页</b>
+    <a href="#kit">组件与动效</a><a href="#explain">甲 讲解长页</a><a href="#launch">乙 发布专题页</a><a href="#review">丙 复盘报告页</a><a href="#compare">丁 对比评审页</a><a href="#social">戊 社媒长图</a>
+  </nav>
+</div>
+
+<!-- ============================================================ 组件与动效 -->
+<main class="view" data-view="kit">
+  <div class="mk-wrap">
+    <div class="mk-nav"><div class="in"><span class="brand"><i></i>荧光笔</span>
+      <a href="#k-base">基础</a><a href="#k-a">文字</a><a href="#k-b">导读</a><a href="#k-c">叙事</a><a href="#k-d">产品</a><a href="#k-e">数据</a><a href="#k-f">结论</a><a href="#k-g">外壳</a><a href="#k-h">版式</a><a href="#k-m">动效</a></div></div>
+
+    <header class="mk-sec mk-grid mid">
+      <div class="c7">
+        <span class="mk-kicker"><b>13</b>UI 风格库 · marker</span>
+        <h1 class="mk-h1">浅底、深墨，<span class="nb">一支只压<span class="mk-hl">结论</span>的笔</span></h1>
+        <p class="mk-lead">整页只有一种彩色。它不串主线、不当字色，只在每个标题里压住一个结论词；产品界面是唯一带投影的东西。</p>
+      </div>
+      <div class="c5"><div class="mk-quote"><blockquote>只读高亮的词，就能说出<span class="nb">这一段的<span class="mk-hl">结论</span>。</span></blockquote><footer>判断高亮放对没有的唯一标准</footer></div></div>
+    </header>
+
+    <section class="mk-sec" id="k-base">
+      <div class="mk-r"><span class="mk-kicker"><b>00</b>基础</span><h2 class="mk-h2">令牌里只有<span class="mk-hl">一种彩色</span></h2></div>
+      <div class="swatches mt32">
+        <div class="swatch"><i style="background:var(--bg)"></i><div><b>--bg</b>页面底</div></div>
+        <div class="swatch"><i style="background:linear-gradient(135deg,var(--aur-cool),var(--aur-warm))"></i><div><b>--aur-*</b>两团柔光，固定</div></div>
+        <div class="swatch"><i style="background:var(--ink)"></i><div><b>--ink</b>#22262E</div></div>
+        <div class="swatch"><i style="background:var(--ink2)"></i><div><b>--ink2</b>#4B5260</div></div>
+        <div class="swatch"><i style="background:var(--mut)"></i><div><b>--mut</b>#5E6571</div></div>
+        <div class="swatch"><i style="background:var(--hl)"></i><div><b>--hl</b>实底·下划</div></div>
+        <div class="swatch"><i style="background:var(--hl-band)"></i><div><b>--hl-band</b>标题荧光带</div></div>
+        <div class="swatch"><i style="background:var(--hl-soft)"></i><div><b>--hl-soft</b>正文荧光</div></div>
+        <div class="swatch"><i style="background:var(--sand)"></i><div><b>--sand</b>子任务条</div></div>
+        <div class="swatch"><i style="background:var(--inv-bg)"></i><div><b>--inv-bg</b>反白段</div></div>
+      </div>
+      <div class="kit-grid mt16">
+        <div class="mk-panel"><h3 class="mk-h3">字号阶梯</h3>
+          <div class="type-row"><code>h1 64/800</code><span class="mk-h2">标题 <span class="mk-hl">结论词</span></span></div>
+          <div class="type-row"><code>h2 42/800</code><span class="mk-h3">区块标题写成结论句</span></div>
+          <div class="type-row"><code>h3 20 · h4 17</code><span class="mk-h4">卡片标题</span></div>
+          <div class="type-row"><code>17 · 16 · 15</code><span class="mk-body">导语 / 正文 / 卡片说明</span></div>
+          <div class="type-row"><code>14 · 13 · 12</code><span class="t13 mut">辅助 / 注释 / 标签</span></div>
+          <div class="type-row"><code>mono 800</code><span class="mk-num">321 · 11-14 23:04 · v1.2.0</span></div>
+        </div>
+        <div class="mk-panel"><h3 class="mk-h3">网格、间距、圆角、投影</h3>
+          <ul class="stack mt12 mk-body t15">
+            <li>12 栏、24px 列距，最宽 1180px；常用跨 7+5、5+7、4+8、6+6。</li>
+            <li>区块间距 <span class="mk-num">96</span> / <span class="mk-num">64</span> / <span class="mk-num">40</span>；组件内 8 / 12 / 16。</li>
+            <li>圆角 <span class="mk-num">6</span> 标签 · <span class="mk-num">10</span> 小件 · <span class="mk-num">14</span> 卡片 · <span class="mk-num">18</span> 窗口 · 胶囊。</li>
+            <li>投影只有两档：<b>--sh-chip</b> 给胶囊和浮层小件，<b>--sh-win</b> 给产品窗口。讲解内容用浅灰底或 1px 线，不加投影。</li>
+            <li>字体：标题 Inter Tight（中文回落 Noto Sans SC），正文 Noto Sans SC，数字与代码 JetBrains Mono。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="mk-sec" id="k-a">
+      <div class="mk-r"><span class="mk-kicker"><b>A</b>文字强调 01–05</span><h2 class="mk-h2">高亮的厚度跟着<span class="mk-hl">字号</span>走</h2></div>
+      <div class="kit-grid k3 mt32">
+        <div class="kit-cell"><header><b>01</b><h3>标题荧光</h3><code>.mk-hl</code></header>
+          <p class="mk-h2">聊着聊着就<span class="mk-hl">乱</span>了</p>
+          <p class="how"><b>h1 / h2 / blockquote 各最多一处，20px 以下不用。</b>带厚 h1 .36em、h2 .42em，词不折行；首次滚到时划出。</p></div>
+        <div class="kit-cell"><header><b>02</b><h3>正文荧光</h3><code>.mk-hl-soft</code></header>
+          <p class="mk-body">回信会先核对原文，<span class="mk-hl-soft">对不上就不收</span>，免得把别的提问当成审查结论。</p>
+          <p class="how"><b>一段最多一处。</b>淡黄盖下半截，不动。</p></div>
+        <div class="kit-cell"><header><b>03</b><h3>下划荧光</h3><code>.mk-ul</code></header>
+          <p class="mk-body">打开 <span class="mk-ul">设置 → AI 接入</span> 切换执行方。</p>
+          <p class="how"><b>链接和按钮里的关键字。</b>3px，偏移 5px。</p></div>
+        <div class="kit-cell"><header><b>04</b><h3>问题标签</h3><code>.mk-tag</code></header>
+          <ul class="mk-tags"><li><span class="mk-tag">干等</span>它在忙，下一件发不出去</li><li><span class="mk-tag">答串</span>回一句「修」，它问是哪个</li><li><span class="mk-tag">失忆</span>聊久了，前面的事就忘了</li></ul>
+          <p class="how"><b>同组字数相同。</b>黄实底 6px，右侧一句灰字。</p></div>
+        <div class="kit-cell"><header><b>05</b><h3>行内数字</h3><code>.mk-num</code></header>
+          <p class="mk-body">合并 <span class="mk-num">216</span> 个 PR，Rust 测试 <span class="mk-num">987</span> 条全过，用时 <span class="mk-num">11</span> 天。</p>
+          <p class="how"><b>数字、版本、时间换等宽。</b>含中文的标签不用等宽。</p></div>
+        <div class="kit-cell"><header><b>✕</b><h3>不要这样</h3><code>反例</code></header>
+          <p class="mk-h3"><span class="kit-bad-fill">整句涂黄</span>、<span class="mk-hl">两处</span>都<span class="mk-hl">高亮</span>、<span class="kit-bad-color">黄色当字色</span></p>
+          <p class="how">涂满就没有重点；黄字在白底上只有 1.7 : 1。</p></div>
+      </div>
+    </section>
+
+    <section class="mk-sec" id="k-b">
+      <div class="mk-r"><span class="mk-kicker"><b>B</b>标题与导读 06–08</span><h2 class="mk-h2">每段先报<span class="mk-hl">编号和出处</span></h2></div>
+      <div class="kit-grid k3 mt32">
+        <div class="kit-cell"><header><b>06</b><h3>编号眉题</h3><code>.mk-kicker</code></header>
+          <div class="stack"><span><span class="mk-kicker"><b>01</b>重点提炼</span></span><span><span class="mk-kicker"><b>02</b>自适应课堂</span></span></div>
+          <p class="how"><b>同一页的同级 h2 要么都有，要么都没有。</b>编号用黄圆点。</p></div>
+        <div class="kit-cell"><header><b>07</b><h3>来源注</h3><code>.mk-src</code></header>
+          <div class="mk-src"><span class="mk-time">11-14 23:04</span><span class="mk-note">按当晚实机截屏重画 · 会话标题已改写</span></div>
+          <p class="how">演示旁写清时间、数据从哪来、改了什么。</p></div>
+        <div class="kit-cell"><header><b>08</b><h3>要点列表</h3><code>.mk-feats</code></header>
+          <div class="mk-feats sync" data-feats-demo>
+            <div class="mk-feat on"><i><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></i><div><b>多种格式</b><span>PDF、PPT、Word 都能传</span></div></div>
+            <div class="mk-feat on cur"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg></i><div><b>连回原文</b><span>每个要点都能对照原文</span></div></div>
+            <div class="mk-feat"><i><svg viewBox="0 0 24 24"><path d="M6 4h9l3 3v13H6z"/><path d="M9 12h6M9 16h4"/></svg></i><div><b>哪里不会点哪里</b><span>点卡点生成讲解</span></div></div>
+          </div>
+          <p class="how"><b>演示：</b>随旁边演示逐条点亮，没到的 40% 透明，当前一条图标格变黄。</p></div>
+      </div>
+    </section>
+
+    <section class="mk-sec" id="k-c">
+      <div class="mk-r"><span class="mk-kicker"><b>C</b>叙事结构 09–16</span><h2 class="mk-h2">讲解内容<span class="mk-hl">不套投影卡</span></h2></div>
+      <div class="kit-grid mt32">
+        <div class="kit-cell"><header><b>09</b><h3>痛点 → 解法</h3><code>.mk-pair</code></header>
+          <div class="mk-pair"><div class="p"><span class="k">现在</span><b>五家 AI 五个窗口</b><p>谁在等你，只能挨个点开。</p></div><div class="ar" aria-hidden="true">→</div><div class="s"><span class="k">之后</span><b>一条侧栏</b><p>要你回的挂在它的小签上。</p></div></div>
+          <p class="how">左浅灰底是现状，右深墨描边是目标；不加投影。</p></div>
+        <div class="kit-cell"><header><b>10</b><h3>同画面改前 / 改后</h3><code>.mk-ba</code></header>
+          <div class="mk-ba" style="--x:50%">
+            <div class="lay bef tc"><span class="lbl">改前 · 整块</span><p class="mk-h1">收进<span class="mk-hl" style="--hl-h:.62em;background-position:0 100%">一条侧栏</span></p></div>
+            <div class="lay aft tc"><span class="lbl">改后 · 细带</span><p class="mk-h1">收进<span class="mk-hl">一条侧栏</span></p></div>
+            <div class="line"></div>
+            <input type="range" min="0" max="100" value="50" aria-label="拖动比较改前改后">
+          </div>
+          <p class="how"><b>只比同一画面。</b>左改前、右改后；整块可拖，也能用方向键。结构不同就用 09。</p></div>
+        <div class="kit-cell" data-demo="steps" data-n="5"><header><b>11</b><h3>步骤链 + 清单打勾</h3><code>.mk-steps</code></header>
+          <div class="mk-steps">
+            <div class="mk-step" data-s="2"><div class="n">1</div><div><h4 class="mk-h4">访谈提纲</h4><ul><li data-s="1"><i>✓</i>角色、新老、业务线问到底</li><li data-s="2"><i>✓</i>每个判断附原话出处</li></ul></div></div>
+            <div class="mk-step" data-s="4"><div class="n">2</div><div><h4 class="mk-h4">技术方案</h4><ul><li data-s="3"><i>✓</i>按读者的论证逻辑排结构</li><li data-s="4"><i>✓</i>写清不做什么</li></ul></div></div>
+            <div class="mk-step" data-s="5"><div class="n">3</div><div><h4 class="mk-h4">执行规范</h4><ul><li data-s="5"><i>✓</i>每个人做什么、怎样算做到</li></ul></div></div>
+          </div>
+          <div class="mk-ctl"><button class="mk-btn pri" data-a="play" type="button">播放</button><button class="mk-btn" data-a="again" type="button">重播</button><button class="mk-btn" data-a="next" type="button">逐步 →</button><span class="mk-prog">0 / 5</span></div>
+          <p class="mk-concl mk-off">一步的清单勾完，编号才变深色。</p></div>
+        <div class="kit-cell"><header><b>12</b><h3>时间轴</h3><code>.mk-tl</code></header>
+          <div class="mk-tl" style="--p:100%"><div class="rail"><div class="fill"></div><div class="ptr">11-07</div></div>
+            <div class="nodes">
+              <div class="node on"><i></i><b>0.1.0</b><span>首版</span><span class="mk-st ok">定稿</span></div>
+              <div class="node on"><i></i><b>0.2.0</b><span>补 evals</span><span class="mk-st bad">2/3</span></div>
+              <div class="node on"><i></i><b>0.3.0</b><span>12 种风格</span><span class="mk-st ask">4 轮</span></div>
+              <div class="node on"><i></i><b>1.0.0</b><span>过闸</span><span class="mk-st ok">5/5</span></div>
+              <div class="node on"><i></i><b>1.1.0</b><span>补口径</span><span class="mk-st ok">5/5</span></div>
+            </div></div>
+          <p class="how"><b>演示：</b>指针前进、节点点亮（播放版见「丙」）。620px 以下自动改竖排。</p></div>
+        <div class="kit-cell w" data-demo="trace" data-n="3"><header><b>15</b><h3>原文对照</h3><code>.mk-trace</code></header>
+          <div class="mk-trace">
+            <div class="row"><p class="src"><small>访谈 · 一线销售</small>“客户问完价格就不回了，<em>我也不知道该什么时候再跟</em>。”</p><i class="wire"></i><div class="note"><b><span class="k">判断 1</span>缺的是跟进时机</b><span>不是话术</span></div></div>
+            <div class="row"><p class="src"><small>访谈 · 主管</small>“新人<em>第三次跟进就开始乱</em>，老人凭感觉。”</p><i class="wire"></i><div class="note"><b><span class="k">判断 2</span>节奏要写成规则</b><span>新老差异大</span></div></div>
+            <div class="row"><p class="src"><small>访谈 · 运营</small>“表格里有记录，<em>但没人回头看</em>。”</p><i class="wire"></i><div class="note"><b><span class="k">判断 3</span>提醒要推给人</b><span>不能等人去查</span></div></div>
+          </div>
+          <div class="mk-ctl"><button class="mk-btn pri" data-a="play" type="button">播放</button><button class="mk-btn" data-a="again" type="button">重播</button><button class="mk-btn" data-a="next" type="button">逐步 →</button><span class="mk-prog">0 / 3</span></div>
+          <p class="mk-democap">访谈内容为示例数据。</p>
+          <p class="how"><b>演示：</b>原文句子先被荧光划出，虚线连过去，判断卡再出现。每个判断都能追到原话。</p></div>
+        <div class="kit-cell"><header><b>13</b><h3>金句卡</h3><code>.mk-quote</code></header>
+          <div class="mk-quote"><blockquote>规范要先在<span class="mk-hl">样板上</span>做到。</blockquote><footer>ui-styles 0.3.0 第 3 轮盲测的教训</footer></div>
+          <p class="how">一页最多两张；顶边一段黄短条是唯一装饰。</p></div>
+        <div class="kit-cell"><header><b>14</b><h3>问答折叠</h3><code>.mk-faq</code></header>
+          <div class="mk-faq"><details open><summary>高亮能不能放两处？</summary><div class="a">不能。真有两个结论，拆成两个标题。</div></details><details><summary>为什么黄色不能当字色？</summary><div class="a">#F5BC3B 在白底上只有 1.7 : 1。</div></details></div>
+          <p class="how">线分隔，不套卡；加号旋转 45°，0.25s。</p></div>
+        <div class="kit-cell w"><header><b>16</b><h3>场景卡</h3><code>.mk-scene</code></header>
+          <div class="mk-grid">
+            <div class="mk-scene c4"><h4 class="mk-h4">推一条新业务线</h4><p class="t14 ink2">从零开始，先问清情况。</p><ol><li>说「用三步法」</li><li>回答几轮提问</li><li>拿到访谈提纲</li></ol><div class="chips"><span class="mk-chip">访谈提纲</span><span class="mk-chip">提问</span></div></div>
+            <div class="mk-scene c4"><h4 class="mk-h4">访谈做完了</h4><p class="t14 ink2">把原话变成方案。</p><ol><li>交访谈记录</li><li>看证据 → 判断</li><li>定方案结构</li></ol><div class="chips"><span class="mk-chip">技术方案</span><span class="mk-chip">原文对照</span></div></div>
+            <div class="mk-scene c4"><h4 class="mk-h4">要落到每个人</h4><p class="t14 ink2">写清谁做什么。</p><ol><li>交技术方案</li><li>拆到岗位</li><li>自检并送审</li></ol><div class="chips"><span class="mk-chip">执行规范</span><span class="mk-chip">独立审查</span></div></div>
+          </div>
+          <p class="how">线框卡，不加投影；底部芯片列出用到的功能。</p></div>
+      </div>
+    </section>
+
+    <section class="mk-sec" id="k-d">
+      <div class="mk-r"><span class="mk-kicker"><b>D</b>产品展示 17–23</span><h2 class="mk-h2">只有产品界面<span class="mk-hl">带投影</span></h2></div>
+      <div class="kit-grid mt32">
+        <div class="kit-cell w" data-demo="chat" data-n="5"><header><b>17 · 18</b><h3>窗口 + 对话流</h3><code>.mk-win · .mk-chat</code></header>
+          <div class="mk-grid top">
+            <div class="c5 mk-body t15"><p>窗口顶上是网址栏，交代这是产品里的哪一页；三颗灰点，不用红黄绿。</p><p class="mt8">我方深色气泡，系统提示虚线胶囊。AI 先显示「生成中」微光，下一步逐字打出。</p></div>
+            <div class="c7"><div class="mk-win"><div class="bar"><i></i><i></i><i></i><span class="url">postpane.local/relay/h1a1b0</span></div>
+              <div class="mk-chat">
+                <div class="mk-msg me" data-s="0"><span class="who">你</span>第一个 PR 修完了吗？</div>
+                <div class="mk-msg" data-s="1" data-t="2"><span class="who">Claude</span><span class="mk-gen">生成中</span><span data-type>修完了，已推到 PR 分支，CI 在跑。</span></div>
+                <div class="mk-msg sys" data-s="3">左滑「审核」· 已送进 ChatGPT</div>
+                <div class="mk-msg" data-s="4" data-t="5"><span class="who">ChatGPT</span><span class="mk-gen">生成中</span><span data-type>需修改 3 条：编号归因、记录落盘、从领取起计时。</span></div>
+              </div></div></div>
+          </div>
+          <div class="mk-ctl"><button class="mk-btn pri" data-a="play" type="button">播放</button><button class="mk-btn" data-a="again" type="button">重播</button><button class="mk-btn" data-a="next" type="button">逐步 →</button><span class="mk-prog">0 / 5</span></div>
+          <p class="mk-democap">功能流程示意，使用示例数据。</p></div>
+        <div class="kit-cell"><header><b>19</b><h3>任务卡 + 状态</h3><code>.mk-task · .mk-st</code></header>
+          <div class="mk-tasks">
+            <div class="mk-task mk-lift"><div class="t"><span class="mk-st ok">闲置</span><b>调研：新榜单能不能参加</b><span class="tm">刚刚</span></div><p class="res">可以参加，要准备三样东西。</p></div>
+            <div class="mk-task mk-lift"><div class="t"><span class="mk-st run">运行中</span><b>审核 PR：消息排队</b><span class="tm">4 分钟</span></div></div>
+            <div class="mk-task need mk-lift"><div class="t"><span class="mk-st ask">需要你回答</span><b>审核 PR：MCP 路径防护</b><span class="tm">47 分钟</span></div><p class="res">审完了，有两处要你定。</p></div>
+          </div>
+          <p class="how">状态四色只在产品界面里用；悬停浮起 0.2s。</p></div>
+        <div class="kit-cell"><header><b>20</b><h3>看板</h3><code>.mk-board</code></header>
+          <div class="mk-board">
+            <div class="mk-col"><h5><span class="mk-st ask">需要你</span><em>1</em></h5><div class="mk-task need mk-lift"><b>清理已合并 PR 的工作区</b></div></div>
+            <div class="mk-col"><h5><span class="mk-st run">运行中</span><em>2</em></h5><div class="mk-task mk-lift"><b>调研 harness 评测</b></div><div class="mk-task mk-lift"><b>审核贡献者 PR</b></div></div>
+            <div class="mk-col"><h5><span class="mk-st ok">已完成</span><em>43</em></h5><div class="mk-task mk-lift"><b>盘点 14 个 open PR</b></div></div>
+          </div>
+          <p class="how">列计数等宽右对齐。镜头推近的播放版见「乙」首屏。</p></div>
+        <div class="kit-cell w"><header><b>21</b><h3>差异卡</h3><code>.mk-diff</code></header>
+          <div class="mk-diff"><div class="h">src/crates/host/src/handoff/belongs.rs<em>+2</em><em>−1</em></div><pre><code>fn bare(s: &amp;str) -&gt; String {</code><code class="del">-    s.chars().filter(|c| !c.is_whitespace())</code><code class="add">+    s.chars().filter(|c| !c.is_whitespace()</code><code class="add">+        &amp;&amp; *c != '`')</code><code>}</code></pre></div>
+          <p class="how">长行在卡内横滑。（示意，来由见驿窗 #366）</p></div>
+        <div class="kit-cell"><header><b>22</b><h3>通知条</h3><code>.mk-toast</code></header>
+          <div><span class="mk-toast">Claude 有 1 条等你回答</span></div>
+          <div><button class="mk-btn" type="button" data-toast="已复制到剪贴板">弹一条试试</button></div>
+          <p class="how">右下角淡入上移 8px，0.3s；2.4 秒后淡出。</p></div>
+        <div class="kit-cell"><header><b>23</b><h3>命令面板</h3><code>.mk-cmd</code></header>
+          <div class="mk-cmd" data-cmd>
+            <label><span>⌘K</span><input type="text" role="combobox" aria-expanded="true" aria-controls="cmd-list" aria-autocomplete="list" placeholder="输入「审核」「额度」试试" aria-label="搜索命令" id="cmd-in"></label>
+            <ul role="listbox" id="cmd-list">
+              <li role="option" id="cmd-0" aria-selected="true">左滑发起审核<kbd>⌥ R</kbd></li>
+              <li role="option" id="cmd-1" aria-selected="false">查看本周额度<kbd>⌥ Q</kbd></li>
+              <li role="option" id="cmd-2" aria-selected="false">打开设置 · AI 接入<kbd>⌘ ,</kbd></li>
+              <li role="option" id="cmd-3" aria-selected="false">移除这个会话<kbd>⌫</kbd></li>
+            </ul>
+          </div>
+          <p class="how">输入即筛选，↑↓ 选择，回车执行。命令为示意。</p></div>
+      </div>
+    </section>
+
+    <section class="mk-sec" id="k-e">
+      <div class="mk-r"><span class="mk-kicker"><b>E</b>数据 24–31</span><h2 class="mk-h2">数字是<span class="mk-hl">仪表读数</span></h2></div>
+      <div class="kit-grid mt32">
+        <div class="kit-cell"><header><b>24</b><h3>数字条</h3><code>.mk-stats</code></header>
+          <div><div class="mk-stats"><div><b>321</b><span>次提交</span></div><div><b>216</b><span>个 PR</span></div><div><b>144</b><span>个 issue</span></div></div></div>
+          <p class="how"><b>标题下 2–4 项。</b>加 <code>.grid</code> 变 KPI 格（复盘页用）。</p></div>
+        <div class="kit-cell"><header><b>25</b><h3>数字墙</h3><code>.mk-nums</code></header>
+          <div class="mk-nums n3" style="--n:3"><div><b class="mk-hl">216</b><span>个 PR 合并</span></div><div><b>987</b><span>Rust 测试</span></div><div><b>11</b><span>天</span></div></div>
+          <p class="how"><b>一页一次，只高亮一个。</b>不做滚动计数，用荧光划出代替。</p></div>
+        <div class="kit-cell"><header><b>26</b><h3>额度条</h3><code>.mk-quota</code></header>
+          <div class="mk-quota">
+            <div class="q"><span class="nm">5 小时</span><span class="tr"><i style="width:13%"></i></span><span class="v">13%</span><span class="rs">5 分钟后重置</span></div>
+            <div class="q"><span class="nm">每周</span><span class="tr"><i class="warn" style="width:18%"></i><u style="left:12%"></u></span><span class="v">18%</span><span class="rs warn">照现在的速度，约 67 小时后用完</span></div>
+          </div>
+          <p class="how">黄短竖线 = 平均该到的位置；超速变红。</p></div>
+        <div class="kit-cell" data-demo="gantt" data-n="4"><header><b>27</b><h3>迷你甘特</h3><code>.mk-gantt</code></header>
+          <div class="mk-gantt" style="--now:1">
+            <div class="axis"><span></span><div><span>19:26</span><span>19:35</span><span>19:45</span></div></div>
+            <div class="r"><span><b>主会话</b></span><div class="t"><i class="m" data-a="0" data-b="14" style="left:0;width:14%"></i><i class="m" data-a="30" data-b="38" style="left:30%;width:8%"></i><i class="m" data-a="76" data-b="92" style="left:76%;width:16%"></i></div></div>
+            <div class="r"><span>1 MCP 防护</span><div class="t"><i class="e done" data-a="8" data-b="82" style="left:8%;width:74%"></i></div></div>
+            <div class="r"><span>2 历史记录</span><div class="t"><i class="e done" data-a="16" data-b="62" style="left:16%;width:46%"></i></div></div>
+            <div class="r"><span>3 消息排队</span><div class="t"><i data-a="26" data-b="100" style="left:26%;width:74%"></i></div></div>
+            <i class="now" aria-hidden="true"></i>
+          </div>
+          <div class="mk-ctl"><button class="mk-btn pri" data-a="play" type="button">播放</button><button class="mk-btn" data-a="again" type="button">重播</button><button class="mk-btn" data-a="next" type="button">逐步 →</button><span class="mk-prog">0 / 4</span></div>
+          <p class="mk-democap">深色 = 主会话在干活，米色 = 子任务，黄点 = 结果回来。示例数据。</p></div>
+        <div class="kit-cell"><header><b>28</b><h3>对比条形</h3><code>.mk-bars</code></header>
+          <div class="mk-bars"><div class="r"><span>第 1 轮</span><div class="tr"><i style="width:80%"></i></div><span class="v">4/5</span></div><div class="r"><span>第 3 轮</span><div class="tr"><i style="width:80%"></i></div><span class="v">4/5</span></div><div class="r key"><span>第 4 轮</span><div class="tr"><i style="width:100%"></i></div><span class="v">5/5</span></div></div>
+          <p class="how">其余中灰，关键一条荧光黄。</p></div>
+        <div class="kit-cell"><header><b>29</b><h3>前后对比</h3><code>.mk-delta</code></header>
+          <div class="mk-delta" style="--n:2"><div><span class="k">要看的窗口</span><div class="v"><s>5</s><b>1</b><em>−4</em></div></div><div><span class="k">E1 盲测</span><div class="v"><s>4/5</s><b>5/5</b><em>第 4 轮</em></div></div></div>
+          <p class="how">划掉的旧值 → 粗体新值 → 变化量。</p></div>
+        <div class="kit-cell w"><header><b>30</b><h3>基础表格</h3><code>.mk-table</code></header>
+          <div class="mk-tablewrap"><table class="mk-table"><thead><tr><th>版本</th><th>日期</th><th>做了什么</th><th class="n">盲测</th></tr></thead><tbody>
+            <tr><td class="mk-num">0.1.0</td><td>11-04</td><td>细线风格整理成 skill</td><td class="n">—</td></tr>
+            <tr><td class="mk-num">0.2.0</td><td>11-07</td><td>补 evals，首次盲测</td><td class="n">2/3</td></tr>
+            <tr><td class="mk-num">1.1.0</td><td>11-07</td><td>补大字口径、派生字段</td><td class="n">5/5</td></tr></tbody></table></div>
+          <p class="how">线框表，表头浅灰底；数字列等宽右对齐；窄屏在框内横滑。</p></div>
+        <div class="kit-cell w"><header><b>31</b><h3>方案对比矩阵</h3><code>.mk-matrix</code></header>
+          <div class="mk-matrix"><table><thead><tr><th></th><th class="pick">A 独立第 13 种 <span class="mk-tag">推荐</span></th><th>B 并进柔光</th><th>C 单独 skill</th></tr></thead><tbody>
+            <tr><th scope="row">共用底线与截图脚本</th><td class="pick"><span class="mk-yes">直接复用</span></td><td><span class="mk-yes">复用</span></td><td><span class="mk-no">要重写</span></td></tr>
+            <tr><th scope="row">和已定内容冲突</th><td class="pick"><span class="mk-yes">无</span></td><td><span class="mk-no">撞柔光禁区 4、6</span></td><td><span class="mk-yes">无</span></td></tr>
+            <tr><th scope="row">触发是否清楚</th><td class="pick"><span class="mk-yes">点名就用</span></td><td><span class="mk-mid">要记变体名</span></td><td><span class="mk-mid">和 ui-styles 抢触发</span></td></tr></tbody></table></div>
+          <p class="how">推荐列白底，顶上一道黄条加「推荐」标签；结论词用状态色加粗。</p></div>
+      </div>
+    </section>
+
+    <section class="mk-sec" id="k-f">
+      <div class="mk-r"><span class="mk-kicker"><b>F</b>结论与行动 32–35</span><h2 class="mk-h2">读完就知道<span class="mk-hl">下一步</span></h2></div>
+      <div class="kit-grid mt32">
+        <div class="kit-cell"><header><b>32</b><h3>结论判定</h3><code>.mk-verdict</code></header>
+          <div class="mk-verdict"><div class="stamp">结论<b>采纳</b></div><div><h3 class="mk-h3">作为第 13 种风格独立收进</h3><p>不改柔光的两条禁区，复用共用底线和截图脚本。11-15 定。</p></div></div>
+          <p class="how">一页最多一块，深墨描边；印章里的结论词压一块荧光实底，字仍是深墨。</p></div>
+        <div class="kit-cell"><header><b>33</b><h3>行动项</h3><code>.mk-actions</code></header>
+          <ul class="mk-actions">
+            <li class="done"><i></i><span>出总览样张</span><span class="who">Claude</span><span class="due">11-15</span></li>
+            <li><i></i><span>写 STYLE.md 与参考页</span><span class="who">Claude</span><span class="due">11-16</span></li>
+            <li><i></i><span>在 PR 上批准</span><span class="who">常浩</span><span class="due">待定</span></li>
+          </ul>
+          <p class="how">勾选框 · 事项 · 负责人 · 期限；做完的划线变灰。</p></div>
+        <div class="kit-cell"><header><b>34</b><h3>提示条</h3><code>.mk-callout</code></header>
+          <div class="mk-callout"><span><b>生成需要时间，</b>重要信息请对照原文核实。</span></div>
+          <div class="mk-callout warn"><span><b>超过 60 页</b>时只取连续页面。</span></div>
+          <p class="how">左侧 4px 竖条：黄 = 提示，红 = 注意；浅灰底，不加投影。</p></div>
+        <div class="kit-cell"><header><b>35</b><h3>代码 / 提示词块</h3><code>.mk-code</code></header>
+          <div class="mk-code"><div class="h">提示词 · 访谈提纲<button class="mk-btn" type="button" data-copy>复制</button></div><pre>你是一线业务访谈设计者。对象是<span class="slot">{角色}</span>，
+入职<span class="slot">{年限}</span>，负责<span class="slot">{业务线}</span>。
+每个问题写明想验证什么，并留出原话记录位。</pre></div>
+          <p class="how">槽位用正文荧光标出；复制失败时选中原文。</p></div>
+      </div>
+    </section>
+
+    <section class="mk-sec" id="k-g">
+      <div class="mk-r"><span class="mk-kicker"><b>G</b>外壳与行动 36–39</span><h2 class="mk-h2">页面的头、按钮和<span class="mk-hl">图注</span></h2></div>
+      <div class="kit-grid k3 mt32">
+        <div class="kit-cell"><header><b>36</b><h3>吸附目录</h3><code>.mk-nav</code></header>
+          <p class="mk-body t15">就是本页顶上那条：居中毛玻璃胶囊，当前章节下面一道黄短线（离散切换）。窄屏右侧渐隐提示可横滑。</p></div>
+        <div class="kit-cell"><header><b>37 · 38</b><h3>主行动 / 次按钮 / 文字链</h3><code>.mk-cta · .mk-btn · .mk-link</code></header>
+          <div class="mk-acts"><a class="mk-cta" href="#launch">看发布页 →</a><a class="mk-btn" href="#review">复盘页</a></div>
+          <p class="mk-body t15">或者读一下 <a class="mk-link" href="#explain">讲解长页</a>。</p>
+          <p class="how">主行动每屏一个；次按钮白底线框；文字链悬停时下划线变黄。</p></div>
+        <div class="kit-cell"><header><b>39</b><h3>图注</h3><code>.mk-fig</code></header>
+          <figure class="mk-fig"><div class="mk-ph" style="height:96px"></div><figcaption><b>图 1</b>截图用灰色占位；图注写清这张图说明什么。</figcaption></figure></div>
+      </div>
+    </section>
+
+    <section class="mk-sec" id="k-h">
+      <div class="mk-r"><span class="mk-kicker"><b>H</b>版式模式 40–41</span><h2 class="mk-h2">两种版式<span class="mk-hl">限量用</span></h2></div>
+      <div class="kit-grid mt32">
+        <div class="kit-cell"><header><b>40</b><h3>全宽舞台</h3><code>.mk-stage</code></header>
+          <p class="mk-body t15">左上标题和副题，右上时间戳 + 来源注；下面可选甘特条，再下面一到两块铺满 12 栏的产品窗口（内部带一点 <b>--sand</b> 暖色渐层）。<b>每页最多 2 次。</b>播放版见「乙」首屏。</p></div>
+        <div class="kit-cell"><header><b>41</b><h3>反白段</h3><code>.mk-invert</code></header>
+          <p class="mk-body t15">一整段换成近黑底，荧光带换成暗金 <b>--inv-hl</b>（白字 5.7 : 1）。用来给一页换一次节奏。<b>每页最多 1 次</b>，放在产品演示最强的那一段。见「乙」的接力一段。</p></div>
+      </div>
+    </section>
+
+    <section class="mk-sec" id="k-m" style="padding-bottom:96px">
+      <div class="mk-r"><span class="mk-kicker"><b>M</b>动效</span><h2 class="mk-h2">会动的都有<span class="mk-hl">理由</span></h2></div>
+      <div class="kit-grid mt32">
+        <div class="mk-panel"><h3 class="mk-h3">用到的动效</h3>
+          <div class="mlist mt12">
+            <div><span class="lv b">进场</span><span>标题荧光首次滚到时从左往右划出 0.6s，比块浮现晚 0.35s；首屏在载入后划出。</span></div>
+            <div><span class="lv b">进场</span><span>块浮现：每节最多 2 块（标题组 + 主视觉），上移 24px、0.7s；滚过、跳过、键盘聚焦都会立即显示；20 秒兜底。</span></div>
+            <div><span class="lv b">演示</span><span>镜头推近：窗口框不动，框内内容放大 ≤1.06 倍对准当前卡，其余卡变淡；每段一次，播完复原。</span></div>
+            <div><span class="lv a">演示</span><span>对话逐条 + 「生成中」微光 + 逐字打出；任务卡落回结果；甘特「现在」线前进；时间轴指针；清单打勾；原文对照连线；要点列表同步点亮。</span></div>
+            <div><span class="lv a">反馈</span><span>悬停浮起、加号旋转、通知条进出、按钮按下 0.97、复制、滑块跟手，均 0.15–0.3s。</span></div>
+          </div></div>
+        <div class="mk-panel"><h3 class="mk-h3">不做的动效</h3>
+          <div class="mlist mt12">
+            <div><span class="lv c">禁止</span><span>数字滚动计数。</span></div>
+            <div><span class="lv c">禁止</span><span>背景柔光漂移、任何背景动画。</span></div>
+            <div><span class="lv c">禁止</span><span>随滚动连续变化：阅读进度条、视差、按比例缩放。</span></div>
+            <div><span class="lv c">禁止</span><span>卡片级逐张浮现、脉冲光圈、上下浮动、高亮循环闪烁。</span></div>
+            <div><span class="lv a">兜底</span><span>减少动态效果：所有过渡和动画关闭，高亮画满，演示直接到最后一步。</span></div>
+          </div></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- ============================================================ 甲 讲解长页 -->
+<main class="view" data-view="explain" hidden>
+  <div class="mk-wrap">
+    <div class="mk-nav"><div class="in"><span class="brand"><i></i>AI 落地三步法</span><a href="#e1">为什么</a><a href="#e2">三步</a><a href="#e3">原文对照</a><a href="#e4">怎么用</a><a href="#e5">常见问题</a></div></div>
+    <header class="mk-sec mk-grid mid">
+      <div class="c7"><span class="mk-kicker"><b>方法</b>ai-landing-method</span>
+        <h1 class="mk-h1">一线的 AI 落地，先把<span class="mk-hl">情况问清</span></h1>
+        <p class="mk-lead">访谈提纲 → 技术方案 → 执行规范。不懂这套方法也能用：skill 先问几轮，再判断从哪一步进入。</p>
+        <div class="mk-acts mt24"><a class="mk-cta" href="#e4">看三个使用场景 →</a><a class="mk-link" href="#e2">先看三步</a></div></div>
+      <div class="c5"><div class="mk-code"><div class="h">一句话开始<button class="mk-btn" type="button" data-copy>复制</button></div><pre>用三步法，帮我给<span class="slot">{团队}</span>设计一线访谈。</pre></div>
+        <p class="mk-democap">内容来自 my-skills · ai-landing-method 的说明。</p></div>
+    </header>
+
+    <section class="mk-sec" id="e1">
+      <div class="mk-r"><span class="mk-kicker"><b>01</b>为什么</span><h2 class="mk-h2">直接上工具，往往<span class="mk-hl">做偏</span></h2><p class="mk-lead">三个常见的起手式，和这套方法的替代做法。</p></div>
+      <div class="stack16 mt32 mk-r">
+        <div class="mk-pair"><div class="p"><span class="k">常见</span><b>拿一个模板访谈所有人</b><p>新人老人、不同业务线问同一套，差异被抹平。</p></div><div class="ar" aria-hidden="true">→</div><div class="s"><span class="k">三步法</span><b>按角色、新老、业务线、情境分开问</b><p>一直问到底。</p></div></div>
+        <div class="mk-pair"><div class="p"><span class="k">常见</span><b>方案按技术模块排</b><p>读者看不出为什么这样做。</p></div><div class="ar" aria-hidden="true">→</div><div class="s"><span class="k">三步法</span><b>按读者的论证逻辑排</b><p>先证据，再判断，最后决定。</p></div></div>
+        <div class="mk-pair"><div class="p"><span class="k">常见</span><b>上线说明一页话</b><p>一线不知道今天要做什么。</p></div><div class="ar" aria-hidden="true">→</div><div class="s"><span class="k">三步法</span><b>执行规范落到每个人</b><p>写清动作和完成标准。</p></div></div>
+      </div>
+    </section>
+
+    <section class="mk-sec" id="e2">
+      <div class="mk-grid top">
+        <div class="c5 mk-r"><span class="mk-kicker"><b>02</b>三步</span><h2 class="mk-h2">每一步<span class="mk-hl">勾完</span>才往下</h2><p class="mk-lead">下一步要用的材料，上一步必须先交出来。</p>
+          <div class="mk-callout mt24"><span><b>判断都要能追到原话。</b>这是「从证据到决定」的底层框架。</span></div></div>
+        <div class="c7 mk-panel mk-r" data-demo="steps" data-n="7">
+          <div class="mk-steps">
+            <div class="mk-step" data-s="3"><div class="n">1</div><div><h4 class="mk-h4">访谈提纲</h4><ul><li data-s="1"><i>✓</i>问清角色、新老、业务线、情境</li><li data-s="2"><i>✓</i>替换标准提示词里的槽位</li><li data-s="3"><i>✓</i>记下每个判断的原话出处</li></ul></div></div>
+            <div class="mk-step" data-s="5"><div class="n">2</div><div><h4 class="mk-h4">技术方案</h4><ul><li data-s="4"><i>✓</i>按数据本体论盘点材料</li><li data-s="5"><i>✓</i>按读者的论证逻辑排结构</li></ul></div></div>
+            <div class="mk-step" data-s="7"><div class="n">3</div><div><h4 class="mk-h4">执行规范</h4><ul><li data-s="6"><i>✓</i>对照质量特征自检</li><li data-s="7"><i>✓</i>请独立审查后交付</li></ul></div></div>
+          </div>
+          <div class="mk-ctl"><button class="mk-btn pri" data-a="play" type="button">播放</button><button class="mk-btn" data-a="again" type="button">重播</button><button class="mk-btn" data-a="next" type="button">逐步 →</button><span class="mk-prog">0 / 7</span></div>
+          <p class="mk-concl mk-off">三步走完，交出一份单页 HTML 报告。</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="mk-sec" id="e3">
+      <div class="mk-stage">
+        <div class="head mk-r"><div><span class="mk-kicker"><b>03</b>原文对照</span><h2 class="mk-h2">方案里的每个判断，都<span class="mk-hl">连回原话</span></h2><p class="mk-lead">技术方案不是凭印象写的：先在访谈原文里划出依据，再落成判断。</p></div>
+          <div class="mk-src r"><span class="mk-note">访谈内容为示例数据</span></div></div>
+        <div class="floor mk-win sand mk-r" data-demo="trace" data-n="3">
+          <div class="bar"><i></i><i></i><i></i><span class="url">ai-landing / 技术方案 / 证据</span></div>
+          <div class="body" style="padding:24px">
+            <div class="mk-trace">
+              <div class="row"><p class="src"><small>访谈 · 一线销售</small>“客户问完价格就不回了，<em>我也不知道该什么时候再跟</em>。”</p><i class="wire"></i><div class="note"><b><span class="k">判断 1</span>缺的是跟进时机</b><span>不是话术</span></div></div>
+              <div class="row"><p class="src"><small>访谈 · 主管</small>“新人<em>第三次跟进就开始乱</em>，老人凭感觉。”</p><i class="wire"></i><div class="note"><b><span class="k">判断 2</span>节奏要写成规则</b><span>新老差异大</span></div></div>
+              <div class="row"><p class="src"><small>访谈 · 运营</small>“表格里有记录，<em>但没人回头看</em>。”</p><i class="wire"></i><div class="note"><b><span class="k">判断 3</span>提醒要推给人</b><span>不能等人去查</span></div></div>
+            </div>
+            <div class="mk-ctl"><button class="mk-btn pri" data-a="play" type="button">播放</button><button class="mk-btn" data-a="again" type="button">重播</button><button class="mk-btn" data-a="next" type="button">逐步 →</button><span class="mk-prog">0 / 3</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mk-sec" id="e4">
+      <div class="mk-r"><span class="mk-kicker"><b>04</b>怎么用</span><h2 class="mk-h2">三种情况，从<span class="mk-hl">不同的步</span>进入</h2></div>
+      <div class="mk-grid mt32 mk-r">
+        <div class="mk-scene c4"><h4 class="mk-h4">推一条新业务线</h4><p class="t14 ink2">从零开始，先问清情况。</p><ol><li>说「用三步法」</li><li>回答几轮提问</li><li>拿到访谈提纲</li></ol><div class="chips"><span class="mk-chip">访谈提纲</span></div></div>
+        <div class="mk-scene c4"><h4 class="mk-h4">访谈做完了</h4><p class="t14 ink2">把原话变成方案。</p><ol><li>交访谈记录</li><li>看证据 → 判断</li><li>定方案结构</li></ol><div class="chips"><span class="mk-chip">技术方案</span><span class="mk-chip">原文对照</span></div></div>
+        <div class="mk-scene c4"><h4 class="mk-h4">要落到每个人</h4><p class="t14 ink2">写清谁做什么。</p><ol><li>交技术方案</li><li>拆到岗位</li><li>自检并送审</li></ol><div class="chips"><span class="mk-chip">执行规范</span></div></div>
+      </div>
+    </section>
+
+    <section class="mk-sec" id="e5">
+      <div class="mk-grid top">
+        <div class="c4 mk-r"><span class="mk-kicker"><b>05</b>常见问题</span><h2 class="mk-h2">什么时候<span class="mk-hl">不用</span>它</h2></div>
+        <div class="c8 mk-faq mk-r">
+          <details open><summary>只想写一段提示词，要用它吗？</summary><div class="a">不用。普通问答、单项飞书操作、和业务无关的纯技术设计都不适用。</div></details>
+          <details><summary>我不懂这套方法，能直接用吗？</summary><div class="a">能。skill 会先问几轮，把情况和材料问清，再判断从第几步进入。</div></details>
+          <details><summary>最后交出来的是什么？</summary><div class="a">一份单页 HTML 报告，交付前自检，并请独立审查。</div></details>
+        </div>
+      </div>
+    </section>
+    <footer class="mk-sec" style="padding-bottom:110px">
+      <h2 class="mk-h2 mk-r">下次推一条业务线，说一句<span class="mk-hl">「用三步法」</span></h2>
+      <div class="mk-acts mt24"><a class="mk-cta" href="#explain">回到顶部 ↑</a></div>
+    </footer>
+  </div>
+</main>
+
+<!-- ============================================================ 乙 发布专题页 -->
+<main class="view" data-view="launch" hidden>
+  <div class="mk-wrap">
+    <div class="mk-nav"><div class="in"><span class="brand"><i></i>驿窗 PostPane</span><a href="#l1">问题</a><a href="#l2">单家卡</a><a href="#l3">接力</a><a href="#l4">11 天</a></div></div>
+    <header class="mk-sec mk-stage" data-demo="board" data-n="3">
+      <div class="head">
+        <div><span class="mk-kicker"><b>新</b>Mac 侧栏 AI 小助手</span><h1 class="mk-h1">五家 AI，<span class="nb">收进<span class="mk-hl">一条侧栏</span></span></h1>
+          <p class="mk-lead">Claude、Codex、ChatGPT、Hermes、DeepSeek：谁在等你、额度还剩多少，侧栏上一眼看到。</p></div>
+        <div class="mk-src r"><span class="mk-time">11-14 23:04</span><span class="mk-note">按当晚装机后的实机截屏重画 · 会话为示意</span></div>
+      </div>
+      <div class="floor mk-grid mid">
+        <div class="c4 mk-feats sync">
+          <div class="mk-feat" data-s="1"><i><svg viewBox="0 0 24 24"><path d="M4 12h12M12 6l6 6-6 6"/></svg></i><div><b>回信落回自己的卡</b><span>不用在窗口之间找</span></div></div>
+          <div class="mk-feat" data-s="2"><i><svg viewBox="0 0 24 24"><path d="M12 4v10M12 18v.5"/><circle cx="12" cy="12" r="9"/></svg></i><div><b>要你拍板的被标出来</b><span>琥珀描边，镜头推近</span></div></div>
+          <div class="mk-feat" data-s="3"><i><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20h4"/></svg></i><div><b>侧栏小签提醒</b><span>不用一直盯着</span></div></div>
+        </div>
+        <div class="c8"><div class="mk-win sand" data-zoomwin>
+          <div class="bar"><i></i><i></i><i></i><span class="url">postpane · Claude · 等待处理</span><span class="r mk-st ask">待答</span></div>
+          <div class="body mk-tasks">
+            <div class="mk-task" data-k="a"><div class="t"><span class="mk-st run">运行中</span><b>驿窗｜接力「通过」也回送发起会话</b><span class="tm">已 38 秒</span></div><p class="res mk-off">改好了，测试全绿，已推到 PR 分支。</p></div>
+            <div class="mk-task" data-k="b"><div class="t"><span class="mk-st run">运行中</span><b>管培生工作台｜进度汇报与挑版链接</b><span class="tm">47 分钟</span></div><p class="res mk-off">首页 B′ 优化可以定下来吗？</p></div>
+            <div class="mk-task mk-dim"><div class="t"><span class="mk-st ok">闲置</span><b>数字分身｜托管账本与额度预占</b><span class="tm">2 小时</span></div></div>
+            <div style="min-height:44px;display:flex;justify-content:flex-end"><span class="mk-toast mk-off" data-k="toast">Claude 有 1 条等你回答</span></div>
+          </div></div>
+          <div class="mk-ctl"><button class="mk-btn pri" data-a="play" type="button">播放</button><button class="mk-btn" data-a="again" type="button">重播</button><button class="mk-btn" data-a="next" type="button">逐步 →</button><span class="mk-prog">0 / 3</span></div>
+          <p class="mk-concl mk-off">回信各自落回自己的卡，要你拍板的那张被标出来。</p></div>
+      </div>
+    </header>
+
+    <section class="mk-sec" id="l1">
+      <div class="mk-grid mid">
+        <div class="c5 mk-r"><span class="mk-kicker"><b>01</b>问题</span><h2 class="mk-h2">AI 开得越多，<span class="nb">越<span class="mk-hl">看不见</span>谁在等你</span></h2>
+          <ul class="mk-tags mt24"><li><span class="mk-tag">漏答</span>它在等你拍板，窗口压在最底下</li><li><span class="mk-tag">超额</span>每周额度快用完，用完了才知道</li><li><span class="mk-tag">来回</span>每家一个窗口，只能挨个点开看</li></ul></div>
+        <div class="c7 stack16 mk-r">
+          <div class="mk-pair"><div class="p"><span class="k">之前</span><b>五家 AI 五个窗口</b><p>挨个点开，才知道谁在等你。</p></div><div class="ar" aria-hidden="true">→</div><div class="s"><span class="k">驿窗</span><b>一条侧栏</b><p>每家一张小签，要你回的直接标出来。</p></div></div>
+          <div class="mk-delta" style="--n:2"><div><span class="k">要看的窗口</span><div class="v"><s>5</s><b>1</b><em>−4</em></div></div><div><span class="k">待答默认列出（条）</span><div class="v"><s>5</s><b>4</b><em>其余折叠</em></div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mk-sec" id="l2">
+      <div class="mk-grid mid mk-flip">
+        <div class="c7 mk-r"><div class="mk-win"><div class="bar"><i></i><i></i><i></i><span class="url">postpane · Claude 单家卡</span><span class="r mk-st ask">待答</span></div>
+          <div class="body" style="padding:22px 24px"><div class="mk-quota">
+            <div class="q"><span class="nm">5 小时</span><span class="tr"><i style="width:13%"></i></span><span class="v">13%</span><span class="rs">5 分钟后重置</span></div>
+            <div class="q"><span class="nm">每周</span><span class="tr"><i class="warn" style="width:18%"></i><u style="left:12%"></u></span><span class="v">18%</span><span class="rs warn">下周六 01:59 重置；照现在的速度会提前用完</span></div>
+            <div class="q"><span class="nm">云端额度</span><span class="tr"><i style="width:97%"></i></span><span class="v">97%</span><span class="rs">等待更新</span></div>
+          </div></div></div></div>
+        <div class="c5 mk-r"><span class="mk-kicker"><b>02</b>单家卡</span><h2 class="mk-h2">额度不是数字，是<span class="mk-hl">还能撑多久</span></h2><p class="mk-lead">每条额度旁写重置时间；照现在的速度会提前用完，条直接变红。</p></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="mk-invert" id="l3" data-demo="chat" data-n="5">
+    <div class="mk-wrap mk-grid mid">
+      <div class="c5"><span class="mk-kicker"><b>03</b>接力</span><h2 class="mk-h2">Claude 写完，ChatGPT <span class="mk-hl">自动</span>来审</h2>
+        <p class="mk-lead">左滑一个会话点「审核」。需修改时未满 2 轮自动转回，通过自动结束；到上限、没结论、送话失败两次或超时，才交还给你。</p>
+        <p class="mk-democap mut">规则来自接力自动往返 #72 · 对话为示意</p></div>
+      <div class="c7"><div class="mk-win"><div class="bar"><i></i><i></i><i></i><span class="url">postpane · 接力记录</span></div>
+        <div class="mk-chat">
+          <div class="mk-msg me" data-s="0"><span class="who">你</span>左滑 → 审核</div>
+          <div class="mk-msg sys" data-s="1">已送进 ChatGPT 网页 · 第 1 轮</div>
+          <div class="mk-msg" data-s="2" data-t="3"><span class="who">ChatGPT</span><span class="mk-gen">生成中</span><span data-type>需修改 3 条：编号归因、记录落盘、从领取起计时。</span></div>
+          <div class="mk-msg sys" data-s="4">未满 2 轮 · 自动转回 Claude</div>
+          <div class="mk-msg" data-s="5"><span class="who">ChatGPT · 第 2 轮</span><span data-type>通过。已回送发起会话。</span></div>
+        </div></div>
+        <div class="mk-ctl"><button class="mk-btn pri" data-a="play" type="button">播放</button><button class="mk-btn" data-a="again" type="button">重播</button><button class="mk-btn" data-a="next" type="button">逐步 →</button><span class="mk-prog">0 / 5</span></div>
+        <p class="mk-concl mk-off">你只点了一次「审核」。</p></div>
+    </div>
+  </section>
+
+  <div class="mk-wrap">
+    <section class="mk-sec" id="l4">
+      <div class="mk-r"><span class="mk-kicker"><b>04</b>11 天</span><h2 class="mk-h2">11 天合并了 <span class="mk-hl">216 个 PR</span></h2></div>
+      <div class="mk-nums mt32 mk-r"><div><b>321</b><span>次提交</span></div><div><b class="mk-hl">216</b><span>个 PR 合并</span></div><div><b>144</b><span>个 issue 关掉</span></div><div><b>987</b><span>条 Rust 测试通过</span></div></div>
+      <p class="mk-democap">2026-11-04 至 11-15，来自 postpane 仓库 git 记录与 GitHub；测试数来自 #369 交接记录。</p>
+    </section>
+    <footer class="mk-sec" style="padding-bottom:110px">
+      <h2 class="mk-h2 mk-r">AI 开得再多，<span class="mk-hl">一条侧栏</span>就够了</h2>
+      <div class="mk-acts mt24"><a class="mk-cta" href="#l1">从问题看起 ↑</a><span class="t14 ink2">安装说明在 <span class="mk-num">docs/安装与使用.md</span></span></div>
+    </footer>
+  </div>
+</main>
+
+<!-- ============================================================ 丙 复盘报告页 -->
+<main class="view" data-view="review" hidden>
+  <div class="mk-wrap">
+    <div class="mk-nav"><div class="in"><span class="brand"><i></i>ui-styles 复盘</span><a href="#r1">时间线</a><a href="#r2">各轮结果</a><a href="#r3">根因</a><a href="#r4">下一步</a></div></div>
+    <header class="mk-sec">
+      <div class="mk-src"><span class="mk-time">11-04 → 11-07</span><span class="mk-note">来源：ui-styles CHANGELOG 与 evals.md</span></div>
+      <h1 class="mk-h1 mt24">5 轮盲测，E1 卡了<span class="mk-hl">3 轮</span>才过</h1>
+      <p class="mk-lead">从单一细线风格扩成 12 种风格库，过闸 2 之前第一条评测反复不过。原因不在新风格，在参考页自己没守规矩。</p>
+      <div class="mk-stats grid mt32"><div><b>5</b><span>轮整组盲测</span></div><div><b>3</b><span>轮 E1 不过或临界</span></div><div><b>12</b><span>种风格收齐</span></div><div><b>1.1.0</b><span>当前版本 · PR #64</span></div></div>
+    </header>
+
+    <section class="mk-sec" id="r1">
+      <div class="mk-r"><span class="mk-kicker"><b>01</b>时间线</span><h2 class="mk-h2">后四个版本都在<span class="mk-hl">同一天</span></h2></div>
+      <div class="mk-panel mt32 mk-r" data-demo="tl" data-n="5">
+        <div class="mk-tl" style="--p:0%"><div class="rail"><div class="fill"></div><div class="ptr">开始</div></div>
+          <div class="nodes">
+            <div class="node" data-s="1" data-d="11-04"><i></i><b>0.1.0</b><span>细线风格整理成 skill</span><span class="mk-st ok">定稿</span></div>
+            <div class="node" data-s="2" data-d="11-07"><i></i><b>0.2.0</b><span>补 evals，首次盲测</span><span class="mk-st bad">2/3</span></div>
+            <div class="node" data-s="3" data-d="11-07"><i></i><b>0.3.0</b><span>改成 12 种风格库</span><span class="mk-st ask">4 轮才过</span></div>
+            <div class="node" data-s="4" data-d="11-07"><i></i><b>1.0.0</b><span>过闸 2，PR #58</span><span class="mk-st ok">合并</span></div>
+            <div class="node" data-s="5" data-d="11-07"><i></i><b>1.1.0</b><span>补大字口径，PR #64</span><span class="mk-st ok">5/5</span></div>
+          </div></div>
+        <div class="mk-ctl"><button class="mk-btn pri" data-a="play" type="button">播放</button><button class="mk-btn" data-a="again" type="button">重播</button><button class="mk-btn" data-a="next" type="button">逐步 →</button><span class="mk-prog">0 / 5</span></div>
+        <p class="mk-concl mk-off">0.2.0 到 1.1.0 都在 11-07 完成。</p>
+      </div>
+    </section>
+
+    <section class="mk-sec" id="r2">
+      <div class="mk-grid top">
+        <div class="c4 mk-r"><span class="mk-kicker"><b>02</b>各轮结果</span><h2 class="mk-h2">卡住的一直是<span class="mk-hl">同一条</span></h2><p class="mk-lead">E2–E5 从第 1 轮起就过；E1「把流程做成讲解页」连续三轮不过或临界。</p></div>
+        <div class="c8 stack16 mk-r">
+          <div class="mk-tablewrap"><table class="mk-table"><thead><tr><th>轮次</th><th>E1 讲解页</th><th>E2–E5</th><th class="n">通过</th></tr></thead><tbody>
+            <tr><td>第 1 轮</td><td><span class="mk-st bad">不过</span></td><td><span class="mk-st ok">过</span></td><td class="n">4/5</td></tr>
+            <tr><td>第 2 轮</td><td><span class="mk-st ask">临界不过</span></td><td><span class="mk-st ok">过</span></td><td class="n">4/5</td></tr>
+            <tr><td>第 3 轮</td><td><span class="mk-st ask">临界不过</span></td><td><span class="mk-st ok">过</span></td><td class="n">4/5</td></tr>
+            <tr><td>第 4 轮</td><td><span class="mk-st ok">过</span></td><td><span class="mk-st ok">过</span></td><td class="n">5/5</td></tr>
+            <tr><td>第 5 轮 · 1.1.0</td><td><span class="mk-st ok">过</span></td><td><span class="mk-st ok">过</span></td><td class="n">5/5</td></tr></tbody></table></div>
+          <div class="mk-delta" style="--n:2"><div><span class="k">E1 不过或临界的轮数</span><div class="v"><s>3</s><b>0</b><em>第 4 轮起全过</em></div></div><div><span class="k">整组通过</span><div class="v"><s>4/5</s><b>5/5</b><em>连续 2 轮</em></div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mk-sec" id="r3">
+      <div class="mk-r"><span class="mk-kicker"><b>03</b>根因</span><h2 class="mk-h2">三次临界，根子都在<span class="mk-hl">参考页</span></h2></div>
+      <div class="stack16 mt32 mk-r">
+        <div class="mk-pair"><div class="p"><span class="k">第 1 轮</span><b>E1 不过</b><p>新页面没按细线的要求做。</p></div><div class="ar" aria-hidden="true">→</div><div class="s"><span class="k">处置</span><b>细线令牌、组件移进独立 STYLE.md</b><p>选风格和照风格做分开写。</p></div></div>
+        <div class="mk-pair"><div class="p"><span class="k">第 2 轮</span><b>照抄了参考页的零散灰</b><p>参考页里有令牌外的色值。</p></div><div class="ar" aria-hidden="true">→</div><div class="s"><span class="k">处置</span><b>参考页色值全部收进令牌</b><p>写死的色值换成 <span class="mk-num">var()</span>。</p></div></div>
+        <div class="mk-pair"><div class="p"><span class="k">第 3 轮</span><b>小字用了只准大字用的灰</b><p>参考页自己也这么用。</p></div><div class="ar" aria-hidden="true">→</div><div class="s"><span class="k">处置</span><b><span class="mk-num">--ink4</span> 只留给首屏 h1</b><p>参考页先改到完全合规。</p></div></div>
+      </div>
+      <div class="mk-grid mt24 mk-r">
+        <div class="c7 mk-diff"><div class="h">styles/hairline/reference.html<em>+1</em><em>−1</em></div><pre><code>.unit{</code><code class="del">-  color:var(--ink4);</code><code class="add">+  color:var(--ink3);</code><code>}</code></pre></div>
+        <div class="c5 mk-callout"><span><b>差异卡为示意，</b>表达的是「小字换成准用的灰」这类改法，不是原提交。</span></div>
+      </div>
+    </section>
+
+    <section class="mk-sec" id="r4" style="padding-bottom:110px">
+      <div class="mk-grid top">
+        <div class="c5 mk-r"><span class="mk-kicker"><b>04</b>下一步</span><h2 class="mk-h2">下一版加入<span class="mk-hl">荧光笔</span></h2><p class="mk-lead">1.1.0 第 5 轮留下的 6 个临界点记在 evals.md，下次改 ui-styles 时一起看。</p></div>
+        <div class="c7 mk-r"><ul class="mk-actions">
+          <li class="done"><i></i><span>出总览样张，独立评审</span><span class="who">Claude</span><span class="due">11-15</span></li>
+          <li><i></i><span>写 styles/marker 与参考页</span><span class="who">Claude</span><span class="due">待定</span></li>
+          <li><i></i><span>整组重跑盲测</span><span class="who">子 agent</span><span class="due">待定</span></li>
+          <li><i></i><span>在 PR 上批准</span><span class="who">常浩</span><span class="due">待定</span></li>
+        </ul></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- ============================================================ 丁 对比评审页 -->
+<main class="view" data-view="compare" hidden>
+  <div class="mk-wrap">
+    <div class="mk-nav"><div class="in"><span class="brand"><i></i>方案评审</span><a href="#c1">三个方案</a><a href="#c2">结论</a><a href="#c3">行动</a></div></div>
+    <header class="mk-sec mk-grid mid">
+      <div class="c8"><span class="mk-kicker"><b>评审</b>2026-11-15</span><h1 class="mk-h1">荧光笔<span class="nb">该怎么收</span>：<span class="mk-hl">独立一种</span></h1>
+        <p class="mk-lead">三个收法，按「复用」「冲突」「触发」三项比。结论已定，下面是依据。</p></div>
+      <div class="c4"><div class="mk-verdict"><div class="stamp">结论<b>A</b></div><div><h3 class="mk-h3">独立第 13 种</h3><p>11-15 常浩定。</p></div></div></div>
+    </header>
+    <section class="mk-sec" id="c1">
+      <div class="mk-r"><span class="mk-kicker"><b>01</b>三个方案</span><h2 class="mk-h2">只有 A <span class="mk-hl">不碰已定内容</span></h2></div>
+      <div class="mk-matrix mt32 mk-r"><table><thead><tr><th></th><th class="pick">A 独立第 13 种 <span class="mk-tag">推荐</span></th><th>B 并进柔光</th><th>C 单独 skill</th></tr></thead><tbody>
+        <tr><th scope="row">共用底线与截图脚本</th><td class="pick"><span class="mk-yes">直接复用</span></td><td><span class="mk-yes">复用</span></td><td><span class="mk-no">要重写一份</span></td></tr>
+        <tr><th scope="row">和已定内容冲突</th><td class="pick"><span class="mk-yes">无</span></td><td><span class="mk-no">撞柔光禁区 4、6</span></td><td><span class="mk-yes">无</span></td></tr>
+        <tr><th scope="row">触发是否清楚</th><td class="pick"><span class="mk-yes">点名就用</span></td><td><span class="mk-mid">要记变体名</span></td><td><span class="mk-mid">和 ui-styles 抢触发</span></td></tr>
+        <tr><th scope="row">维护</th><td class="pick">跟库一起升版本</td><td>柔光改动牵连</td><td>两处各维护</td></tr></tbody></table></div>
+    </section>
+    <section class="mk-sec" id="c2">
+      <div class="mk-grid top">
+        <div class="c5 mk-r"><span class="mk-kicker"><b>02</b>结论</span><h2 class="mk-h2">B 要先改<span class="mk-hl">两条禁区</span></h2><p class="mk-lead">柔光禁区 4「不做渐变彩色背景」、禁区 6「黄色高亮不当装饰」，正好是荧光笔的底和识别点。</p></div>
+        <div class="c7 stack16 mk-r"><div class="mk-callout warn"><span><b>改柔光等于改已定内容，</b>按规矩要单独确认，代价是柔光的旧页面可能不再合规。</span></div>
+          <div class="mk-delta" style="--n:2"><div><span class="k">要改的已定规则（条）</span><div class="v"><s>2</s><b>0</b><em>选 A</em></div></div><div><span class="k">风格库数量</span><div class="v"><s>12</s><b>13</b><em>+1</em></div></div></div></div>
+      </div>
+    </section>
+    <section class="mk-sec" id="c3" style="padding-bottom:110px">
+      <div class="mk-r"><span class="mk-kicker"><b>03</b>行动</span><h2 class="mk-h2">接下来<span class="mk-hl">四件事</span></h2></div>
+      <ul class="mk-actions mt32 mk-r">
+        <li class="done"><i></i><span>出总览样张并独立评审</span><span class="who">Claude</span><span class="due">11-15</span></li>
+        <li><i></i><span>写 STYLE.md 与 reference.html</span><span class="who">Claude</span><span class="due">待定</span></li>
+        <li><i></i><span>SKILL.md 改成 13 种、加评测</span><span class="who">Claude</span><span class="due">待定</span></li>
+        <li><i></i><span>在 PR 上批准</span><span class="who">常浩</span><span class="due">待定</span></li>
+      </ul>
+    </section>
+  </div>
+</main>
+
+<!-- ============================================================ 戊 社媒长图 -->
+<main class="view" data-view="social" hidden>
+  <div class="mk-wrap mk-sec" style="padding-bottom:110px">
+    <div class="mk-grid top">
+      <div class="c4"><span class="mk-kicker"><b>戊</b>社媒长图 · 封面</span><h2 class="mk-h2">导出成图，<span class="mk-hl">不带交互</span></h2>
+        <p class="mk-lead">设计宽 1080，按容器缩放；没有演示和进场，荧光直接画满。封面 4 : 5，长图高度随内容。</p>
+        <div class="mk-callout mt24"><span><b>规则：</b>一张图一个标题高亮；数字条最多 3 项；字号不小于设计宽的 2.6%。</span></div></div>
+      <div class="c4"><div class="art cover"><div class="pad"><span class="k">驿窗 POSTPANE · 11 天</span><h2>五家 AI，<span class="nb">收进<span class="mk-hl" style="--hl-h:.36em">一条侧栏</span></span></h2><p class="lead">谁在等你、额度还剩多少，一眼看到。</p></div><div class="foot"><span>Mac 侧栏 AI 小助手</span><b>v300533126324</b></div></div></div>
+      <div class="c4"><div class="art"><div class="pad"><span class="k">驿窗的 11 天</span><h2>合并了 <span class="mk-hl" style="--hl-h:.36em">216 个 PR</span></h2>
+        <div class="row3"><div><b>321</b><span>次提交</span></div><div><b>144</b><span>个 issue</span></div><div><b>987</b><span>条测试</span></div></div>
+        <div class="pt"><i>1</i><div><b>回信落回自己的卡</b><span>不用在窗口之间找</span></div></div>
+        <div class="pt"><i>2</i><div><b>要你拍板的被标出来</b><span>琥珀描边，一眼看到</span></div></div>
+        <div class="pt"><i>3</i><div><b>Claude 写完 ChatGPT 自动审</b><span>未满 2 轮自动转回</span></div></div>
+      </div><div class="foot"><span>2026-11-04 → 11-15 · 数据来自仓库</span><b>PostPane</b></div></div></div>
+    </div>
+  </div>
+</main>
+
+<span class="mk-toast fixed mk-off" id="toast" role="status" aria-live="polite"></span>
+
+<script>
+(function(){
+  var RM=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function $(s,r){return (r||document).querySelector(s)}
+  function $$(s,r){return [].slice.call((r||document).querySelectorAll(s))}
+
+  /* 通知条 */
+  var toastEl=$('#toast'),toastT;
+  function toast(m){toastEl.textContent=m;toastEl.classList.remove('mk-off');clearTimeout(toastT);toastT=setTimeout(function(){toastEl.classList.add('mk-off')},2400)}
+  $$('[data-toast]').forEach(function(b){b.addEventListener('click',function(){toast(b.dataset.toast)})});
+
+  /* 复制 */
+  $$('[data-copy]').forEach(function(b){b.addEventListener('click',function(){
+    var pre=b.closest('.mk-code').querySelector('pre'),text=pre.textContent;
+    function sel(){var r=document.createRange();r.selectNodeContents(pre);var s=getSelection();s.removeAllRanges();s.addRange(r);toast('已选中，请复制')}
+    try{navigator.clipboard.writeText(text).then(function(){toast('已复制');b.textContent='已复制';setTimeout(function(){b.textContent='复制'},1600)},sel)}catch(e){sel()}
+  })});
+
+  /* 改前 / 改后 */
+  $$('.mk-ba input').forEach(function(r){r.addEventListener('input',function(){r.closest('.mk-ba').style.setProperty('--x',r.value+'%')})});
+
+  /* 命令面板 */
+  $$('[data-cmd]').forEach(function(box){
+    var inp=$('input',box),ul=$('ul',box),items=$$('li',ul),empty=document.createElement('li');
+    empty.className='empty';empty.textContent='没有匹配的命令';
+    function vis(){return items.filter(function(li){return !li.hidden})}
+    function pick(li){items.forEach(function(x){x.setAttribute('aria-selected',x===li?'true':'false')});if(li)inp.setAttribute('aria-activedescendant',li.id);else inp.removeAttribute('aria-activedescendant')}
+    function run(li){toast('已执行：'+li.firstChild.textContent.trim()+'（示意）')}
+    inp.addEventListener('input',function(){var q=inp.value.trim();items.forEach(function(li){li.hidden=!!q&&li.textContent.indexOf(q)<0});var v=vis();if(v.length){empty.remove();pick(v[0])}else{ul.appendChild(empty);pick(null)}});
+    inp.addEventListener('keydown',function(e){var v=vis(),i=v.findIndex(function(li){return li.getAttribute('aria-selected')==='true'});
+      if(e.key==='ArrowDown'){e.preventDefault();pick(v[Math.min(v.length-1,i+1)])}
+      else if(e.key==='ArrowUp'){e.preventDefault();pick(v[Math.max(0,i-1)])}
+      else if(e.key==='Enter'&&v[i]){e.preventDefault();run(v[i])}});
+    items.forEach(function(li){li.addEventListener('click',function(){pick(li);run(li)})});
+    pick(items[0]);
+  });
+
+  /* ---------- 演示控制器 ---------- */
+  function Demo(root,n,render){
+    var step=0,timer=null,touched=false,prog=$('.mk-prog',root),play=$('[data-a=play]',root),concl=$('.mk-concl',root);
+    function go(s){step=s;render(step);prog.textContent=step+' / '+n;if(concl)concl.classList.toggle('mk-off',step<n)}
+    function stop(){clearInterval(timer);timer=null;play.textContent='播放'}
+    function start(){if(step>=n)go(0);play.textContent='暂停';timer=setInterval(function(){if(step>=n){stop();return}go(step+1);if(step>=n)stop()},1500)}
+    play.addEventListener('click',function(){touched=true;timer?stop():start()});
+    $('[data-a=again]',root).addEventListener('click',function(){touched=true;stop();go(0);start()});
+    $('[data-a=next]',root).addEventListener('click',function(){touched=true;stop();go(step>=n?0:step+1)});
+    if(RM){go(n);return}
+    go(0);
+    if('IntersectionObserver' in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting&&!touched){touched=true;io.disconnect();start()}})},{threshold:.33});io.observe(root)}
+  }
+  function typeInto(el,on,instant){
+    var full=el.dataset.full||(el.dataset.full=el.textContent);clearInterval(el._t);
+    if(!on){el.innerHTML='<span class="rest">'+full+'</span>';return}
+    if(instant||RM){el.textContent=full;return}
+    var i=0;el._t=setInterval(function(){i+=2;if(i>=full.length){clearInterval(el._t);el.textContent=full;return}
+      el.innerHTML=full.slice(0,i)+'<span class="mk-caret"></span><span class="rest">'+full.slice(i)+'</span>'},40);
+  }
+  function syncFeats(root,s){var f=$('.mk-feats.sync',root);if(!f)return;$$('.mk-feat[data-s]',f).forEach(function(x){var k=+x.dataset.s;x.classList.toggle('on',k<=s);x.classList.toggle('cur',k===s)})}
+  var R={
+    steps:function(root){var lis=$$('li[data-s]',root),st=$$('.mk-step',root);return function(s){lis.forEach(function(li){li.classList.toggle('on',+li.dataset.s<=s)});st.forEach(function(x){x.classList.toggle('done',+x.dataset.s<=s)})}},
+    chat:function(root){var ms=$$('.mk-msg',root),prev=-1;return function(s){ms.forEach(function(m){
+      var a=+m.dataset.s,t=m.dataset.t?+m.dataset.t:a,gen=$('.mk-gen',m),ty=$('[data-type]',m);
+      m.classList.toggle('mk-off',a>s);
+      if(gen)gen.hidden=!(s>=a&&s<t);
+      if(ty)typeInto(ty,s>=t,t<s||prev>s||t!==s)});prev=s}},
+    tl:function(root){var tl=$('.mk-tl',root),nodes=$$('.node',root),ptr=$('.ptr',root),n=nodes.length;return function(s){var p=s===0?0:((s-1)/(n-1))*100;tl.style.setProperty('--p',p+'%');ptr.textContent=s===0?'开始':nodes[s-1].dataset.d;nodes.forEach(function(x){x.classList.toggle('on',+x.dataset.s<=s)})}},
+    trace:function(root){var rows=$$('.mk-trace .row',root);return function(s){rows.forEach(function(r,i){r.classList.toggle('on',i<s)})}},
+    gantt:function(root){var g=$('.mk-gantt',root),bars=$$('.t i',g),stops=[.08,.35,.66,.85,1];return function(s){var now=stops[s]*100;g.style.setProperty('--now',stops[s]);bars.forEach(function(b){var a=+b.dataset.a,e=+b.dataset.b,w=Math.max(0,Math.min(e,now)-a);b.style.width=w+'%';if(b.classList.contains('e'))b.classList.toggle('done',now>=e)})}},
+    board:function(root){var win=$('[data-zoomwin]',root),body=$('.body',win),a=$('[data-k=a]',root),b=$('[data-k=b]',root),t=$('[data-k=toast]',root);
+      function set(card,cls,txt,need,show){var st=$('.mk-st',card);st.className='mk-st '+cls;st.textContent=txt;card.classList.toggle('need',need);$('.res',card).classList.toggle('mk-off',!show)}
+      return function(s){
+        set(a,s>=1?'ok':'run',s>=1?'闲置':'运行中',false,s>=1);
+        set(b,s>=2?'ask':'run',s>=2?'需要你回答':'运行中',s>=2,s>=2);
+        t.classList.toggle('mk-off',s<3);
+        a.classList.toggle('mk-dim',s===2);
+        var zoom=s===2&&!RM;win.classList.toggle('zooming',zoom);
+        if(zoom){body.style.transformOrigin='50% '+(b.offsetTop+b.offsetHeight/2)+'px';body.style.transform='scale(1.05)'}else body.style.transform='';
+        syncFeats(root,s);
+      }}
+  };
+  $$('[data-demo]').forEach(function(root){Demo(root,+root.dataset.n,R[root.dataset.demo](root))});
+
+  /* ---------- 进场：荧光划出 + 块浮现（一次） ---------- */
+  var onScroll=null;
+  function reveal(e){e.classList.remove('mk-wait');e.dataset.in=1}
+  function arm(view){
+    if(RM||view.dataset.view==='social')return;
+    var vh=innerHeight,lim=vh*.88;
+    var hls=$$('.mk-hl',view).filter(function(e){return !e.closest('.kit-cell')}); /* 组件总览格子里的示例不参与进场（外壳） */
+    var blocks=$$('.mk-r',view);
+    hls.concat(blocks).forEach(function(e){if(!e.dataset.in)e.classList.add('mk-wait')});
+    blocks.forEach(function(e){if(e.getBoundingClientRect().top<vh*.92)reveal(e)});
+    /* 首屏标题在载入后划出 */
+    setTimeout(function(){hls.forEach(function(e){if(e.getBoundingClientRect().top<vh*.92)reveal(e)})},250);
+    if(onScroll)removeEventListener('scroll',onScroll);
+    onScroll=function(){$$('.mk-wait',view).forEach(function(e){if(e.getBoundingClientRect().top<lim)reveal(e)})};
+    addEventListener('scroll',onScroll,{passive:true});
+    setTimeout(onScroll,300);
+    setTimeout(function(){$$('.mk-wait',view).forEach(reveal)},20000);
+  }
+  /* 键盘聚焦到未浮现的块：立即显示 */
+  document.addEventListener('focusin',function(e){var w=e.target.closest&&e.target.closest('.mk-wait');if(w)reveal(w)});
+
+  /* ---------- 吸附目录：当前章节（离散） ---------- */
+  function spy(view){
+    var links=$$('.mk-nav a',view),secs=links.map(function(a){return document.getElementById(a.getAttribute('href').slice(1))}).filter(Boolean);
+    if(!secs.length||!('IntersectionObserver' in window))return;
+    var io=new IntersectionObserver(function(es){es.forEach(function(en){if(en.isIntersecting)links.forEach(function(a){a.classList.toggle('on',a.getAttribute('href')==='#'+en.target.id)})})},{rootMargin:'-30% 0px -60% 0px'});
+    secs.forEach(function(s){io.observe(s)});
+  }
+
+  /* ---------- 视图切换（查看用外壳） ---------- */
+  var views=$$('.view'),spied={},cur=null;
+  function show(){
+    var h=location.hash.slice(1),name=null,anchor=null;
+    if(views.some(function(v){return v.dataset.view===h}))name=h;
+    else{var el=h&&document.getElementById(h),host=el&&el.closest('.view');if(host){name=host.dataset.view;anchor=el}else name='kit'}
+    if(name===cur&&anchor)return;
+    cur=name;
+    function apply(){
+      views.forEach(function(v){v.hidden=v.dataset.view!==name});
+      $$('.sw a').forEach(function(a){if(a.getAttribute('href')==='#'+name)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
+      var v=$('[data-view='+name+']');if(!spied[name]){spied[name]=1;spy(v)}
+      if(anchor)anchor.scrollIntoView();else scrollTo(0,0);
+      arm(v);
+    }
+    if(document.startViewTransition&&!RM&&cur!==null&&document.readyState==='complete')document.startViewTransition(apply);else apply();
+  }
+  addEventListener('hashchange',show);show();
+})();
+</script>
