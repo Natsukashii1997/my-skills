@@ -10,6 +10,7 @@
 | 排障、改脚本、装 launchd 或定时任务 | 先 `grep -n 关键词 docs/LESSONS.md`，再搜全局坑 `/Users/nat/Documents/ChatGPT/个人/work/agent-kit/LESSONS.md` |
 | 开需求、拆任务、实现、审查 | 下面「Agent skills」一节 |
 | 写交接、验收别人的交接 | [docs/templates/handoff.md](docs/templates/handoff.md) 骨架；[OPERATIONS](docs/OPERATIONS.md)「交接写法」「报告与验收」 |
+| 改界面、交互、文案、数据格式，或判断某处算不算已定 | [docs/DECIDED.md](docs/DECIDED.md) 已定内容登记表；网页基线截图对比用 `scripts/ui-baseline.mjs` |
 
 项目长出接口、样式、发布等文档后，在这张表里加一行。
 
@@ -24,6 +25,8 @@
 ```sh
 node --test tests/*.test.mjs     # 交接格式 + 通用规则（含自测）
 node scripts/check-rules.mjs     # 只跑通用规则检查
+node scripts/ui-baseline.mjs shoot     # 网页项目：拍基线截图到 docs/design/baseline/
+node scripts/ui-baseline.mjs compare   # 网页项目：和基线逐页对比，差异图写到证据目录
 ```
 
 ## 结构
@@ -34,11 +37,14 @@ CURRENT.md           当前状态与唯一下一步；每轮交接写在顶部
 {{需求文件}}          需求
 docs/
   agents/            Matt Pocock 技能读的约定：issue 看板、分流标签、领域文档
+  DECIDED.md         已定内容登记表（用户选定、验收过的界面、交互、文案、数据格式）
+  design/            网页项目用到时再建：pages.json 页面清单、baseline/ 基线截图
   LESSONS.md         本项目的坑（排障、改脚本前先搜）
   OPERATIONS.md      操作手册：交接写法、报告与验收
   templates/handoff.md  交接一节的骨架
 scripts/
   check-rules.mjs    通用规则检查（只查机器能判定的）
+  ui-baseline.mjs    网页项目的基线截图：拍基线、对比（配 ui-baseline.spec.mjs）
 tests/               node:test 测试
 ```
 
