@@ -1,7 +1,8 @@
 ---
 name: project-starter
-description: 「项目起步」：给新项目、或还没有 AGENTS.md / LESSONS 的项目铺 Claude 与 Codex 接力用的两层骨架：协作规矩（AGENTS 入口与导航表、LESSONS 与三级升级、交接模板与格式测试、防伪造五条、通用规则检查脚本）和 Matt Pocock 开发流程（GitHub Issues 看板、分流标签、领域文档约定、AGENTS 里的 Agent skills 一节）。仅在用户要求给项目铺协作骨架、或显式调用 project-starter 时使用；先列计划等确认，不覆盖已有文件。
+description: 「项目起步」：给新项目、或还没有 AGENTS.md / LESSONS 的项目铺 Claude 与 Codex 接力用的两层骨架：协作规矩（AGENTS 入口与导航表、LESSONS 与三级升级、交接模板与格式测试、防伪造五条、通用规则检查脚本、已定内容登记表、网页基线截图对比）和 Matt Pocock 开发流程（GitHub Issues 看板、分流标签、领域文档约定、AGENTS 里的 Agent skills 一节）。仅在用户要求给项目铺协作骨架、或显式调用 project-starter 时使用；先列计划等确认，不覆盖已有文件。
 metadata:
+  version: "0.3.0"
   governance:
     network: none
     external-writes: required
@@ -13,7 +14,7 @@ metadata:
 
 # 项目起步
 
-把一套中性的两层骨架铺进一个项目。协作规矩这层（agent-kit 管）：AI 读的入口、坑怎么记怎么升级、每轮怎么交接、交接写得对不对由测试查、能机检的规矩由脚本查。开发流程这层（Matt Pocock skills 管）：`docs/agents/` 三份约定和 AGENTS 里的「Agent skills」一节，`to-spec`、`to-tickets`、`implement`、`tdd`、`code-review` 等技能都从这里读 issue 看板和标签。骨架在本 skill 的 `skeleton/`，源仓库是 `/Users/nat/Documents/ChatGPT/个人/work/agent-kit/`。
+把一套中性的两层骨架铺进一个项目。协作规矩这层（agent-kit 管）：AI 读的入口、坑怎么记怎么升级、每轮怎么交接、交接写得对不对由测试查、能机检的规矩由脚本查（含 LESSONS 每条的「升级」行、大改动的改前改后对照）、用户定过的内容登记在哪、网页界面怎么和基线截图比。开发流程这层（Matt Pocock skills 管）：`docs/agents/` 三份约定和 AGENTS 里的「Agent skills」一节，`to-spec`、`to-tickets`、`implement`、`tdd`、`code-review` 等技能都从这里读 issue 看板和标签。骨架只有一份，就在本 skill 的 `skeleton/`（`/Users/nat/Documents/ChatGPT/个人/work/my-skills/skills/project-starter/skeleton/`）。
 
 ## 先问清（已知的不重复问，一次问完）
 
@@ -34,6 +35,8 @@ metadata:
    - `docs/agents/issue-tracker.md`：`{{GitHub仓库}}`。
    - `CURRENT.md`：`{{日期}}`、`{{阶段}}`、`{{下一步}}`、`{{执行方}}`（Claude / Codex）、`{{提交状态}}`、`{{开工时刻}}`、`{{测试结果}}`、`{{检查输出}}`、`{{遗留}}`。
 6. 按项目实际改 `AGENTS.md`：「结构」列出项目里已有的目录和文件；「运行」加项目自己的命令；「规则」不适用的条删掉。`scripts/check-rules.mjs` 的 `SCAN` 指向项目源码目录；项目已有依赖要列进 `ALLOWED_DEPS`，并在交接里写明。
+   - 网页项目：基线截图要用 `@playwright/test`（已在 `ALLOWED_DEPS` 里）。装依赖、建 `docs/design/pages.json`（格式见 `scripts/ui-baseline.mjs` 开头）列进第 3 步的计划，用户同意再装；第一次拍基线等用户验收界面的那一轮再拍，并登记进 `docs/DECIDED.md`。
+   - 不是网页项目：删掉 `scripts/ui-baseline.mjs`、`scripts/ui-baseline.spec.mjs`、`tests/ui-baseline.test.mjs`，`ALLOWED_DEPS` 里的 `@playwright/test` 和 AGENTS.md 里提到它们的几处一起删；`docs/DECIDED.md` 照样留着（文案、交互、数据格式也会定）。
 7. 跑 `node --test tests/*.test.mjs` 和 `node scripts/check-rules.mjs`（在项目根目录），把原样结果填进 `CURRENT.md` 顶部那一节，再跑一次测试。
 8. 有 GitHub 远端时，把 `docs/agents/triage-labels.md` 里的 5 个标签建上：`gh label create <标签> --description <含义> --force`（外部写入，列进第 3 步的计划，用户确认后再做）。
 9. 用户同意提交时才提交，只提交本次新建的文件。
@@ -48,4 +51,4 @@ metadata:
 
 ## 骨架怎么进化
 
-在某个项目里发现骨架（模板、测试、检查脚本）该改的，先出提案、用户批准，再改 agent-kit 里的 `skeleton/` 并提交；已经起步的项目不自动同步，需要时按 diff 手工带过去。
+在某个项目里发现骨架（模板、测试、检查脚本）该改的，先出提案、用户批准，再改本 skill 的 `skeleton/`，按本仓库流程走 PR；已经起步的项目不自动同步，需要时按 diff 手工带过去。
