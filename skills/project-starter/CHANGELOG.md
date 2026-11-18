@@ -14,6 +14,7 @@
 - 新增：`scripts/ui-baseline.mjs`（兼 Playwright 配置）与 `scripts/ui-baseline.spec.mjs`：网页项目拍基线、和基线对比，用 Playwright 自带的 `toHaveScreenshot`，差异图写到证据目录；`tests/ui-baseline.test.mjs` 自测，没装 Playwright 时跳过。`ALLOWED_DEPS` 加 `@playwright/test`。
 - 改动：骨架 LESSONS 的格式样例「- 升级：未升级。」改为「- 升级：〔提醒〕未升级。」，「怎么升级」加一条层级词说明；SKILL.md 第 6 步写明网页项目和非网页项目各怎么处理新文件。
 - 新增：本文件、evals.md、`metadata.version`（存量 skill 补齐）。
+- 修复：过期说法改为指向本 skill 的 `skeleton/`：SKILL.md 开头「源仓库是 agent-kit」、「骨架怎么进化」里的「改 agent-kit 里的 `skeleton/`」，骨架 CURRENT.md 的「agent-kit 的 `skills/project-starter`」（agent-kit 里没有 `skeleton/`）。
 
 ## 0.2.1 - 2026-11-18（7e4f99b，#103）
 

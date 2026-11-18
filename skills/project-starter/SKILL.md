@@ -14,7 +14,7 @@ metadata:
 
 # 项目起步
 
-把一套中性的两层骨架铺进一个项目。协作规矩这层（agent-kit 管）：AI 读的入口、坑怎么记怎么升级、每轮怎么交接、交接写得对不对由测试查、能机检的规矩由脚本查（含 LESSONS 每条的「升级」行、大改动的改前改后对照）、用户定过的内容登记在哪、网页界面怎么和基线截图比。开发流程这层（Matt Pocock skills 管）：`docs/agents/` 三份约定和 AGENTS 里的「Agent skills」一节，`to-spec`、`to-tickets`、`implement`、`tdd`、`code-review` 等技能都从这里读 issue 看板和标签。骨架在本 skill 的 `skeleton/`，源仓库是 `/Users/nat/Documents/ChatGPT/个人/work/agent-kit/`。
+把一套中性的两层骨架铺进一个项目。协作规矩这层（agent-kit 管）：AI 读的入口、坑怎么记怎么升级、每轮怎么交接、交接写得对不对由测试查、能机检的规矩由脚本查（含 LESSONS 每条的「升级」行、大改动的改前改后对照）、用户定过的内容登记在哪、网页界面怎么和基线截图比。开发流程这层（Matt Pocock skills 管）：`docs/agents/` 三份约定和 AGENTS 里的「Agent skills」一节，`to-spec`、`to-tickets`、`implement`、`tdd`、`code-review` 等技能都从这里读 issue 看板和标签。骨架只有一份，就在本 skill 的 `skeleton/`（`/Users/nat/Documents/ChatGPT/个人/work/my-skills/skills/project-starter/skeleton/`）。
 
 ## 先问清（已知的不重复问，一次问完）
 
@@ -51,4 +51,4 @@ metadata:
 
 ## 骨架怎么进化
 
-在某个项目里发现骨架（模板、测试、检查脚本）该改的，先出提案、用户批准，再改 agent-kit 里的 `skeleton/` 并提交；已经起步的项目不自动同步，需要时按 diff 手工带过去。
+在某个项目里发现骨架（模板、测试、检查脚本）该改的，先出提案、用户批准，再改本 skill 的 `skeleton/`，按本仓库流程走 PR；已经起步的项目不自动同步，需要时按 diff 手工带过去。
