@@ -40,7 +40,7 @@
 /* 另外四种主色：结构和黄色一样，四个令牌一起换（--inv-hl 是反白段里的暗色带） */
 :root[data-hl="sky"]   {--hl:#62BDF0;--hl-band:#A3D8F6;--hl-soft:#D6EDFB;--inv-hl:#1F5D85}
 :root[data-hl="coral"] {--hl:#FF946B;--hl-band:#FFBEA3;--hl-soft:#FFE1D4;--inv-hl:#8E3A1C}
-:root[data-hl="mint"]  {--hl:#4FD1BA;--hl-band:#98E4D6;--hl-soft:#D0F4ED;--inv-hl:#16695C}
+:root[data-hl="mint"]  {--hl:#92DDCF;--hl-band:#B1E7DD;--hl-soft:#D9F4EF;--inv-hl:#16695C}
 :root[data-hl="violet"]{--hl:#B39DF5;--hl-band:#CFC2F9;--hl-soft:#E9E3FC;--inv-hl:#5940A6}
 *{box-sizing:border-box}
 html{scroll-padding-top:84px}
@@ -472,7 +472,7 @@ a{color:inherit}
 .sw-hl button{display:inline-flex;align-items:center;gap:6px;border:0;cursor:pointer;border-radius:999px;padding:4px 10px;font-size:13px;background:var(--glass);color:var(--ink2)}
 .sw-hl button i{width:10px;height:10px;border-radius:3px}
 /* 五个色块只用来标按钮，是外壳里唯一写死的色值 */
-.sw-hl [data-hl="yellow"] i{background:#F5BC3B}.sw-hl [data-hl="sky"] i{background:#62BDF0}.sw-hl [data-hl="coral"] i{background:#FF946B}.sw-hl [data-hl="mint"] i{background:#4FD1BA}.sw-hl [data-hl="violet"] i{background:#B39DF5}
+.sw-hl [data-hl="yellow"] i{background:#F5BC3B}.sw-hl [data-hl="sky"] i{background:#62BDF0}.sw-hl [data-hl="coral"] i{background:#FF946B}.sw-hl [data-hl="mint"] i{background:#92DDCF}.sw-hl [data-hl="violet"] i{background:#B39DF5}
 .sw-hl button[aria-pressed="true"]{background:var(--ink);color:var(--card)}
 .kit-cell{display:flex;flex-direction:column;gap:14px;border-radius:18px;padding:18px;background:var(--glass);box-shadow:inset 0 0 0 1px var(--glass2)}
 .kit-cell>header{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
@@ -541,7 +541,7 @@ a{color:inherit}
         <tr><td><b>黄</b>（默认）</td><td class="mk-num">yellow</td><td class="mk-num">#F5BC3B · #F8D27E · #FCE9B4 · #7A5C16</td><td>产品发布、功能介绍、讲解页；拿不准时</td><td>和「需要你回答」琥珀同色系</td></tr>
         <tr><td><b>天蓝</b></td><td class="mk-num">sky</td><td class="mk-num">#62BDF0 · #A3D8F6 · #D6EDFB · #1F5D85</td><td>技术方案、数据复盘、工程向的说明</td><td>和「运行中」蓝、左上角冷色柔光同色系</td></tr>
         <tr><td><b>珊瑚</b></td><td class="mk-num">coral</td><td class="mk-num">#FF946B · #FFBEA3 · #FFE1D4 · #8E3A1C</td><td>对外活动、招募、培训分享、热闹的发布</td><td>和「异常」红同属暖色，状态标签要靠深浅分</td></tr>
-        <tr><td><b>薄荷</b></td><td class="mk-num">mint</td><td class="mk-num">#4FD1BA · #98E4D6 · #D0F4ED · #16695C</td><td>流程改进、效率成果、工具上手指南</td><td>和「完成」绿同属绿色系，但更偏青</td></tr>
+        <tr><td><b>薄荷</b></td><td class="mk-num">mint</td><td class="mk-num">#92DDCF · #B1E7DD · #D9F4EF · #16695C</td><td>流程改进、效率成果、工具上手指南</td><td>和「完成」绿同属绿色系，但更偏青；五种里最淡</td></tr>
         <tr><td><b>淡紫</b></td><td class="mk-num">violet</td><td class="mk-num">#B39DF5 · #CFC2F9 · #E9E3FC · #5940A6</td><td>给管理层的报告、方案评审、策略和 AI 方向的讨论</td><td>荧光感最弱；实底上深墨字 6.5 : 1，五种里最低</td></tr></tbody></table></div>
       <div class="kit-grid mt16">
         <div class="mk-panel"><h3 class="mk-h3">字号阶梯</h3>
@@ -584,7 +584,7 @@ a{color:inherit}
           <p class="how"><b>数字、版本、时间换等宽。</b>含中文的标签不用等宽。</p></div>
         <div class="kit-cell"><header><b>✕</b><h3>不要这样</h3><code>反例</code></header>
           <p class="mk-h3"><span class="kit-bad-fill">整句涂满</span>、<span class="mk-hl">两处</span>都<span class="mk-hl">高亮</span>、<span class="kit-bad-color">主色当字色</span></p>
-          <p class="how">涂满就没有重点；五种主色当字色，在白底上只有 1.7–2.3 : 1。</p></div>
+          <p class="how">涂满就没有重点；五种主色当字色，在白底上只有 1.6–2.3 : 1。</p></div>
       </div>
     </section>
 
@@ -652,7 +652,7 @@ a{color:inherit}
           <div class="mk-quote"><blockquote>规范要先在<span class="mk-hl">样板上</span>做到。</blockquote><footer>ui-styles 0.3.0 第 3 轮盲测的教训</footer></div>
           <p class="how">一页最多两张；顶边一段主色短条是唯一装饰。</p></div>
         <div class="kit-cell"><header><b>14</b><h3>问答折叠</h3><code>.mk-faq</code></header>
-          <div class="mk-faq"><details open><summary>高亮能不能放两处？</summary><div class="a">不能。真有两个结论，拆成两个标题。</div></details><details><summary>为什么主色不能当字色？</summary><div class="a">五种主色在白底上只有 1.7–2.3 : 1，读不清。</div></details></div>
+          <div class="mk-faq"><details open><summary>高亮能不能放两处？</summary><div class="a">不能。真有两个结论，拆成两个标题。</div></details><details><summary>为什么主色不能当字色？</summary><div class="a">五种主色在白底上只有 1.6–2.3 : 1，读不清。</div></details></div>
           <p class="how">线分隔，不套卡；加号旋转 45°，0.25s。</p></div>
         <div class="kit-cell w"><header><b>16</b><h3>场景卡</h3><code>.mk-scene</code></header>
           <div class="mk-grid">
