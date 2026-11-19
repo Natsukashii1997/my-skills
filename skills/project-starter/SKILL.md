@@ -2,7 +2,7 @@
 name: project-starter
 description: 「项目起步」：给新项目、或还没有 AGENTS.md / LESSONS 的项目铺 Claude 与 Codex 接力用的两层骨架：协作规矩（AGENTS 入口与导航表、LESSONS 与三级升级、交接模板与格式测试、防伪造五条、通用规则检查脚本、已定内容登记表、网页基线截图对比）和 Matt Pocock 开发流程（GitHub Issues 看板、分流标签、领域文档约定、AGENTS 里的 Agent skills 一节）。仅在用户要求给项目铺协作骨架、或显式调用 project-starter 时使用；先列计划等确认，不覆盖已有文件。
 metadata:
-  version: "0.3.1"
+  version: "0.3.2"
   governance:
     network: none
     external-writes: required
