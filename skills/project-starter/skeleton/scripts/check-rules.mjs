@@ -79,7 +79,8 @@ export function checkRules(root) {
   return found;
 }
 
-// LESSONS 每条 L-xx 都要有以层级词开头的「升级」行；代码块里的格式样例和标题带 <占位> 的不算条目
+// LESSONS 每条 L-xx 都要有以层级词开头的「升级」行；代码块里的格式样例和标题带 <占位> 的不算条目。
+// 反引号里的尖括号是真实内容不是占位（如剪藏插件 L-02 标题里的 `<all_urls>`），先去掉再判断
 function checkLessons(root, hit) {
   const file = path.join(root, 'docs', 'LESSONS.md');
   if (!fs.existsSync(file)) return;
@@ -91,7 +92,7 @@ function checkLessons(root, hit) {
     const head = text.match(/^## (L-\d+) (.*)$/);
     if (head || text.startsWith('## ')) {
       close();
-      if (head && !/<[^>]+>/.test(head[2])) cur = { id: head[1], line: i + 1, up: false };
+      if (head && !/<[^>]+>/.test(head[2].replace(/`[^`]*`/g, ''))) cur = { id: head[1], line: i + 1, up: false };
       return;
     }
     const up = cur && text.match(/^- 升级：(.*)$/);
