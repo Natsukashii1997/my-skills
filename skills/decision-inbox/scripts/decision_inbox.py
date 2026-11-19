@@ -31,8 +31,11 @@ NOT_USER = (
     "[Request interrupted",
     "The app was quit",
 )
-SESSION_ID = re.compile(r"local_[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}")
 BUSY_SECONDS = 180
+# 别的会话发来的消息：可能是转达的答复，也可能只是通知，不能当作常浩已经回复。
+PEER = "Another Claude session sent a message"
+# 回复过了这么久还没出新状态，多半是没被接走，要重新列出来。
+STALE_REPLY_HOURS = 2
 
 
 def texts(message):
@@ -72,10 +75,12 @@ def read_log(path):
                 continue
             if entry.get("type") == "assistant":
                 for text in texts(entry.get("message", {})):
-                    found = STATUS.search(text)
-                    if not found:
+                    # 取这条答复里最后一次出现的状态行：正文里可能先引用了别的会话的状态。
+                    marks = list(STATUS.finditer(text))
+                    if not marks:
                         continue
-                    step = NEXT.search(text)
+                    found = marks[-1]
+                    step = NEXT.search(text, found.end())
                     last = {
                         "at": entry.get("timestamp") or "",
                         "word": found.group(1).strip(),
@@ -86,7 +91,13 @@ def read_log(path):
             else:
                 words = user_words(entry)
                 if words and last:
-                    after.append({"at": entry.get("timestamp") or "", "text": words[:160]})
+                    after.append(
+                        {
+                            "at": entry.get("timestamp") or "",
+                            "text": words[:160],
+                            "peer": words.startswith(PEER),
+                        }
+                    )
     return last, after, bad
 
 
@@ -120,14 +131,13 @@ def load_ignored(inbox_dir):
 
 def listed_before(inbox_dir):
     """最近一份清单里出现过的会话 id（前 8 位）。"""
-    lists = sorted(glob.glob(os.path.join(inbox_dir, "拍板清单-*.md")))
+    # 按修改时间取最新一份：同一天的第二份叫「…-2.md」，按文件名排会排到第一份前面。
+    lists = sorted(glob.glob(os.path.join(inbox_dir, "拍板清单-*.md")), key=os.path.getmtime)
     if not lists:
         return None, set()
     with open(lists[-1], errors="replace") as handle:
         body = handle.read()
-    found = {short(match) for match in SESSION_ID.findall(body)}
-    found |= set(re.findall(r"local_([0-9a-f]{8})\b", body))
-    return os.path.basename(lists[-1]), found
+    return os.path.basename(lists[-1]), set(re.findall(r"local_([0-9a-f]{8})\b", body))
 
 
 def scan(meta_dir, projects_dir, days, now, only=None):
@@ -208,8 +218,9 @@ def scan(meta_dir, projects_dir, days, now, only=None):
     return rows, skipped
 
 
-def sift(rows, ignored, before):
+def sift(rows, ignored, before, now=None):
     """去假：返回（留下的，筛掉的计数）。"""
+    now = now or time.time()
     dropped = {"已交给下游会话": 0, "你已回复、还在做": 0, "在忽略名单里": 0}
     kept = []
     for row in rows:
@@ -218,9 +229,15 @@ def sift(rows, ignored, before):
         if row["children"]:
             dropped["已交给下游会话"] += 1
             continue
-        if row["userAfter"]:
-            dropped["你已回复、还在做"] += 1
-            continue
+        own = [reply for reply in row["userAfter"] if not reply.get("peer")]
+        row["peerAfter"] = len(own) < len(row["userAfter"])
+        row["replyUnanswered"] = False
+        if own:
+            waited = days_since(own[-1]["at"], now)
+            if waited is None or waited * 24 < STALE_REPLY_HOURS:
+                dropped["你已回复、还在做"] += 1
+                continue
+            row["replyUnanswered"] = True
         mark = ignored.get(row["id"])
         if mark and mark.get("statusAt") == row["statusAt"]:
             dropped["在忽略名单里"] += 1
@@ -274,8 +291,15 @@ def flag_text(row):
         flags.append("PR 都已合并或关闭，可能过期")
     if row["busy"]:
         flags.append("3 分钟内有写入，可能正在跑")
+    if row.get("replyUnanswered"):
+        flags.append(f"你回过，但超过 {STALE_REPLY_HOURS} 小时没出新状态，可能没被接走")
+    if row.get("peerAfter"):
+        flags.append("之后收到过别的会话的消息")
     if row["prs"]:
-        flags.append("PR " + " ".join(f"#{pr['n']}{pr['state']}" for pr in row["prs"]))
+        names = {"OPEN": "开着", "MERGED": "已合并", "CLOSED": "已关闭"}
+        flags.append(
+            "PR " + "、".join(f"#{pr['n']} {names.get(pr['state'], pr['state'])}" for pr in row["prs"])
+        )
     return "｜" + "；".join(flags) if flags else ""
 
 
@@ -283,7 +307,7 @@ def cmd_collect(args):
     now = time.time()
     rows, skipped = scan(args.meta_dir, args.projects_dir, args.days, now)
     last_list, before = listed_before(args.inbox_dir)
-    kept, dropped = sift(rows, load_ignored(args.inbox_dir), before)
+    kept, dropped = sift(rows, load_ignored(args.inbox_dir), before, now)
     total = sum(1 for row in rows if row["word"] in WAITING)
     out = args.out or os.path.join(args.inbox_dir, "runs", time.strftime("%Y-%m-%d-%H%M"))
     os.makedirs(out, exist_ok=True)
@@ -375,14 +399,12 @@ def cmd_ignore(args):
     if not (args.since and args.ids and args.by):
         raise SystemExit("ignore add 需要 --since、--ids 和 --by（常浩哪天、原话是什么）")
     snapshot = load_snapshot(args.since)
-    have = {item["id"] for item in items}
     added = 0
-    for item in (short(value) for value in args.ids):
+    for item in dict.fromkeys(short(value) for value in args.ids):
         if item not in snapshot:
             raise SystemExit(f"快照里没有这个会话：{item}")
         row = snapshot[item]
-        if row["id"] in have:
-            items = [entry for entry in items if entry["id"] != row["id"]]
+        items = [entry for entry in items if entry["id"] != row["id"]]
         items.append(
             {
                 "id": row["id"],

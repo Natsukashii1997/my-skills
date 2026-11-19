@@ -51,8 +51,8 @@ def sessions(now):
             assistant(now, 5, closing("等你决定", "首页三版预览已发布，要选一版。", "打开预览后回复「选甲」「选乙」或「选丙」。")),
         ]),
         ("d", "周报｜卡片样式", "report", False, None, [], [
-            assistant(now, 10, closing("等你决定", "标题用哪种字号。", "回复「大号」或「小号」。")),
-            user(now, 9, "大号"),
+            assistant(now, 1, closing("等你决定", "标题用哪种字号。", "回复「大号」或「小号」。")),
+            user(now, 0.5, "大号"),
         ]),
         ("e", "备份｜恢复演练", "backup", False, None, [(3, "MERGED")], [
             assistant(now, 40, closing("已结束", "演练通过。", "本任务已结束，下一步无需任何动作。")),
@@ -76,6 +76,15 @@ def sessions(now):
         ]),
         ("5", "闲聊｜没有收尾", "misc", False, None, [], [
             assistant(now, 6, "好的，已经改好了。"),
+        ]),
+        ("7", "插件｜图标替换", "plugin", False, None, [], [
+            assistant(now, 30, closing("等你决定", "图标用哪一版。", "回复「用甲」或「用乙」。")),
+            user(now, 26, "用甲"),
+        ]),
+        ("8", "接口｜限流方案", "api", False, None, [], [
+            assistant(now, 12, "先说别的会话的情况。那个会话当前状态：〔已结束〕早就做完了，下一步：无。\n\n"
+                      + closing("等你决定", "限流阈值定多少。", "回复「每分钟 60 次」（推荐）或给一个数。")),
+            user(now, 1, "Another Claude session sent a message:\n<cross-session-message>顺带告知，不用回复。</cross-session-message>"),
         ]),
         ("6", "账单｜对账脚本", "billing", False, None, [], [
             assistant(now, 70, closing("受阻", "缺账单导出文件。", "把 10 月账单导出文件放到 data/ 目录后回复「放好了」。")),
@@ -116,7 +125,7 @@ def build(root, now=None):
         os.utime(path, (now - 3600, now - 3600))
     # 上一份清单里列过「账单」那个会话；「规则」那个在忽略名单里，状态没变。
     with open(os.path.join(inbox, "拍板清单-2026-01-01.md"), "w") as handle:
-        handle.write(f"# 拍板清单\n\n- B1 放账单导出文件。账单｜对账脚本 `{sid('6', 12)}`\n")
+        handle.write(f"# 拍板清单\n\n- B1 放账单导出文件。账单｜对账脚本 `{sid('6', 14)}`\n")
     ignored = [{"id": sid("f", 6), "title": "规则｜以后留意手机端", "statusAt": stamp(now, 200),
                 "addedOn": "2026-01-01", "by": "合成样例"},
                {"id": sid("1", 7), "title": "课件｜第二轮打磨", "statusAt": stamp(now, 300),
