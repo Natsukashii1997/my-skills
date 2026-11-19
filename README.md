@@ -25,6 +25,7 @@
 | [vault-backup](skills/vault-backup/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「知识库备份」：给 Obsidian 知识库和只在本机的 Git 项目做加密、增量、可异地的备份（restic），检查完整性、演练恢复 |
 | [monthly-user-strategy](skills/monthly-user-strategy/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「月度用户策略」generate 模式：替常浩生成牛马之家某个月的月度用户策略，经 workdesk 工具取事实底稿、按 SCOUT 阶段 01–05 研判、组装 schema 2.1 文档并自检，提交为待确认 submission，常浩在工作台页面确认；缺背景卡按规则降级，提交结果不明不自动重试；Claude、Codex 通用 |
 | [matt-flow](skills/matt-flow/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「Matt 流程向导」：常浩要做软件、改代码，或开发流程进行中问「下一步呢」时自动用；先判 0–3 档（顺手改 / 轻量 / 标准 / 大雾）或认出半路入口，按 Matt Pocock 技能的顺序带着走，每站把「下一步回什么」写进收尾三项（只能手动的技能直接给出要回的命令）；分支、issue、PR 照 agent-kit 工程流程，交接、送 GPT、对外写入按常浩规则；Claude、Codex 通用 |
+| [decision-inbox](skills/decision-inbox/SKILL.md) | `~/.claude/skills` | 「拍板清单」：把 Claude 桌面应用里停下来等常浩的会话收成一张编号清单（要定什么、推荐、回这句话），常浩一条消息批量回，再把原话逐条转给对应会话并回读；脚本先筛掉已交接、已回复、已忽略的假等待，对外动作和已定内容单独问，转达前复核、问题变了就作废；只在 Claude 桌面应用里用 |
 
 链接关系以 [links.tsv](links.tsv) 为准。
 
