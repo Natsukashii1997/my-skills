@@ -83,6 +83,83 @@ class AuditBehaviorTests(unittest.TestCase):
         self.assertTrue(result.passed)
         self.assertEqual(result.error_count, 0)
 
+    def test_linked_installed_skill_is_scanned_and_blocks_duplicate(self) -> None:
+        source = write_skill(self.base / "source", "linked-demo")
+        (source / "danger.py").write_text("import os\nos.unlink(user_path)\n", encoding="utf-8")
+        (self.installed / "linked-demo").symlink_to(source, target_is_directory=True)
+        result = AUDIT.audit("post-install", installed_roots=(self.installed,))
+        self.assertEqual(result.skills_scanned, 4)
+        self.assertFalse(result.passed)
+        self.assertIn("RISK_SIGNAL_DESTRUCTIVE_ACTION", self.codes(result))
+        write_skill(self.candidate, "linked-demo")
+        result = AUDIT.audit("pre-install", candidate_roots=(self.candidate,),
+                             installed_roots=(self.installed,))
+        self.assertIn("DUPLICATE_SKILL_NAME", self.codes(result))
+
+    def test_linked_aliases_and_cycles_are_deduplicated(self) -> None:
+        source = write_skill(self.base / "source", "linked-demo")
+        (self.installed / "linked-demo").symlink_to(source, target_is_directory=True)
+        (self.installed / "alias").symlink_to(source, target_is_directory=True)
+        (self.installed / "loop").symlink_to(self.installed, target_is_directory=True)
+        result = AUDIT.audit("post-install", installed_roots=(self.installed,))
+        self.assertEqual(result.skills_scanned, 4)
+        self.assertTrue(result.passed)
+        overlap = AUDIT.audit("post-install", installed_roots=(self.installed, source))
+        self.assertEqual(overlap.skills_scanned, 4)
+        self.assertTrue(overlap.passed)
+
+    def test_linked_descriptor_cannot_hide_original_skill_sources(self) -> None:
+        source = write_skill(self.base / "source", "linked-demo")
+        (source / "danger.py").write_text("import os\nos.unlink(user_path)\n", encoding="utf-8")
+        entry = self.installed / "linked-demo"
+        entry.symlink_to(source, target_is_directory=True)
+        before = AUDIT.audit("post-install", installed_roots=(self.installed,))
+        self.assertIn("RISK_SIGNAL_DESTRUCTIVE_ACTION", self.codes(before))
+        clean = write_skill(self.base / "clean", "linked-demo")
+        (source / "SKILL.md").unlink()
+        (source / "SKILL.md").symlink_to(clean / "SKILL.md")
+        for root in (self.installed, entry, entry / "SKILL.md"):
+            with self.subTest(root=root):
+                result = AUDIT.audit("post-install", installed_roots=(root,),
+                                     ack_warnings=("SOURCE_SCAN_SKIPPED_SYMLINK",))
+                self.assertFalse(result.passed)
+                self.assertIn("SOURCE_SCAN_SKIPPED_SYMLINK", self.codes(result))
+                self.assertIn("RISK_SIGNAL_DESTRUCTIVE_ACTION", self.codes(result))
+                errors = [d for d in result.diagnostics if d.code == "SOURCE_SCAN_SKIPPED_SYMLINK"]
+                self.assertTrue(all(d.severity == "error" for d in errors))
+
+    def test_shared_descriptor_target_does_not_merge_distinct_skill_directories(self) -> None:
+        clean = write_skill(self.base / "clean", "shared-demo")
+        sources = []
+        for name in ("first-demo", "second-demo"):
+            source = write_skill(self.base / "source", name)
+            (source / "SKILL.md").unlink()
+            (source / "SKILL.md").symlink_to(clean / "SKILL.md")
+            (source / "danger.py").write_text("import os\nos.unlink(user_path)\n", encoding="utf-8")
+            (self.installed / name).symlink_to(source, target_is_directory=True)
+            sources.append(source)
+        result = AUDIT.audit("post-install", installed_roots=(self.installed, sources[0]))
+        self.assertEqual(result.skills_scanned, 5)
+        self.assertEqual({d.path for d in result.diagnostics
+                          if d.code == "SOURCE_SCAN_SKIPPED_SYMLINK"},
+                         {str(source.resolve() / "SKILL.md") for source in sources})
+        self.assertEqual({d.path for d in result.diagnostics
+                          if d.code == "RISK_SIGNAL_DESTRUCTIVE_ACTION"},
+                         {str(source.resolve() / "danger.py") for source in sources})
+
+    def test_broken_linked_entry_is_coverage_error(self) -> None:
+        (self.installed / "missing").symlink_to(self.base / "absent", target_is_directory=True)
+        result = AUDIT.audit("post-install", installed_roots=(self.installed,))
+        self.assertFalse(result.passed)
+        self.assertIn("SKILL_DISCOVERY_ERROR", self.codes(result))
+
+    def test_cyclic_linked_entry_is_coverage_error(self) -> None:
+        entry = self.installed / "cycle"
+        entry.symlink_to(entry, target_is_directory=True)
+        result = AUDIT.audit("post-install", installed_roots=(self.installed,))
+        self.assertFalse(result.passed)
+        self.assertIn("SKILL_DISCOVERY_ERROR", self.codes(result))
+
     def test_invalid_frontmatter_fails(self) -> None:
         bad = self.candidate / "broken"
         bad.mkdir()

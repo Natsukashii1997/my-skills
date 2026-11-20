@@ -8,10 +8,50 @@ import zlib from 'node:zlib';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-import { codexHitsInText, fmtDate, parseArgs, run } from '../scripts/monthly-health.mjs';
+import { codexHitsInText, fmtDate, loadSkills, parseArgs, run } from '../scripts/monthly-health.mjs';
 
 const SCRIPT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../scripts/monthly-health.mjs');
 const NOW = Date.parse('2026-11-07T00:00:00Z');
+
+test('CLI 对合法无版本多行 metadata 限时完成', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'health-metadata-'));
+  try {
+    const dir = path.join(root, 'skills', 'demo');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'SKILL.md'), `---
+name: demo
+description: 合法的无版本元数据
+metadata:
+  governance:
+    dependencies:
+${Array.from({ length: 40 }, (_, i) => `      - dependency-${i}`).join('\n')}
+---
+`);
+    const out = execFileSync(process.execPath, [SCRIPT, '--repo', root,
+      '--usage', path.join(root, 'missing-usage'), '--codex', path.join(root, 'missing-sessions')],
+    { encoding: 'utf8', timeout: 5000 });
+    assert.match(out, /\| demo \| 未链接 \| 0 \| 0 \| — \| — \|/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('metadata 只读取直接子字段，支持治理块后的版本号', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'health-version-'));
+  try {
+    const dir = path.join(root, 'skills', 'demo');
+    fs.mkdirSync(dir, { recursive: true });
+    for (const [metadata, version] of [
+      ['metadata:\n    governance:\n      dependencies:\n        - demo\n    version: "2.3.4"', '2.3.4'],
+      ['metadata:\n  nested:\n    version: "9.9.9"\nother:\n  version: "8.8.8"', null],
+    ]) {
+      fs.writeFileSync(path.join(dir, 'SKILL.md'), `---\nname: demo\ndescription: 样例\n${metadata}\n---\n`);
+      assert.equal(loadSkills(root)[0].version, version);
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 function skill(repo, name, { description = `${name} 的说明`, version, evals, changelog } = {}) {
   const dir = path.join(repo, 'skills', name);

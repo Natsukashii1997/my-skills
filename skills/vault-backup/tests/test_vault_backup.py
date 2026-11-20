@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import importlib.util
 import json
 import os
@@ -19,6 +20,7 @@ import sys
 import tempfile
 import time
 import unittest
+from contextlib import redirect_stdout
 from unittest import mock
 from pathlib import Path
 
@@ -106,6 +108,139 @@ class ConfigTests(unittest.TestCase):
         self.assertIn(str(SCRIPT), data["ProgramArguments"])
         self.assertEqual(data["ProgramArguments"][-2:], ["backup", "--notify"])
         self.assertEqual(data["StartCalendarInterval"], [{"Hour": 9, "Minute": 5}, {"Hour": 21, "Minute": 30}])
+
+
+@unittest.skipUnless(RESTIC, "未安装 restic，跳过本地快照清理回归")
+class PruneScopeTests(unittest.TestCase):
+    def test_prune_preserves_snapshots_outside_configured_ownership(self):
+        with tempfile.TemporaryDirectory(prefix="vb-prune-") as td:
+            root = Path(td)
+            repo = root / "repository"
+            sources = [root / name for name in ("源 A", "源 B", "其他源")]
+            env = dict(os.environ, RESTIC_PASSWORD=PASSWORD,
+                       VAULT_BACKUP_PASSWORD=PASSWORD, RESTIC_CACHE_DIR=str(root / "cache"))
+
+            def restic(*args):
+                result = subprocess.run([RESTIC, "-r", str(repo), *args], env=env,
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                return result.stdout
+
+            restic("init")
+            for source in sources:
+                source.mkdir()
+                (source / "note.md").write_text("合成备份\n", encoding="utf-8")
+            for source, tag, host in (
+                (sources[0], "vault-backup", "test-host"),
+                (sources[1], "vault-backup", "test-host"),
+                (sources[0], "manual-other", "test-host"),
+                (sources[2], "vault-backup", "test-host"),
+                (sources[0], "vault-backup", "other-host"),
+                ([sources[0], sources[2]], "vault-backup", "test-host"),
+            ):
+                for day in (1, 2):
+                    restic("backup", "--host", host, "--tag", tag,
+                           "--time", f"2026-11-0{day} 12:00:00",
+                           *[str(p) for p in (source if isinstance(source, list) else [source])])
+            before = json.loads(restic("snapshots", "--json"))
+            protected = {s["id"] for s in before if s["hostname"] != "test-host"
+                         or "vault-backup" not in s.get("tags", [])
+                         or s["paths"] not in [[str(p)] for p in sources[:2]]}
+            config = root / "config.txt"
+            config.write_text(f"source = {sources[0]}\nsource = {sources[1]}\n"
+                              f"target = 本地 | {repo}\nhost = test-host\n"
+                              "keep_daily = 1\nkeep_weekly = 0\nkeep_monthly = 0\nkeep_yearly = 0\n",
+                              encoding="utf-8")
+            for apply in (False, True):
+                result = subprocess.run(
+                    [sys.executable, str(SCRIPT), "--config", str(config), "prune"]
+                    + (["--apply"] if apply else []), env=env, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                after = json.loads(restic("snapshots", "--json"))
+                remaining = {s["id"] for s in after}
+                self.assertTrue(protected <= remaining, "清理删除了配置范围外的快照")
+                self.assertEqual(len(after), 10 if apply else 12)
+                for source in sources[:2]:
+                    owned = [s for s in after if s["hostname"] == "test-host"
+                             and "vault-backup" in s.get("tags", []) and s["paths"] == [str(source)]]
+                    self.assertEqual(len(owned), 1 if apply else 2)
+
+
+class PruneCommandTests(unittest.TestCase):
+    def run_prune(self, *, apply=True, empty=False, fail_command=None, bad_plan=None, invalid_id=False):
+        calls = []
+        with tempfile.TemporaryDirectory(prefix="vb-prune-command-") as td:
+            root = Path(td)
+            sources = [root / "源 A", root / "源 B"]
+            targets = [root / "repo A", root / "repo B"]
+            config = root / "config.txt"
+            config.write_text("".join(f"source = {src}\n" for src in sources)
+                              + "".join(f"target = {i} | {target}\n" for i, target in enumerate(targets))
+                              + "host = test-host\n", encoding="utf-8")
+
+            def restic_run(cmd, **kwargs):
+                if cmd[1:] == ["version"]:
+                    return subprocess.CompletedProcess(cmd, 0, "restic 0.19.1", "")
+                self.assertEqual(cmd[1], "-r")
+                args = cmd[3:]
+                calls.append((cmd[2], args))
+                if "--json" in args:
+                    if bad_plan is not None:
+                        return subprocess.CompletedProcess(cmd, 0, bad_plan, "")
+                    src = args[args.index("--path") + 1]
+                    snapshot = {"id": ("a" if src == str(sources[0]) else "b") * 64,
+                                "hostname": "test-host", "paths": [src], "tags": ["vault-backup"]}
+                    if invalid_id:
+                        snapshot["id"] = "bad"
+                    return subprocess.CompletedProcess(cmd, 0,
+                                                       json.dumps([{"remove": [] if empty else [snapshot]}]), "")
+                code = 1 if args[0] == fail_command else 0
+                return subprocess.CompletedProcess(cmd, code, "", "synthetic failure" if code else "")
+
+            output = io.StringIO()
+            with mock.patch.object(VB, "find_restic", return_value="/synthetic/restic"), \
+                    mock.patch.object(VB.subprocess, "run", side_effect=restic_run), \
+                    mock.patch.dict(os.environ, {"VAULT_BACKUP_PASSWORD": PASSWORD}), redirect_stdout(output):
+                code = VB.main(["--config", str(config), "prune"] + (["--apply"] if apply else []))
+        return code, calls, output.getvalue()
+
+    def test_two_sources_reclaim_repository_space_once_per_target(self):
+        code, calls, output = self.run_prune()
+        self.assertEqual(code, 0, output)
+        for target in {target for target, _ in calls}:
+            commands = [args for repo, args in calls if repo == target]
+            reclaim = [args for args in commands if args[0] == "prune" or "--prune" in args]
+            self.assertEqual(len(reclaim), 1, commands)
+            deleted = [sid for args in commands if args[0] == "forget" and "--dry-run" not in args
+                       for sid in args[1:] if len(sid) == 64]
+            self.assertEqual(set(deleted), {"a" * 64, "b" * 64})
+            self.assertEqual(commands[-1], reclaim[0])
+
+    def test_preview_and_empty_plans_never_reclaim_space(self):
+        for options in ({"apply": False}, {"empty": True}):
+            with self.subTest(options=options):
+                code, calls, output = self.run_prune(**options)
+                self.assertEqual(code, 0, output)
+                self.assertFalse(any(args[0] == "prune" or "--prune" in args for _, args in calls))
+                self.assertTrue(all("--dry-run" in args for _, args in calls))
+
+    def test_forget_and_prune_failures_return_failure(self):
+        for command in ("forget", "prune"):
+            with self.subTest(command=command):
+                code, calls, output = self.run_prune(fail_command=command)
+                self.assertEqual(code, 1, output)
+                self.assertIn("synthetic failure", output)
+                if command == "forget":
+                    self.assertFalse(any(args[0] == "prune" for _, args in calls))
+
+    def test_malformed_plan_or_invalid_id_never_deletes(self):
+        for options in ({"bad_plan": "not json"}, {"bad_plan": '[{"remove":[{}]}]'},
+                        {"invalid_id": True}):
+            with self.subTest(options=options):
+                code, calls, output = self.run_prune(**options)
+                self.assertEqual(code, 1, output)
+                self.assertTrue(all("--json" in args for _, args in calls))
+                self.assertIn("清理计划无法完整读取", output)
 
 
 class ScheduleStateTests(unittest.TestCase):

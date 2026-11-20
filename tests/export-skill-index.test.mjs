@@ -74,3 +74,43 @@ test('本仓库真实索引：ID 唯一、不含绝对路径、每个 skill 都�
   const readme = fs.readFileSync(path.join(REPO, 'README.md'), 'utf8');
   for (const id of ids) assert.ok(readme.includes(`(skills/${id}/SKILL.md)`), `README 表格缺 ${id}`);
 });
+
+test('无版本号的多行 metadata 在限时内完成索引', () => {
+  const dir = fixture();
+  try {
+    fs.writeFileSync(path.join(dir, 'skills/bare/SKILL.md'), `---
+name: bare
+description: 合法的无版本元数据
+metadata:
+  governance:
+    dependencies:
+${Array.from({ length: 40 }, (_, i) => `      - dependency-${i}`).join('\n')}
+---
+`);
+    const code = `import { buildIndex } from ${JSON.stringify(path.join(REPO, 'scripts/export-skill-index.mjs'))};
+      console.log(JSON.stringify(buildIndex(process.argv[1]).skills.find(s => s.id === 'bare')));`;
+    const result = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', code, dir],
+      { encoding: 'utf8', timeout: 5000 }));
+    assert.equal(result.version, null);
+    assert.deepEqual(result.metadata_missing, ['version', 'changelog', 'evals']);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('metadata 只读取直接子字段，支持治理块后的版本号', () => {
+  const dir = fixture();
+  try {
+    for (const [metadata, version, governance] of [
+      ['metadata:\n    governance:\n      dependencies:\n        - demo\n    version: "2.3.4"', '2.3.4', true],
+      ['metadata:\n  nested:\n    version: "9.9.9"\n    governance: {}\nother:\n  version: "8.8.8"\n  governance: {}', null, false],
+    ]) {
+      fs.writeFileSync(path.join(dir, 'skills/bare/SKILL.md'), `---\nname: bare\ndescription: 样例\n${metadata}\n---\n`);
+      const item = buildIndex(dir).skills.find(s => s.id === 'bare');
+      assert.equal(item.version, version);
+      assert.equal(!item.metadata_missing.includes('governance'), governance);
+    }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

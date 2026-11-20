@@ -2,6 +2,7 @@
 name: skill-governance-audit
 description: Audit a local Codex Skill package before activation or scan installed custom Skill roots for deterministic naming, trigger, invocation-policy, protected-role, dependency, and static capability-risk signals. Use when installing, updating, enabling, or reviewing Skills; it reports findings but does not install, rewrite, disable, or delete them.
 metadata:
+  version: "0.2.0"
   governance:
     network: none
     external-writes: none
