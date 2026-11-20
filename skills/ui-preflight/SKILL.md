@@ -2,7 +2,7 @@
 name: ui-preflight
 description: 「界面交付前自查」：任何产品界面改动（新页面、改版、改样式、改数据展示）交给常浩看之前跑一遍。脚本用项目自己的 Playwright 在 1280、1440 两个桌面宽度打开页面，查横向溢出、同列对齐（表头和数据）、文字截断与折行（卡头、按钮、标签折成两行）、0 高容器，出一张通过 / 不通过表和标注截图；项目有基线截图（scripts/ui-baseline.mjs）时一起调它比对；再按自查清单看真实与极端数据、正式运行引擎（Safari / WKWebView）、同一写法的其他出现处和相邻状态。用户说「交付前自查一下界面」「跑一下 ui-preflight」「界面改完了，先自己查一遍」，或你改完界面准备交付时使用。不适用：画方案、出三版视觉预览（只给方案页，不是交付）；只改后端、脚本、文档；手机版或窄屏适配（只做电脑版）；Excel / 飞书表格美化（用 excel-aura）；页面风格怎么选（用 ui-styles）。
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   governance:
     network: optional
     external-writes: required

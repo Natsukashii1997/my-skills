@@ -280,7 +280,9 @@ export async function main(argv) {
   return { pass, run, md };
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === SELF) {
+// 经 ~/.claude/skills 的符号链接调用时，argv[1] 是链接路径、SELF 是真实路径：两边都解析成真实路径再比（G-38）
+const isMain = () => { try { return !!process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(SELF); } catch { return false; } };
+if (isMain()) {
   main(process.argv.slice(2)).then(({ pass, run, md }) => {
     console.log(md);
     console.log(`\n报告：${path.join(run, 'report.md')}`);
