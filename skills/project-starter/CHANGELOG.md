@@ -4,6 +4,13 @@
 
 还没过闸 2（没做 `skill-governance-audit` 审计，也没经常浩在 PR 上按准入批准），所以停在 0.x。
 
+## 0.4.1 - 2026-11-20
+
+- 修复：`scripts/hooks/pre-push` 从 worktree 推送时会把测试里的 git 操作落到真实仓库上。git 在 worktree 里跑钩子时会带上仓库位置（`GIT_DIR`），测试在临时目录建仓库、提交、推送都继承了它：推送的分支多出测试的提交，主目录被改成裸仓库、不能用，而测试照样全过。钩子现在在跑检查前清掉这些变量（`unset $(git rev-parse --local-env-vars)`）；`tests/hooks.test.mjs` 自己的 git 调用也不再继承。
+- 新增测试：从 worktree 真推一次，测试命令里建仓库、提交，核对推送的分支和主目录没被动。旧钩子下这条失败。
+- 验证：骨架复制到空目录、`git init` 后 `node --test tests/hooks.test.mjs` 原样 `ℹ pass 4` / `ℹ fail 0`；换回 0.4.0 的 `pre-push` 后 `ℹ pass 3` / `ℹ fail 1`，失败在「测试命令的提交落到了推送的分支上」。
+- 已经用 0.4.0 装过钩子的项目要各自补这一处；补之前不要从 worktree 推送，或先 `git config --unset core.hooksPath`。
+
 ## 0.4.0 - 2026-11-20
 
 复盘 P4、P5、P6 落到骨架（常浩 11-20 批：P4、P5「批」，P6「批（按改过的）」）。
