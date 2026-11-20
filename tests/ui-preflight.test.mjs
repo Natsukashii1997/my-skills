@@ -1,6 +1,7 @@
 // ui-preflight：纯函数和参数解析在任何环境都跑；真浏览器那组要 Playwright，
 // 本机用 UI_PREFLIGHT_PLAYWRIGHT=<装了 @playwright/test 的项目目录> 指过去，没有就跳过（CI 上没装）。
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import os from 'node:os';
@@ -114,6 +115,15 @@ test('mark / renderReport：不通过、提示分开写，提示不影响通过'
   assert.match(md, /页面没能查完：打不开/);
   assert.match(md, /另有 1 条 ⚠️ 提示/);
   assert.match(md, /d\\\|x/);
+});
+
+test('经符号链接调用（~/.claude/skills 里就是链接）也会执行：--width 375 报错退出 2', () => {
+  const dir = tmp();
+  const link = path.join(dir, 'skill');
+  fs.symlinkSync(path.join(here, '..', 'skills', 'ui-preflight'), link);
+  const r = spawnSync(process.execPath, [path.join(link, 'scripts', 'ui-preflight.mjs'), '--width', '375'], { encoding: 'utf8' });
+  assert.equal(r.status, 2, `stdout=${r.stdout} stderr=${r.stderr}`);
+  assert.match(r.stderr, /1280 和 1440/);
 });
 
 // —— 真浏览器 ——
