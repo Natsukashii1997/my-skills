@@ -2,8 +2,10 @@
 """自动化体检：只读检查本机用户级 LaunchAgents、hermes 定时任务和 crontab，出一页 Markdown 报告。
 
 只读保证：
-- 外部命令只有两个程序、三种用法：/bin/launchctl print、/bin/launchctl print-disabled、/usr/bin/crontab -l。
+- 外部命令只有三个程序、四种用法：/bin/launchctl print、/bin/launchctl print-disabled、/usr/bin/crontab -l、
+  /usr/bin/pmset -g log（只在有任务该跑没跑、晚点或失败时读一次，查那段时间电脑睡没睡）。
   命令层按绝对路径和参数格式逐一核对，其他一律拒绝。
+- plist 里的 EnvironmentVariables 只核对变量名（代理变量齐不齐），不读值、不写进报告；不读任何进程的环境变量。
 - hermes 定时任务直接读它的 jobs.json，不运行 hermes（运行 hermes 会触发它自己的启动维护，会写文件）。
 - 不加载、不停止、不重启任何任务，不改、不挪、不删任何文件。唯一会写的是报告本身（.md 和同名 .json）。
 
@@ -55,10 +57,13 @@ DEFAULT_CONFIG = {
     "log_size_warn_mb": 200,
     "recent_error_hours": 24,
     "hermes_overdue_minutes": 15,
+    "hermes_late_minutes": 10,
+    "proxy_labels": ["ai.hermes.gateway*"],
 }
 
 # launchd 找「只写了名字的程序」时用的固定 PATH（_PATH_STDPATH），和 plist 里自己设的 PATH 无关
 LAUNCHD_STD_PATH = "/usr/bin:/bin:/usr/sbin:/sbin"
+PROXY_KEYS = ("HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY", "https_proxy", "http_proxy", "no_proxy")   # G-19：大小写两套
 
 # ---------------------------------------------------------------------------
 # 命令层：所有外部命令都从这里走，只放行查看类命令
@@ -66,14 +71,17 @@ LAUNCHD_STD_PATH = "/usr/bin:/bin:/usr/sbin:/sbin"
 
 LAUNCHCTL = "/bin/launchctl"
 CRONTAB = "/usr/bin/crontab"
+PMSET = "/usr/bin/pmset"
 READ_ONLY_COMMANDS = (
     f"{LAUNCHCTL} print gui/<UID>/<Label>",
     f"{LAUNCHCTL} print-disabled gui/<UID>",
     f"{CRONTAB} -l",
+    f"{PMSET} -g log",
 )
 _PRINT_TARGET = re.compile(r"^(gui|user)/\d+/[^\s/\-][^\s/]*$")
 _DOMAIN_TARGET = re.compile(r"^(gui|user)/\d+$")
 MAX_OUTPUT = 2 * 1024 * 1024
+PMSET_MAX_OUTPUT = 32 * 1024 * 1024   # pmset -g log 常有十几 MB，新记录在末尾：只截掉开头
 
 
 class ReadOnlyViolation(RuntimeError):
@@ -87,6 +95,8 @@ def assert_read_only(argv: list[str]) -> None:
         if argv[1] == "print-disabled" and _DOMAIN_TARGET.match(argv[2]):
             return
     if list(argv) == [CRONTAB, "-l"]:
+        return
+    if list(argv) == [PMSET, "-g", "log"]:
         return
     raise ReadOnlyViolation(f"拒绝执行非只读命令：{' '.join(map(str, argv))}")
 
@@ -111,7 +121,9 @@ class CommandRunner:
         assert_read_only(argv)
         self.history.append(list(argv))
         r = self._execute(argv, timeout)
-        if len(r.out) > MAX_OUTPUT:
+        if argv[0] == PMSET:
+            r.out = r.out[-PMSET_MAX_OUTPUT:]
+        elif len(r.out) > MAX_OUTPUT:
             r.out = r.out[:MAX_OUTPUT]
         return r
 
@@ -1056,6 +1068,7 @@ class Context:
     cfg: dict
     check_hermes: bool = True
     check_crontab: bool = True
+    sleep_cache: list = field(default_factory=list)   # pmset 睡眠记录，一次体检只读一遍
 
 
 @dataclass
@@ -1486,10 +1499,27 @@ def assess_job(job: Job, ctx: Context, item: Item) -> None:
                 sev = ACT if (missed >= cfg["missed_runs_act"] and stale_h >= cfg["stale_hours_act"]) else WARN
                 sleep_note = ("每隔一段时间跑的任务，电脑睡眠（合盖）期间错过的点不会补跑；关机期间的也不补。"
                               if iv else "电脑关机期间错过的点不会补跑（睡眠期间错过的，醒来后会补跑一次）。")
-                item.add(sev, "missed", f"{gap}没跑",
-                         f"疑似该跑没跑：日志停在{sp(fmt_time(timing_last, now))}，{what}。{sleep_note}",
-                         "agent 会先查那段时间电脑是不是在睡眠或关机；对得上就不用管，对不上再找原因。"
-                         "如果这个任务平时就不写日志，可以让 agent 把它记为「不按日志判断」。", 30 if sev == ACT else 34)
+                problem, advice = with_sleep(
+                    ctx, timing_last, cutoff,
+                    f"疑似该跑没跑：日志停在{sp(fmt_time(timing_last, now))}，{what}。{sleep_note}",
+                    "agent 会先查那段时间电脑是不是在睡眠或关机；对得上就不用管，对不上再找原因。"
+                    "如果这个任务平时就不写日志，可以让 agent 把它记为「不按日志判断」。",
+                    "这段时间电脑基本醒着，agent 会再查是不是关机（`last shutdown`）；对不上再找原因。"
+                    "如果这个任务平时就不写日志，可以让 agent 把它记为「不按日志判断」。")
+                item.add(sev, "missed", f"{gap}没跑", problem, advice, 30 if sev == ACT else 34)
+
+    # --- 代理变量（全局坑 G-19）：只核对变量名 ---
+    if _match_any(job.label, cfg["proxy_labels"]):
+        env = job.plist.get("EnvironmentVariables")
+        names = set(env) if isinstance(env, dict) else set()
+        missing = [k for k in PROXY_KEYS if k not in names]
+        if missing:
+            item.add(WARN, "proxy_missing", "代理变量不全",
+                     f"这个服务要走代理，但配置文件的 EnvironmentVariables 缺 {'、'.join(missing)}（只核对了变量名，没读值）。"
+                     "launchd 拉起的服务不继承终端里的代理变量，缺了会直连，被墙的地址一直超时。",
+                     "Hermes 网关：profile 的 .env 里写了代理的话，网关启动时会读进来，暂不影响，但说明配置文件被 "
+                     "`hermes gateway restart` 之类重写过。按全局坑 G-19 补回大小写两套，改完 `plutil -lint`，"
+                     "再按 references/actions.md 重装（agent 逐条确认后做）。", 45)
 
     # --- 日志内容 ---
     if not exit_flagged:
@@ -1574,6 +1604,86 @@ def assess_residue(paths: list[Path], live_labels: set[str]) -> Item | None:
 
 
 # ---------------------------------------------------------------------------
+# 电脑睡没睡（全局坑 G-20）：该跑没跑、晚点、失败时自动附那段时间的 pmset 记录
+# ---------------------------------------------------------------------------
+
+PMSET_LINE = re.compile(r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) [+-]\d{4} (Sleep|Wake|DarkWake) *\t")   # 不含「Wake Requests」
+
+
+def pmset_events(ctx: Context) -> list[tuple[dt.datetime, str]] | None:
+    """[(本地时间, Sleep / Wake / DarkWake)]，按时间排好；pmset 不可用或读不了返回 None。"""
+    if not ctx.sleep_cache:
+        events = None
+        if ctx.runner.available(PMSET):
+            r = ctx.runner.run([PMSET, "-g", "log"], timeout=300)   # 日志十几 MB，机器忙时要一两分钟
+            if r.rc == 0:
+                events = []
+                for line in r.out.splitlines():
+                    m = PMSET_LINE.match(line)
+                    if m:
+                        events.append((dt.datetime.strptime(m.group(1), "%Y-%m-%d %H:%M:%S"), m.group(2)))
+                events.sort()
+        ctx.sleep_cache.append(events)
+    return ctx.sleep_cache[0]
+
+
+def _fmt_dur(sec: float) -> str:
+    if sec >= 48 * 3600:
+        return f"{sec / 86400:.1f} 天"
+    if sec >= 3600:
+        return f"{sec / 3600:.1f} 小时"
+    return f"{max(1, int(sec // 60))} 分钟"
+
+
+def sleep_check(ctx: Context, start: dt.datetime, end: dt.datetime) -> tuple[str, float] | None:
+    """[start, end] 这段时间电脑睡了多久：返回 (一句话, 睡着的占比)；读不了 pmset 返回 None。
+
+    Sleep 到下一次 Wake 算睡着；中间的 DarkWake 是系统维护唤醒，只醒几秒，仍算睡着。"""
+    events = pmset_events(ctx)
+    if events is None or end <= start:
+        return None
+    before = [k for t, k in events if t < start]
+    cur = start if before and before[-1] != "Wake" else None
+    spans, dark = [], 0
+    for t, k in events:
+        if not start <= t <= end:
+            continue
+        if k == "Sleep" and cur is None:
+            cur = t
+        elif k == "Wake" and cur is not None:
+            spans.append((cur, t))
+            cur = None
+        elif k == "DarkWake":
+            dark += 1
+    if cur is not None:
+        spans.append((cur, end))
+    window = (end - start).total_seconds()
+    asleep = sum((b - a).total_seconds() for a, b in spans)
+    partial = (f"（pmset 只记到 {events[0][0]:%m-%d %H:%M} 以后，更早的看不到）"
+               if events and events[0][0] > start else "")
+    if not spans:
+        return (f"pmset：这段时间电脑一直醒着，没有睡眠记录{partial}，不是睡眠耽误的；关机看 `last shutdown`。", 0.0)
+    a, b = max(spans, key=lambda x: x[1] - x[0])
+    text = (f"pmset：这段时间电脑睡着约 {_fmt_dur(asleep)}（占 {round(asleep * 100 / window)}%），"
+            f"最长一段 {a:%m-%d %H:%M}～{b:%m-%d %H:%M}"
+            + (f"，期间只在维护唤醒（DarkWake）里醒过 {dark} 次" if dark else "") + f"{partial}。")
+    return text, asleep / window
+
+
+SLEPT_ADVICE = "多半是电脑睡着耽误的（全局坑 G-20），对得上就不用处理；要准时跑完，那个时间让电脑插电、不合盖。"
+
+
+def with_sleep(ctx: Context, start: dt.datetime, end: dt.datetime, problem: str, advice: str,
+               awake_advice: str | None = None) -> tuple[str, str]:
+    """把那段时间的睡眠记录接到「问题」后面：睡着占一半以上换成睡眠的建议，基本醒着用 awake_advice；读不了 pmset 原样返回。"""
+    hit = sleep_check(ctx, start, end)
+    if hit is None:
+        return problem + "（这次没读到 pmset 睡眠记录，agent 会手动再查一次。）", advice
+    text, frac = hit
+    return problem + text, (SLEPT_ADVICE if frac >= 0.5 else awake_advice or advice)
+
+
+# ---------------------------------------------------------------------------
 # hermes 定时任务：直接读 jobs.json，不运行 hermes
 # ---------------------------------------------------------------------------
 
@@ -1652,9 +1762,12 @@ def _assess_hermes_job(j: dict, it: Item, ctx: Context) -> int:
         streak = 0
     if state == "error" or (status and status not in ("ok", "delivery_queued", "delivery_failed")):
         err = redact(_one_line(str(j.get("last_error") or "没有错误信息").splitlines()[0]))[:160]
-        it.add(ACT, f"hermes_failed:{jid}", f"「{name}」上次失败",
-               f"hermes 定时任务「{name}」上次运行失败：{err}" + (f"（已连续失败 {streak} 次）" if streak >= 2 else "") + "。",
-               "看失败原因；凭据过期、对方服务不通这类，要到对应项目或 hermes 配置里修。", 20)
+        problem = f"hermes 定时任务「{name}」上次运行失败：{err}" + (f"（已连续失败 {streak} 次）" if streak >= 2 else "") + "。"
+        advice = "看失败原因；凭据过期、对方服务不通这类，要到对应项目或 hermes 配置里修。"
+        if last:
+            began = _parse_iso((j.get("last_dispatch") or {}).get("dispatched_at")) if isinstance(j.get("last_dispatch"), dict) else None
+            problem, advice = with_sleep(ctx, began or last - dt.timedelta(minutes=30), last, problem, advice)
+        it.add(ACT, f"hermes_failed:{jid}", f"「{name}」上次失败", problem, advice, 20)
     elif status == "delivery_failed":
         err = redact(_one_line(str(j.get("last_delivery_error") or "没有错误信息").splitlines()[0]))[:160]
         it.add(ACT, f"hermes_undelivered:{jid}", f"「{name}」结果没送达",
@@ -1665,10 +1778,22 @@ def _assess_hermes_job(j: dict, it: Item, ctx: Context) -> int:
                f"hermes 定时任务「{name}」已暂停，不会运行。",
                "需要你定：是故意暂停的吗？不是的话 agent 可以恢复。", 40)
     elif nxt and j.get("enabled", True) and (ctx.now - nxt).total_seconds() > ctx.cfg["hermes_overdue_minutes"] * 60:
-        it.add(ACT, f"hermes_overdue:{jid}", f"「{name}」过点没跑",
-               f"hermes 定时任务「{name}」本该在{sp(fmt_time(nxt, ctx.now))}运行，到现在还没跑。"
-               "多半是负责调度的 hermes 网关没在运行。",
-               "先看「飞书网关 Hermes」那一项是不是正常；网关恢复后会接着跑。", 14)
+        problem, advice = with_sleep(
+            ctx, nxt, ctx.now,
+            f"hermes 定时任务「{name}」本该在{sp(fmt_time(nxt, ctx.now))}运行，到现在还没跑。"
+            "多半是负责调度的 hermes 网关没在运行。",
+            "先看「飞书网关 Hermes」那一项是不是正常；网关恢复后会接着跑。")
+        it.add(ACT, f"hermes_overdue:{jid}", f"「{name}」过点没跑", problem, advice, 14)
+    ld = j.get("last_dispatch") if isinstance(j.get("last_dispatch"), dict) else {}
+    sched_at, sent_at = _parse_iso(ld.get("scheduled_at")), _parse_iso(ld.get("dispatched_at"))
+    late = ld.get("lateness_seconds")
+    if (sched_at and sent_at and isinstance(late, (int, float)) and late >= ctx.cfg["hermes_late_minutes"] * 60
+            and (ctx.now - sched_at).total_seconds() <= ctx.cfg["recent_error_hours"] * 3600):
+        problem, advice = with_sleep(
+            ctx, sched_at, sent_at,
+            f"hermes 定时任务「{name}」{sp(fmt_time(sched_at, ctx.now))}那次晚了 {int(late // 60)} 分钟才开始跑。",
+            "晚点但跑完了就不影响；常常晚点的话，看看那个时间电脑是不是在睡或者网关卡住了。")
+        it.add(WARN, f"hermes_late:{jid}", f"「{name}」上次晚点", problem, advice, 38)
     return 1
 
 

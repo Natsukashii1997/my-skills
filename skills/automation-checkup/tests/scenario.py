@@ -39,11 +39,12 @@ def print_text(label: str, state: str, runs: int, last_exit: str, pid: int | Non
 class FakeRunner(checkup.CommandRunner):
     """替换真实命令：按 fixtures 返回伪造输出。只读检查仍由父类 run() 执行。"""
 
-    def __init__(self, home: Path, tools: set[str], extra_print: dict[str, str] | None = None):
+    def __init__(self, home: Path, tools: set[str], extra_print: dict[str, str] | None = None, pmset: str = ""):
         super().__init__()
         self.home = home
         self.tools = tools
         self.extra_print = extra_print or {}
+        self.pmset = pmset   # 伪造的 pmset -g log 输出（只在 tools 里有 checkup.PMSET 时会被调用）
 
     def available(self, path):
         return path in self.tools
@@ -64,6 +65,8 @@ class FakeRunner(checkup.CommandRunner):
             return checkup.CmdResult(113, "", f'Bad request.\nCould not find service "{label}" in domain for user gui: 501\n')
         if argv[0] == checkup.CRONTAB:
             return checkup.CmdResult(0, self._fixture("crontab.txt"), "")
+        if argv[0] == checkup.PMSET:
+            return checkup.CmdResult(0, self.pmset, "")
         raise AssertionError(f"测试里出现了没预料到的命令：{argv}")
 
 
