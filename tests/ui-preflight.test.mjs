@@ -14,6 +14,12 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const fixtures = path.join(here, 'fixtures', 'ui-preflight');
 const box = (left, right, top = 0, bottom = 20) => ({ left, right, top, bottom, width: right - left, height: bottom - top });
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'uip-test-'));
+// 证据目录不许在 /tmp（脚本按 G-01 拒绝），Linux 上 os.tmpdir() 就是 /tmp：要当证据目录用的临时目录放到家目录的缓存里
+const outTmp = () => {
+  const base = /^\/(private\/)?tmp(\/|$)/.test(os.tmpdir()) ? path.join(os.homedir(), '.cache') : os.tmpdir();
+  fs.mkdirSync(base, { recursive: true });
+  return fs.mkdtempSync(path.join(base, 'uip-test-'));
+};
 
 test('数值右对齐、表头左对齐：判为没对齐，按数据实际的右对齐报差值', () => {
   const body = [box(200, 340), box(250, 340)];
@@ -70,11 +76,11 @@ test('resolvePlan：读 pages.json 的页面、ready、ignore、setup；--page �
   fs.mkdirSync(path.join(root, 'scripts'));
   fs.writeFileSync(path.join(root, 'scripts', 'ui-baseline.mjs'), '');
   fs.writeFileSync(path.join(root, 'docs', 'design', 'pages.json'), JSON.stringify({
-    evidence: 'evidence', setup: 'scripts/setup.mjs', ready: 'main', preflight: { ignore: ['.wall'] },
+    evidence: '/srv/uip-evidence', setup: 'scripts/setup.mjs', ready: 'main', preflight: { ignore: ['.wall'] },
     pages: [{ name: 'a', url: 'http://x/a' }, { name: 'b', url: 'http://x/b', ready: '#b', preflight: { openDetails: false, ignore: ['.c'] } }],
   }));
   const plan = resolvePlan(parseArgs(['--root', root, '--ignore', '.z']));
-  assert.equal(plan.evidence, path.join(root, 'evidence'));
+  assert.equal(plan.evidence, '/srv/uip-evidence');
   assert.equal(plan.setup, path.join(root, 'scripts', 'setup.mjs'));
   assert.equal(plan.baseline, path.join(root, 'scripts', 'ui-baseline.mjs'));
   assert.deepEqual(plan.pages.map(p => [p.name, p.ready, p.ignore, p.openDetails]), [['a', 'main', ['.wall', '.z'], true], ['b', '#b', ['.c', '.z'], false]]);
@@ -82,7 +88,8 @@ test('resolvePlan：读 pages.json 的页面、ready、ignore、setup；--page �
   assert.throws(() => resolvePlan(parseArgs(['--root', root, '--page', 'nope'])), /没有这几页/);
   assert.equal(resolvePlan(parseArgs(['--root', root, '--no-baseline'])).baseline, null);
   // --url 指的是已经在跑的地址：不起 setup
-  const byUrl = resolvePlan(parseArgs(['--root', root, '--url', 'http://y/', '--out', path.join(root, 'o')]));
+  const byUrl = resolvePlan(parseArgs(['--root', root, '--url', 'http://y/', '--out', '/srv/o']));
+  assert.equal(byUrl.evidence, '/srv/o');
   assert.equal(byUrl.setup, null);
   assert.deepEqual(byUrl.pages.map(p => p.name), ['page-1']);
   assert.throws(() => resolvePlan(parseArgs(['--root', tmp(), '--url', 'http://y/'])), /证据放哪/);
@@ -118,7 +125,7 @@ const url = f => pathToFileURL(path.join(fixtures, f)).href;
 const hitsOf = (row, k) => row.checks[k].hits;
 
 test('反例页：四项都查得出，省略号只算提示；收起的 <details> 默认展开再查', { skip }, async () => {
-  const out = tmp();
+  const out = outTmp();
   const { pass, run } = await main(['--url', url('bad.html'), '--name', 'bad', '--out', out, '--no-baseline']);
   assert.equal(pass, false);
   const rep = JSON.parse(fs.readFileSync(path.join(run, 'report.json'), 'utf8'));
@@ -148,7 +155,7 @@ test('反例页：四项都查得出，省略号只算提示；收起的 <detail
 });
 
 test('正例页：全部通过；有意的横向滚动区只算提示，--ignore 后连提示也没有', { skip }, async () => {
-  const out = tmp();
+  const out = outTmp();
   const r1 = await main(['--url', url('good.html'), '--out', out, '--no-baseline']);
   assert.equal(r1.pass, true, r1.md);
   const rep = JSON.parse(fs.readFileSync(path.join(r1.run, 'report.json'), 'utf8'));
@@ -163,7 +170,7 @@ test('正例页：全部通过；有意的横向滚动区只算提示，--ignore
 });
 
 test('读 pages.json：先跑 setup、查完调 teardown，再调项目的 ui-baseline.mjs compare 并入报告', { skip }, async () => {
-  const root = tmp();
+  const root = outTmp();
   fs.mkdirSync(path.join(root, 'docs', 'design'), { recursive: true });
   fs.mkdirSync(path.join(root, 'scripts'));
   const marker = path.join(root, 'teardown.txt');
