@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>ui-preflight 正例</title>
+<style>
+  body { margin: 0; font: 14px/1.5 system-ui, sans-serif; }
+  main { padding: 16px; }
+  .wide { max-width: 100%; height: 20px; background: #eee; }
+  .scroll { width: 400px; overflow-x: auto; }
+  .scroll > div { width: 900px; height: 10px; background: #eee; }                 /* 有意的横向滚动区，用 --ignore 排除 */
+  table { border-collapse: collapse; width: 600px; }
+  th, td { padding: 6px; text-align: left; }
+  th.num, td.num { text-align: right; }
+  .card { width: 420px; border: 1px solid #ccc; }
+  .card-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px; padding: 8px; }
+  .card-head h2 { margin: 0; font-size: 15px; }
+  .tag { display: inline-block; background: #fde; padding: 0 4px; }
+  .two { display: inline-flex; flex-direction: column; }                           /* 结构上就是两行的按钮 */
+  .stack > div { width: 200px; height: 20px; background: #def; margin: 4px 0; }
+  .stack > .indent { margin-left: 16px; }                                          /* 有意缩进，不算没对齐 */
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style></head>
+<body><main>
+  <div class="wide">wide</div>
+  <div class="scroll" id="scroll"><div></div></div>
+  <table><thead><tr><th>月份</th><th class="num">实收金额</th></tr></thead>
+    <tbody><tr><td>1 月</td><td class="num">14,732,861.67 元</td></tr><tr><td>2 月</td><td class="num">960,438.42 元</td></tr></tbody></table>
+  <section class="card"><div class="card-head"><h2>同期技术线</h2><span class="tag">超出 113 个工作日</span></div></section>
+  <button class="two"><span>大学辅导</span><span>灵活学Lite</span></button>
+  <span class="sr">只给读屏用的文字</span>
+  <details><summary>完整数值</summary><table><thead><tr><th>月份</th><th class="num">占比</th></tr></thead>
+    <tbody><tr><td>1 月</td><td class="num">12.50%</td></tr><tr><td>2 月</td><td class="num">8.25%</td></tr></tbody></table></details>
+  <div class="stack"><div></div><div class="indent"></div><div></div></div>
+</main></body></html>

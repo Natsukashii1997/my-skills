@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>ui-preflight 反例</title>
+<style>
+  body { margin: 0; font: 14px/1.5 system-ui, sans-serif; }
+  main { padding: 16px; }
+  .wide { width: 1500px; height: 20px; background: #eee; }                     /* 横向溢出 */
+  table { border-collapse: collapse; width: 600px; }
+  th, td { padding: 6px; text-align: left; }
+  td.num { text-align: right; }                                                   /* 数值右对齐、表头没跟上 */
+  .card { width: 260px; border: 1px solid #ccc; }
+  .card-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px; padding: 8px; }
+  .card-head h2 { margin: 0; font-size: 15px; }
+  .tag { display: inline-block; background: #fde; padding: 0 4px; }
+  .cut { width: 120px; height: 21px; overflow: hidden; }                          /* 固定高把第二行裁掉 */
+  .dots { width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* 省略号：提示 */
+  .zero { height: 0; overflow: hidden; }                                           /* 0 高把内容藏掉 */
+  .stack > div { width: 200px; height: 20px; background: #def; margin: 4px 0; }
+  .stack > .off { margin-left: 2px; }                                              /* 左边缘差 2px */
+</style></head>
+<body><main>
+  <div class="wide" id="wide">wide</div>
+  <table id="t"><thead><tr><th>月份</th><th>实收金额</th></tr></thead>
+    <tbody><tr><td>1 月</td><td class="num">14,732,861.67 元</td></tr><tr><td>2 月</td><td class="num">960,438.42 元</td></tr></tbody></table>
+  <section class="card"><div class="card-head" id="head"><h2>同期技术线</h2><span class="tag">超出 113 个工作日</span><button>确认完成</button></div></section>
+  <p class="cut" id="cut">这一段文字比较长，放在固定高度的盒子里会被裁掉第二行</p>
+  <p class="dots" id="dots">促销文案 · 海报标题 · 私信话术</p>
+  <div class="zero" id="zero">藏起来的内容</div>
+  <svg id="flat" width="100" height="0"><rect width="10" height="10"/></svg>
+  <details><summary>完整数值</summary><table id="t2"><thead><tr><th>月份</th><th>占比</th></tr></thead>
+    <tbody><tr><td>1 月</td><td class="num">12.50%</td></tr><tr><td>2 月</td><td class="num">8.25%</td></tr></tbody></table></details>
+  <div class="stack"><div></div><div class="off" id="off"></div><div></div></div>
+</main></body></html>
