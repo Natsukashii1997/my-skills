@@ -27,3 +27,5 @@ monthly-user-strategy	~/.agents/skills
 matt-flow	~/.claude/skills
 matt-flow	~/.agents/skills
 decision-inbox	~/.claude/skills
+ui-preflight	~/.claude/skills
+ui-preflight	~/.agents/skills
