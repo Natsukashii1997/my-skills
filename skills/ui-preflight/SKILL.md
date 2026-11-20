@@ -2,7 +2,7 @@
 name: ui-preflight
 description: 「界面交付前自查」：任何产品界面改动（新页面、改版、改样式、改数据展示）交给常浩看之前跑一遍。脚本用项目自己的 Playwright 在 1280、1440 两个桌面宽度打开页面，查横向溢出、同列对齐（表头和数据）、文字截断与折行（卡头、按钮、标签折成两行）、0 高容器、正文被挤成窄栏、按钮和输入框漏出浏览器默认字体、字符当图标、文字对比度，出一张通过 / 不通过表、一张样式清单和标注截图；项目有基线截图（scripts/ui-baseline.mjs）时一起调它比对；再按自查清单看真实与极端数据、正式运行引擎（Safari / WKWebView）、同一写法的其他出现处和相邻状态。用户说「交付前自查一下界面」「跑一下 ui-preflight」「界面改完了，先自己查一遍」，或你改完界面准备交付时使用。不适用：画方案、出三版视觉预览（只给方案页，不是交付）；只改后端、脚本、文档；手机版或窄屏适配（只做电脑版）；Excel / 飞书表格美化（用 excel-aura）；页面风格怎么选（用 ui-styles）。
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
   governance:
     network: optional
     external-writes: required
@@ -42,7 +42,7 @@ node $S --url 'http://127.0.0.1:5290/#/business' --name business --ready main \
 - Playwright 从项目里解析；项目没装就 `npm i -D @playwright/test && npx playwright install chromium`，或用 `UI_PREFLIGHT_PLAYWRIGHT=<装了它的目录>` 借用。
 - 证据目录用项目约定的持久目录（pages.json 的 `evidence` 或 `--out`），不能在 /tmp（G-01）。每次跑在里面新建 `ui-preflight-<时间>-<随机>/`，放 `report.md`、`report.json`、整页截图和标注截图。
 - 收起的 `<details>` 默认全部展开再查（折叠里的表格最容易漏）；`--no-details` 关掉。
-- 有意的设计用 `--ignore <选择器>` 排除，或写进 pages.json：顶层 `"preflight": { "ignore": [...] }` 管所有页，某页里写只管那页。只排除确认过的有意设计，不拿它压掉真问题。
+- 有意的设计用 `--ignore <选择器>` 排除，或写进 pages.json：顶层 `"preflight": { "ignore": [...] }` 管所有页，某页里写只管那页。只排除确认过的有意设计，不拿它压掉真问题。排除了什么、各匹配到几个元素，报告头部的「排除项」一行会写明；写着「没匹配到元素」的多半是选择器写错了，那一处其实照常查了，改对再跑。
 - 项目有 `scripts/ui-baseline.mjs` 和 pages.json 时，查完会自动调项目里那份的 `compare`（不另写一份），结果并进同一张表；`--no-baseline` 关掉。
 - 要登录的项目：pages.json 的 setup 按骨架约定把登录状态写到 `UI_BASELINE_STATE` 指的文件。在命令前指定一个临时文件（`UI_BASELINE_STATE=$(mktemp) node $S`），跑完自己删掉；脚本只读它，不建也不删。
 - 退出码：0 全部通过；1 有不通过（含基线不一致、页面打不开）；2 用法或环境错误。
@@ -91,7 +91,7 @@ node $S --url 'http://127.0.0.1:5290/#/business' --name business --ready main \
 
 交付说明里贴：
 
-- 自查表（报告里的总表）和报告路径；不通过项怎么处理的，排除了哪些、为什么；
+- 自查表（报告里的总表）和报告路径；不通过项怎么处理的；排除了哪些、为什么：照报告头部「排除项」那一行列，不凭记忆写，每个都说明为什么是有意的；
 - 文字对比度的提示有几条、改了哪些、留给常浩定的是哪些；
 - 基线对比结果（项目有基线时）；
 - 第 4 步四条的结论；

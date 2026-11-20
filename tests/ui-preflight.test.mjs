@@ -171,6 +171,25 @@ test('mark / renderReport：不通过、提示分开写，提示不影响通过'
   assert.match(md, /页面没能查完：打不开/);
   assert.match(md, /另有 2 条 ⚠️ 提示/);
   assert.match(md, /d\\\|x/);
+  assert.match(md, /^- 排除项：无$/m, '行里没有 ignore 字段（旧报告）也按没有排除写');
+});
+
+test('renderReport：排除项写进报告头部，带匹配到的元素数；没匹配到的标出来；各页不一样时分页列', () => {
+  const ok = { pass: true, hits: [] };
+  const checks = Object.fromEntries(CHECKS.map(([k]) => [k, ok]));
+  const row = (page, width, ignore, extra = {}) => ({ page, width, checks, ignore, ...extra });
+  const render = rows => renderReport({ root: '/p', run: '/e/run', time: 't', source: 's', pass: true, baseline: null, baselineSkipped: '没有', rows });
+  const line = md => md.split('\n').find(l => l.startsWith('- 排除项'));
+  assert.equal(line(render([row('a', 1280, []), row('a', 1440, [])])), '- 排除项：无');
+  assert.equal(line(render([row('a', 1280, [{ selector: '#scroll', matched: 1 }, { selector: '.wall', matched: 3 }]), row('a', 1440, [{ selector: '#scroll', matched: 1 }, { selector: '.wall', matched: 3 }])])),
+    '- 排除项（这些元素和它们里面的内容没有查）：`#scroll`（1 个元素）、`.wall`（3 个元素）');
+  assert.equal(line(render([row('a', 1280, [{ selector: '.nope', matched: 0 }])])),
+    '- 排除项（这些元素和它们里面的内容没有查）：`.nope`（没匹配到元素，检查选择器）');
+  assert.equal(line(render([row('a', 1280, [{ selector: '.wall', matched: 2 }]), row('b', 1280, [])])),
+    '- 排除项（这些元素和它们里面的内容没有查）：a：`.wall`（2 个元素）；b：无');
+  // 页面没能查完时数不出元素，只列选择器
+  assert.equal(line(render([row('a', 1280, [{ selector: '.wall', matched: null }], { error: '打不开' })])),
+    '- 排除项（这些元素和它们里面的内容没有查）：`.wall`（页面没查完，没数）');
 });
 
 test('经符号链接调用（~/.claude/skills 里就是链接）也会执行：--width 375 报错退出 2', () => {
@@ -247,10 +266,22 @@ test('正例页：全部通过；有意的横向滚动区只算提示，--ignore
     assert.deepEqual(hitsOf(row, 'overflow').map(h => h.level), ['warn']);
     for (const k of ['align', 'clip', 'zero', 'squeeze', 'font', 'glyph', 'contrast']) assert.deepEqual(hitsOf(row, k), [], `${row.width} ${k}`);
     assert.equal(row.annotated !== null, true);
+    assert.deepEqual(row.ignore, [], '没有排除时是空数组');
   }
+  assert.match(r1.md, /^- 排除项：无$/m);
   const r2 = await main(['--url', url('good.html'), '--out', out, '--no-baseline', '--ignore', '#scroll']);
   const rep2 = JSON.parse(fs.readFileSync(path.join(r2.run, 'report.json'), 'utf8'));
   assert.ok(rep2.rows.every(row => Object.values(row.checks).every(c => c.hits.length === 0)));
+  for (const row of rep2.rows) assert.deepEqual(row.ignore, [{ selector: '#scroll', matched: 1 }], `${row.width} 排除项记进 report.json`);
+  assert.match(r2.md, /^- 排除项（这些元素和它们里面的内容没有查）：`#scroll`（1 个元素）$/m);
+  // 选择器写错、一个元素都没匹配到：照常查（提示还在），报告里标出来
+  const r3 = await main(['--url', url('good.html'), '--out', out, '--no-baseline', '--ignore', '#scrol']);
+  const rep3 = JSON.parse(fs.readFileSync(path.join(r3.run, 'report.json'), 'utf8'));
+  for (const row of rep3.rows) {
+    assert.deepEqual(row.ignore, [{ selector: '#scrol', matched: 0 }]);
+    assert.deepEqual(hitsOf(row, 'overflow').map(h => h.level), ['warn']);
+  }
+  assert.match(r3.md, /`#scrol`（没匹配到元素，检查选择器）/);
 });
 
 test('读 pages.json：先跑 setup、查完调 teardown，再调项目的 ui-baseline.mjs compare 并入报告', { skip }, async () => {
@@ -269,6 +300,8 @@ test('读 pages.json：先跑 setup、查完调 teardown，再调项目的 ui-ba
   const rep = JSON.parse(fs.readFileSync(path.join(r.run, 'report.json'), 'utf8'));
   assert.ok(r.run.startsWith(path.join(root, 'evidence')));
   assert.equal(rep.baseline.status, 1, rep.baseline.tail);
+  assert.deepEqual(rep.rows.map(row => row.ignore), [[{ selector: '#scroll', matched: 1 }], [{ selector: '#scroll', matched: 1 }]], 'pages.json 里的排除项也记进报告');
+  assert.match(r.md, /`#scroll`（1 个元素）/);
   assert.equal(rep.baseline.dir, '/e/ui-baseline-1');
   assert.equal(r.pass, false, '基线不一致也算不通过');
   assert.match(r.md, /❌ 和基线不一致或缺基线（退出码 1）；差异图在 `\/e\/ui-baseline-1`/);
