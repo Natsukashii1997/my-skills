@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { checkMessage } from '../scripts/hooks/commit-msg.mjs';
@@ -47,6 +47,9 @@ test('pre-push 真跑：规则检查不过就推不上去，过了才推', t => 
   const remote = mkdtempSync(path.join(tmpdir(), 'hooks-remote-'));
   t.after(() => rmSync(remote, { recursive: true, force: true }));
   execFileSync('git', ['init', '-q', '--bare', remote]);
+  // 项目可能把 TESTS 改成了只在本项目跑得起来的命令（swift、python、tsc）：临时仓库里换回默认，只验钩子的拦与放
+  const hook = path.join(dir, 'scripts/hooks/pre-push');
+  writeFileSync(hook, readFileSync(hook, 'utf8').replace(/^TESTS=.*$/m, "TESTS='node --test tests/*.test.mjs'"));
   git('remote', 'add', 'origin', remote);
   mkdirSync(path.join(dir, 'tests'));
   writeFileSync(path.join(dir, 'tests/ok.test.mjs'), "import { test } from 'node:test'; test('ok', () => {});\n");
