@@ -29,6 +29,13 @@ sys.path.insert(0, str(SCRIPT.parent))
 import checkup  # noqa: E402
 import scenario  # noqa: E402
 
+# 真实命令层在测试里当作本机没有 pmset：结果不随这台机器的睡眠记录变，也不用等它读十几 MB 日志（机器忙时要几分钟）。
+# 睡眠记录的逻辑用 scenario.FakeRunner 喂伪造的 pmset 输出来测。
+_REAL_AVAILABLE = checkup.CommandRunner.available
+checkup.CommandRunner.available = lambda self, path: path != checkup.PMSET and _REAL_AVAILABLE(self, path)
+NO_HOST_PMSET = ("_a = checkup.CommandRunner.available\n"
+                 "checkup.CommandRunner.available = lambda self, p: p != checkup.PMSET and _a(self, p)\n")
+
 FIX = HERE / "fixtures"
 ACT, WARN, OK = checkup.ACT, checkup.WARN, checkup.OK
 NOW = dt.datetime(2026, 11, 5, 10, 30)  # 周四
@@ -404,7 +411,7 @@ class ReadOnlyTests(unittest.TestCase):
 
     def test_allowed(self):
         for argv in ([self.L, "print", "gui/501/ai.hermes.gateway"], [self.L, "print-disabled", "gui/501"],
-                     [self.C, "-l"]):
+                     [self.C, "-l"], ["/usr/bin/pmset", "-g", "log"]):
             checkup.assert_read_only(argv)
 
     def test_rejected(self):
@@ -413,7 +420,9 @@ class ReadOnlyTests(unittest.TestCase):
                      [self.L, "print", "gui/501/x", "extra"], [self.L, "print-disabled", "system"],
                      [self.L, "print", "system/com.apple.x"], [self.L, "print", "gui/501/-x"],
                      ["launchctl", "print", "gui/501/x"], ["/tmp/evil/launchctl", "print", "gui/501/x"],
-                     [self.C, "-r"], ["crontab", "-l"], ["hermes", "cron", "list"], ["kill", "-9", "1"], []):
+                     [self.C, "-r"], ["crontab", "-l"], ["hermes", "cron", "list"], ["kill", "-9", "1"], [],
+                     ["/usr/bin/pmset", "sleepnow"], ["/usr/bin/pmset", "-a", "sleep", "0"], ["pmset", "-g", "log"],
+                     ["/usr/bin/pmset", "-g", "log", "extra"], ["/usr/bin/pmset", "repeat", "cancel"]):
             with self.assertRaises(checkup.ReadOnlyViolation, msg=str(argv)):
                 checkup.assert_read_only(argv)
 
@@ -486,6 +495,7 @@ class ReadOnlyTests(unittest.TestCase):
                     elif ev == "subprocess.Popen":
                         events.append(["popen", str(args[1])])
                 import checkup
+                exec({NO_HOST_PMSET!r})
                 sys.addaudithook(hook)
                 checkup.main(["--agents-dir", {str(ctx.agents_dir)!r}, "--out", {str(out)!r}])
                 sys.stdout.write("\\nEVENTS=" + json.dumps(events))
@@ -667,6 +677,115 @@ class ScenarioTests(unittest.TestCase):
 # ---------------------------------------------------------------------------
 # 单个任务的边界
 # ---------------------------------------------------------------------------
+
+PMSET_LOG = """2026-11-04 22:59:59 +0800 Wake Requests       \t[process=mDNSResponder request=Maintenance deltaSecs=7199]
+2026-11-04 23:00:00 +0800 Sleep               \tEntering Sleep state due to 'Clamshell Sleep':TCPKeepAlive=active Using Batt (Charge:50%) 7200 secs
+2026-11-05 01:00:00 +0800 DarkWake            \tDarkWake from Deep Idle [CDNP] : due to rtc/Maintenance Using BATT (Charge:48%) 10 secs
+2026-11-05 01:00:10 +0800 Sleep               \tEntering Sleep state due to 'Maintenance Sleep':TCPKeepAlive=active Using Batt (Charge:48%) 47 secs
+2026-11-05 08:45:00 +0800 Wake                \tWake from Deep Idle [CDNPB] : due to UserActivity Using AC (Charge:47%)
+"""
+TOKEN = "sk-ant-oat01-FAKE-TOKEN-DO-NOT-PRINT"   # 夹具里的假令牌：报告里一个字都不许出现
+
+
+class SleepAndProxyTests(unittest.TestCase):
+    """全局坑 G-20：该跑没跑、晚点、失败时脚本自动附 pmset 睡眠记录；G-19：要走代理的服务只核对变量名。验证环境：替身。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.home = Path(self.tmp.name)
+
+    def ctx(self, pmset=PMSET_LOG, tools=None):
+        runner = scenario.FakeRunner(self.home, {checkup.PMSET} if tools is None else tools, pmset=pmset)
+        return checkup.Context(agents_dir=self.home, home=self.home, uid=os.getuid(), now=NOW, runner=runner,
+                               cfg=checkup.load_config())
+
+    def test_sleep_check_spans_and_cache(self):
+        ctx = self.ctx()
+        text, frac = checkup.sleep_check(ctx, dt.datetime(2026, 11, 4, 22, 0), dt.datetime(2026, 11, 5, 9, 0))
+        self.assertIn("睡着约 9.8 小时（占 89%），最长一段 11-04 23:00～11-05 08:45", text)
+        self.assertIn("维护唤醒（DarkWake）里醒过 1 次", text)
+        self.assertGreater(frac, 0.5)
+        text, frac = checkup.sleep_check(ctx, dt.datetime(2026, 11, 5, 9, 0), dt.datetime(2026, 11, 5, 10, 0))
+        self.assertEqual(frac, 0.0)
+        self.assertIn("一直醒着", text)
+        _, frac = checkup.sleep_check(ctx, dt.datetime(2026, 11, 5, 2, 0), dt.datetime(2026, 11, 5, 3, 0))
+        self.assertEqual(frac, 1.0)                                         # 窗口开始时就在睡
+        text, _ = checkup.sleep_check(ctx, dt.datetime(2026, 11, 4, 20, 0), dt.datetime(2026, 11, 4, 23, 30))
+        self.assertIn("pmset 只记到 11-04 23:00 以后", text)   # Wake Requests 那行不算记录
+        self.assertNotIn("Requests", text)
+        self.assertEqual([a for a in ctx.runner.history if a[0] == checkup.PMSET], [[checkup.PMSET, "-g", "log"]])   # 只读一遍
+
+    def test_no_pmset_says_so(self):
+        ctx = self.ctx(tools=set())
+        self.assertIsNone(checkup.sleep_check(ctx, dt.datetime(2026, 11, 4, 22, 0), dt.datetime(2026, 11, 5, 9, 0)))
+        self.assertEqual(checkup.with_sleep(ctx, dt.datetime(2026, 11, 4), NOW, "问题。", "原建议"),
+                         ("问题。（这次没读到 pmset 睡眠记录，agent 会手动再查一次。）", "原建议"))   # 读不到要写明，不静默略过
+
+    def job(self, plist, ctx):
+        plist = {"Label": "x.test", "ProgramArguments": ["/bin/sh", "-c", "true"], **plist}
+        p = self.home / f"{plist['Label']}.plist"
+        p.write_bytes(plistlib.dumps(plist))
+        p.chmod(0o644)
+        job = checkup.build_job(p, plist, ctx)
+        job.launchd = checkup.LaunchdState(loaded=True, state="not running", last_exit=0)
+        item = checkup.Item(key="job:x", name="x", kind="job", label=plist["Label"])
+        checkup.assess_job(job, ctx, item)
+        return item
+
+    def test_missed_runs_get_sleep_record_automatically(self):
+        out = self.home / "out.log"
+        out.write_text("ok\n")
+        ts = dt.datetime(2026, 11, 4, 22, 0).timestamp()
+        os.utime(out, (ts, ts))
+        it = self.job({"StartInterval": 3600, "StandardOutPath": str(out)}, self.ctx())
+        f = next(f for f in it.findings if f.code == "missed")
+        self.assertIn("pmset：这段时间电脑睡着约", f.problem)
+        self.assertEqual(f.advice, checkup.SLEPT_ADVICE)
+        ts = dt.datetime(2026, 11, 5, 9, 0).timestamp()                   # 醒着的时候没跑：照常查原因
+        os.utime(out, (ts, ts))
+        f = next(f for f in self.job({"StartInterval": 600, "StandardOutPath": str(out)}, self.ctx()).findings
+                 if f.code == "missed")
+        self.assertIn("一直醒着", f.problem)
+        self.assertIn("基本醒着，agent 会再查是不是关机", f.advice)
+
+    def test_proxy_names_checked_values_never_reported(self):
+        ctx = self.ctx(tools=set())
+        env = {k: f"http://u:{TOKEN}@127.0.0.1:8086" for k in ("HTTP_PROXY", "NO_PROXY", "http_proxy", "no_proxy")}
+        env["CLAUDE_CODE_OAUTH_TOKEN"] = TOKEN
+        it = self.job({"Label": "ai.hermes.gateway", "KeepAlive": True, "EnvironmentVariables": env}, ctx)
+        f = next(f for f in it.findings if f.code == "proxy_missing")
+        self.assertEqual(f.severity, WARN)
+        self.assertIn("缺 HTTPS_PROXY、https_proxy（只核对了变量名，没读值）", f.problem)
+        blob = json.dumps(checkup.asdict(it), ensure_ascii=False)
+        self.assertNotIn(TOKEN, blob)
+        self.assertNotIn("8086", blob)
+        full = dict.fromkeys(checkup.PROXY_KEYS, "x")
+        self.assertNotIn("proxy_missing", [f.code for f in self.job(
+            {"Label": "ai.hermes.gateway", "KeepAlive": True, "EnvironmentVariables": full}, ctx).findings])
+        self.assertNotIn("proxy_missing", [f.code for f in self.job({"Label": "other.job", "KeepAlive": True}, ctx).findings])
+
+    def hermes(self, **job):
+        it = checkup.Item(key="hermes:默认", name="h", kind="hermes")
+        checkup._assess_hermes_job({"id": "j1", "name": "个人项目日报·写稿", "enabled": True, **job}, it, self.ctx())
+        return {f.code: f for f in it.findings}
+
+    def test_hermes_late_and_failed_get_sleep_record(self):
+        late = self.hermes(last_status="ok", last_run_at="2026-11-05T09:20:00+08:00", last_dispatch={
+            "scheduled_at": "2026-11-05T08:15:00+08:00", "dispatched_at": "2026-11-05T08:50:00+08:00",
+            "lateness_seconds": 2100})
+        f = late["hermes_late:j1"]
+        self.assertEqual(f.severity, WARN)
+        self.assertIn("晚了 35 分钟才开始跑", f.problem)
+        self.assertIn("pmset：这段时间电脑睡着约 30 分钟（占 86%）", f.problem)
+        self.assertEqual(f.advice, checkup.SLEPT_ADVICE)
+        on_time = self.hermes(last_status="ok", last_run_at="2026-11-05T09:20:00+08:00", last_dispatch={
+            "scheduled_at": "2026-11-05T09:15:00+08:00", "dispatched_at": "2026-11-05T09:15:20+08:00",
+            "lateness_seconds": 20})
+        self.assertEqual(on_time, {})
+        failed = self.hermes(last_status="error", last_error="timeout", last_run_at="2026-11-05T09:50:00+08:00")
+        self.assertIn("pmset：这段时间电脑一直醒着", failed["hermes_failed:j1"].problem)
+
 
 class AssessEdgeCaseTests(unittest.TestCase):
     def setUp(self):

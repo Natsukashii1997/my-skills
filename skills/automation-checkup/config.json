@@ -70,5 +70,9 @@
   "restart_runs_act": 20,
   "log_size_warn_mb": 200,
   "recent_error_hours": 24,
-  "hermes_overdue_minutes": 15
+  "hermes_overdue_minutes": 15,
+  "hermes_late_minutes": 10,
+  "proxy_labels": [
+    "ai.hermes.gateway*"
+  ]
 }
