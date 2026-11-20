@@ -6,7 +6,16 @@
 //   { "evidence": "~/Library/Application Support/<项目>/evidence",
 //     "pages": [ { "name": "home", "url": "http://127.0.0.1:3000/", "widths": [1280, 1440], "mask": [".clock"] } ] }
 //   evidence 是项目约定的证据目录（AGENTS.md「规则」），不能在 /tmp；name 当截图文件名用，不能重复；widths 不写默认 1280 和 1440；mask 可不写。
-// 用法：node scripts/ui-baseline.mjs shoot     拍基线到 docs/design/baseline/<name>-<宽>.png，再登记进 docs/DECIDED.md
+//   以下几项可不写（路径相对项目根目录；niuma-home、carvomoto 接入时加，骨架 0.5.0 带回）。另：workers 固定 1，多页共用一份隔离服务时截图更稳；
+//   浏览器按「减少动态效果」打开（reducedMotion），尊重这个设置的脚本动画直接停在终态：
+//     setup：Playwright 的 globalSetup 模块，起隔离服务、登录；要登录的把 storageState 写到环境变量 UI_BASELINE_STATE 指的文件，返回收尾函数
+//       （写法可参照 niuma-home 的 scripts/ui-baseline-setup.mjs：临时数据目录、假外部命令、固定端口、固定时间、断外网）
+//     style：截图时注入的样式表（toHaveScreenshot 的 stylePath），用来展开只滚内容区的页面、藏掉停不住的区域
+//     clock：浏览器里的固定时间（ISO 字符串），页面里 new Date() 显示的时间就不会每次不同
+//     ready：CSS 选择器，等它出现再截（单页应用异步读数据时用）；单页可在 pages 里各写各的 ready
+//     baseline：基线图放哪（不写默认 docs/design/baseline，提交进仓库）。截图不能进仓库的（仓库公开、或用户定过截图不入库）
+//       写本机持久目录，如 "~/Library/Application Support/<项目>/ui-baseline"；不能在 /tmp。基线就不跟提交留历史，换电脑要重拍
+// 用法：node scripts/ui-baseline.mjs shoot     拍基线到基线目录（pages.json 的 baseline）<name>-<宽>.png，再登记进 docs/DECIDED.md
 //       node scripts/ui-baseline.mjs compare   逐页和基线比；有一页差异超过 MAX_DIFF_RATIO 或缺基线就以非零退出，
 //                                              差异图（-diff / -actual / -expected.png）写到 <evidence>/ui-baseline-<时间>-<随机>/
 // 本文件同时是 Playwright 的配置文件（shoot / compare 用 -c 指向自己），每页怎么截写在 ui-baseline.spec.mjs。
@@ -19,6 +28,9 @@ import { fileURLToPath } from 'node:url';
 
 // 差异像素占整张图的比例超过它就算不一致
 const MAX_DIFF_RATIO = 0.001;
+// 单个像素颜色差多少才算「不一样」（YIQ 距离，0～1）。Playwright 默认 0.2 太松：面板底色从 #FBFBFC 改成米色 #F3EFE6、
+// 主色 #2d5b85 调亮一档都算一样，整页对比照样通过（2026-11-19 接入时实测）。同一台机器连拍是逐像素一致的，收紧到 0.02 不误报
+const PIXEL_THRESHOLD = 0.02;
 const WIDTHS = [1280, 1440];
 const SELF = fileURLToPath(import.meta.url);
 export const ROOT = path.resolve(process.env.UI_BASELINE_ROOT ?? path.join(path.dirname(SELF), '..'));
@@ -26,10 +38,14 @@ export const ROOT = path.resolve(process.env.UI_BASELINE_ROOT ?? path.join(path.
 export function readPages(root) {
   const file = path.join(root, 'docs', 'design', 'pages.json');
   if (!fs.existsSync(file)) throw new Error(`没有 ${path.relative(root, file)}，格式见 scripts/ui-baseline.mjs 开头`);
-  const { evidence, pages } = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const { evidence, pages, setup, style, clock, ready, baseline } = JSON.parse(fs.readFileSync(file, 'utf8'));
   if (typeof evidence !== 'string' || !evidence) throw new Error('pages.json 缺 evidence（项目约定的证据目录）');
   const dir = path.resolve(root, evidence.replace(/^~(?=\/|$)/, os.homedir()));
   if (/^\/(private\/)?tmp(\/|$)/.test(dir)) throw new Error(`证据目录不能放 /tmp，会被系统清理（全局坑 G-01）：${dir}`);
+  if (baseline !== undefined && (typeof baseline !== 'string' || !baseline)) throw new Error('pages.json 的 baseline 要写成目录路径');
+  const base = path.resolve(root, (baseline ?? 'docs/design/baseline').replace(/^~(?=\/|$)/, os.homedir()));
+  // 只查显式配置的目录：默认目录在仓库里，仓库本身在临时目录（CI、测试）时不该报
+  if (baseline !== undefined && /^\/(private\/)?tmp(\/|$)/.test(base)) throw new Error(`基线目录不能放 /tmp，会被系统清理（全局坑 G-01）：${base}`);
   if (!Array.isArray(pages) || !pages.length) throw new Error('pages.json 的 pages 是空的');
   const names = new Set();
   for (const p of pages) {
@@ -37,7 +53,18 @@ export function readPages(root) {
     if (names.has(p.name)) throw new Error(`name 重复：${p.name}`);
     names.add(p.name);
   }
-  return { evidence: dir, pages: pages.map(p => ({ ...p, widths: p.widths ?? WIDTHS, mask: p.mask ?? [] })) };
+  const extra = {};
+  for (const [k, v] of Object.entries({ setup, style })) {
+    if (v === undefined) continue;
+    extra[k] = path.resolve(root, v);
+    if (!fs.existsSync(extra[k])) throw new Error(`pages.json 的 ${k} 指向的文件不存在：${v}`);
+  }
+  if (clock !== undefined) {
+    if (Number.isNaN(Date.parse(clock))) throw new Error(`pages.json 的 clock 不是合法时间：${clock}`);
+    extra.clock = clock;
+  }
+  if (ready !== undefined) extra.ready = ready;
+  return { evidence: dir, baseline: base, ...extra, pages: pages.map(p => ({ ...p, widths: p.widths ?? WIDTHS, mask: p.mask ?? [] })) };
 }
 
 // action：shoot 拍基线 / compare 对比。返回 Playwright 的退出码和本次输出目录
@@ -50,20 +77,35 @@ export function uiBaseline(root, action, stdio = 'inherit') {
   fs.mkdirSync(evidence, { recursive: true });
   const out = fs.mkdtempSync(path.join(evidence, `ui-baseline-${stamp}-`));
   const update = action === 'shoot' ? 'all' : 'none';
-  const r = spawnSync(process.execPath, [cli, 'test', '-c', SELF, `--output=${out}`, `--update-snapshots=${update}`], {
-    cwd: root, stdio, encoding: 'utf8', env: { ...process.env, UI_BASELINE_ROOT: root },
-  });
-  return { status: r.status ?? 1, out, output: `${r.stdout ?? ''}${r.stderr ?? ''}` };
+  // 登录状态（会话 Cookie）只放临时目录，跑完就删，不进证据目录
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-baseline-state-'));
+  const state = path.join(stateDir, 'state.json');
+  fs.writeFileSync(state, JSON.stringify({ cookies: [], origins: [] }));
+  try {
+    const r = spawnSync(process.execPath, [cli, 'test', '-c', SELF, `--output=${out}`, `--update-snapshots=${update}`], {
+      cwd: root, stdio, encoding: 'utf8', env: { ...process.env, UI_BASELINE_ROOT: root, UI_BASELINE_STATE: state },
+    });
+    return { status: r.status ?? 1, out, output: `${r.stdout ?? ''}${r.stderr ?? ''}` };
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
 }
+
+// 配置在 Playwright 进程里加载；pages.json 有错时这里先放过，由 spec 里的 readPages 报出来
+const CFG = (() => { try { return readPages(ROOT); } catch { return {}; } })();
 
 export default {
   testDir: path.dirname(SELF),
   testMatch: 'ui-baseline.spec.mjs',
-  snapshotPathTemplate: path.join(ROOT, 'docs', 'design', 'baseline', '{arg}{ext}'),
+  snapshotPathTemplate: path.join(CFG.baseline ?? path.join(ROOT, 'docs', 'design', 'baseline'), '{arg}{ext}'),
   reporter: 'list',
   retries: 0,
-  use: { browserName: 'chromium' },
-  expect: { toHaveScreenshot: { maxDiffPixelRatio: MAX_DIFF_RATIO, animations: 'disabled', caret: 'hide' } },
+  workers: 1,
+  ...(CFG.setup ? { globalSetup: CFG.setup } : {}),
+  // --disable-lcd-text：文字一律灰度抗锯齿。默认的 LCD 子像素抗锯齿要看图层合成，同一版本连拍时玻璃卡片多的页偶尔整页西文字边缘不同
+  // （carvomoto 采购推进、客户开发 2026-11-19 实测，关掉后连拍四次逐字节一致）
+  use: { browserName: 'chromium', reducedMotion: 'reduce', launchOptions: { args: ['--disable-lcd-text'] }, ...(process.env.UI_BASELINE_STATE ? { storageState: process.env.UI_BASELINE_STATE } : {}) },
+  expect: { toHaveScreenshot: { maxDiffPixelRatio: MAX_DIFF_RATIO, threshold: PIXEL_THRESHOLD, animations: 'disabled', caret: 'hide', ...(CFG.style ? { stylePath: CFG.style } : {}) } },
 };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === SELF) {
@@ -74,7 +116,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === SELF) {
   }
   let status, out;
   try { ({ status, out } = uiBaseline(ROOT, action)); } catch (e) { console.error(e.message); process.exit(2); }
-  if (action === 'shoot') console.log(status === 0 ? '基线已写到 docs/design/baseline/，记得登记进 docs/DECIDED.md' : `拍基线失败，看上面的报错；输出在 ${out}`);
+  if (action === 'shoot') console.log(status === 0 ? `基线已写到 ${readPages(ROOT).baseline}，记得登记进 docs/DECIDED.md` : `拍基线失败，看上面的报错；输出在 ${out}`);
   else console.log(status === 0 ? '和基线一致' : `和基线不一致或缺基线，差异图在 ${out}`);
   process.exitCode = status;
 }
