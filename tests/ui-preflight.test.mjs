@@ -8,8 +8,8 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { alignModes, countLines, headerAlignment, nearMisses } from '../skills/ui-preflight/scripts/checks.mjs';
-import { assertEvidenceDir, main, mark, parseArgs, renderReport, resolvePlan } from '../skills/ui-preflight/scripts/ui-preflight.mjs';
+import { alignModes, blend, buildPageScript, contrastRatio, countLines, fontLeak, headerAlignment, isGlyphIcon, isLargeText, isSqueezed, nearMisses, parseColor, primaryFamily } from '../skills/ui-preflight/scripts/checks.mjs';
+import { assertEvidenceDir, CHECKS, main, mark, parseArgs, renderReport, resolvePlan } from '../skills/ui-preflight/scripts/ui-preflight.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const fixtures = path.join(here, 'fixtures', 'ui-preflight');
@@ -55,6 +55,56 @@ test('nearMisses：差 0.5～4px 才报，有意缩进和完全对齐都不报',
   assert.deepEqual(nearMisses([16, 32, 16]), []);
   assert.deepEqual(nearMisses([16, 16.3, 16]), []);
   assert.deepEqual(nearMisses([16]), []);
+});
+
+test('isSqueezed：8 个字以上、折 3 行以上、每行不到 4 个字宽才算挤成窄栏', () => {
+  assert.equal(isSqueezed({ chars: 18, lines: 6, width: 42, fontSize: 14 }), true);
+  assert.equal(isSqueezed({ chars: 18, lines: 2, width: 42, fontSize: 14 }), false, '只折两行不算');
+  assert.equal(isSqueezed({ chars: 6, lines: 3, width: 28, fontSize: 14 }), false, '字太少不算');
+  assert.equal(isSqueezed({ chars: 40, lines: 4, width: 200, fontSize: 14 }), false, '栏够宽，正常折行不算');
+  assert.equal(isSqueezed({ chars: 18, lines: 3, width: 56, fontSize: 14 }), false, '正好 4 个字宽不算');
+});
+
+test('fontLeak：字体族或字号还是浏览器默认值、又和容器不一样判不通过；自己另定了字体族判提示', () => {
+  const body = { family: '"Noto Sans SC", system-ui, sans-serif', size: 14 };
+  const ua = { family: 'Arial', size: 13.3333 };
+  assert.equal(fontLeak({ family: 'Arial', size: 13.3333 }, body, ua), 'fail');
+  assert.equal(fontLeak({ family: 'Arial', size: 12 }, body, ua), 'fail', '字号写了、字体族还是浏览器默认的');
+  assert.equal(fontLeak({ family: 'system-ui', size: 13.3333 }, { family: 'system-ui', size: 14 }, { family: 'system-ui', size: 13.3333 }), 'fail', '字体族碰巧和页面一样，字号仍是默认值');
+  assert.equal(fontLeak({ family: 'Georgia', size: 14 }, body, ua), 'warn');
+  assert.equal(fontLeak({ family: "'Noto Sans SC', x", size: 12 }, body, ua), null, '继承了字体族、字号是自己定的');
+  assert.equal(fontLeak({ family: 'Arial', size: 13.3333 }, { family: 'Arial', size: 13.3333 }, ua), null, '整页就是浏览器默认字体');
+  assert.equal(fontLeak({ family: 'Arial', size: 13.3333 }, body), 'fail', '量不到默认字体时按 13.33px 判');
+  assert.equal(primaryFamily('"Barlow Condensed", sans-serif'), 'barlow condensed');
+});
+
+test('isGlyphIcon：整个元素只有箭头、符号、emoji 才算，字里夹一个箭头不算', () => {
+  for (const t of ['✎', '▶', '↻', '✕', '↗', '→', '🚀', ' ✓ ', '⚠️']) assert.equal(isGlyphIcon(t), true, t);
+  for (const t of ['→ Codex', '下一步 →', 'A', '3', '·', '×', '审', '']) assert.equal(isGlyphIcon(t), false, t);
+});
+
+test('对比度：认 rgb / rgba / color(srgb)，半透明先叠到底色上；大字只要求 3', () => {
+  const white = { r: 255, g: 255, b: 255, a: 1 };
+  assert.deepEqual(parseColor('rgb(153, 153, 153)'), { r: 153, g: 153, b: 153, a: 1 });
+  assert.deepEqual(parseColor('rgba(236, 231, 220, 0.5)'), { r: 236, g: 231, b: 220, a: 0.5 });
+  assert.deepEqual(parseColor('color(srgb 1 0 0 / 0.5)'), { r: 255, g: 0, b: 0, a: 0.5 });
+  assert.equal(parseColor('oklch(0.6 0.1 20)'), null, '认不出的写法不猜');
+  assert.equal(contrastRatio({ r: 0, g: 0, b: 0 }, white), 21);
+  assert.equal(Math.floor(contrastRatio(parseColor('rgb(153, 153, 153)'), white) * 100) / 100, 2.84);
+  // 半透明的黑字叠在白底上是灰：对比度跟着降
+  const half = blend({ r: 0, g: 0, b: 0, a: 0.5 }, white);
+  assert.deepEqual(half, { r: 127.5, g: 127.5, b: 127.5, a: 1 });
+  assert.ok(contrastRatio(half, white) < 4.5);
+  assert.equal(isLargeText(24, 400), true);
+  assert.equal(isLargeText(19, 700), true);
+  assert.equal(isLargeText(19, 400), false);
+  assert.equal(isLargeText(14, 700), false);
+});
+
+test('buildPageScript：拼出来的页面脚本语法正确，新加的函数和常量都带上了', () => {
+  const src = buildPageScript({ ignore: ['#x'] });
+  assert.doesNotThrow(() => new Function(`return ${src.replace('return domChecks(', 'return 0 && domChecks(')}`));
+  for (const name of ['isSqueezed', 'fontLeak', 'isGlyphIcon', 'contrastRatio', 'SQUEEZE_EMS', 'UA_CONTROL_SIZE', 'GLYPH', 'CONTRAST_MIN_LARGE']) assert.ok(src.includes(name), name);
 });
 
 test('parseArgs：不接受别的宽度，--url 和 --name 可写多次', () => {
@@ -108,12 +158,18 @@ test('mark / renderReport：不通过、提示分开写，提示不影响通过'
   const md = renderReport({
     root: '/p', run: '/e/run', time: 't', source: 's', pass: false, baseline: null, baselineSkipped: '没有',
     rows: [{ page: 'biz', width: 1280, screenshot: '/e/run/biz-1280.png', annotated: '/e/run/biz-1280-标注.png',
-      checks: { overflow: ok, align: { pass: false, hits: [hit(1, 'fail')] }, clip: { pass: true, hits: [hit(2, 'warn')] }, zero: ok } },
+      checks: { overflow: ok, align: { pass: false, hits: [hit(1, 'fail')] }, clip: { pass: true, hits: [hit(2, 'warn')] }, zero: ok, squeeze: ok, font: ok, glyph: ok, contrast: { pass: true, hits: [hit(3, 'warn')] } },
+      styles: { fontSizes: [['14px', 120], ['12px', 30]], fontWeights: [['400', 150]], fontFamilies: [['system-ui', 150]], spacings: Array.from({ length: 14 }, (_, i) => [`${i + 1}px`, 14 - i]), radii: [] } },
     { page: 'x', width: 1440, error: '打不开' }],
   });
-  assert.match(md, /\| biz \| 1280 \| ✅ 通过 \| ❌ 不通过（1 处 #1） \| ✅ 通过 ⚠️ 提示 1 处 #2 \| ✅ 通过 \| \[biz-1280\.png\]\(biz-1280\.png\) · \[biz-1280-标注\.png\]/);
+  assert.deepEqual(CHECKS.map(c => c[0]), ['overflow', 'align', 'clip', 'zero', 'squeeze', 'font', 'glyph', 'contrast']);
+  assert.match(md, /\| biz \| 1280 \| ✅ 通过 \| ❌ 不通过（1 处 #1） \| ✅ 通过 ⚠️ 提示 1 处 #2 \| ✅ 通过 \| ✅ 通过 \| ✅ 通过 \| ✅ 通过 \| ✅ 通过 ⚠️ 提示 1 处 #3 \| \[biz-1280\.png\]\(biz-1280\.png\) · \[biz-1280-标注\.png\]/);
+  assert.match(md, /## 样式清单（只供参考，不计入通过 \/ 不通过）/);
+  assert.match(md, /\| 字号 \| 2 \| 14px（120 字符）、12px（30 字符） \|/);
+  assert.match(md, /\| 间距 \| 14 \| 1px（14 处）.*12px（3 处），另有 2 种 \|/);
+  assert.match(md, /\| 圆角 \| 0 \| — \|/);
   assert.match(md, /页面没能查完：打不开/);
-  assert.match(md, /另有 1 条 ⚠️ 提示/);
+  assert.match(md, /另有 2 条 ⚠️ 提示/);
   assert.match(md, /d\\\|x/);
 });
 
@@ -134,7 +190,7 @@ const skip = hasPw ? false : '没设 UI_PREFLIGHT_PLAYWRIGHT（装了 @playwrigh
 const url = f => pathToFileURL(path.join(fixtures, f)).href;
 const hitsOf = (row, k) => row.checks[k].hits;
 
-test('反例页：四项都查得出，省略号只算提示；收起的 <details> 默认展开再查', { skip }, async () => {
+test('反例页：八项都查得出，省略号、对比度、字符图标只算提示；收起的 <details> 默认展开再查', { skip }, async () => {
   const out = outTmp();
   const { pass, run } = await main(['--url', url('bad.html'), '--name', 'bad', '--out', out, '--no-baseline']);
   assert.equal(pass, false);
@@ -155,10 +211,28 @@ test('反例页：四项都查得出，省略号只算提示；收起的 <detail
     const zero = hitsOf(row, 'zero');
     assert.ok(zero.some(h => h.selector.includes('#zero')));
     assert.ok(zero.some(h => h.selector.includes('#flat')));
+    const squeeze = hitsOf(row, 'squeeze');
+    assert.deepEqual(squeeze.map(h => [h.selector, h.level]), [['p#narrow', 'fail'], ['p#gridrow', 'fail']], '窄栏那一段，和掉进 grid 窄格子的那一段');
+    assert.match(squeeze[0].detail, /被挤成 \d+ 行.*不到 4 个字/);
+    const font = hitsOf(row, 'font');
+    assert.ok(font.some(h => h.selector.includes('#head') && h.level === 'fail' && /浏览器默认字体.*13\.33px/.test(h.detail)), '没继承字体的按钮');
+    assert.ok(font.some(h => h.selector.includes('#famb') && h.level === 'warn' && /georgia/.test(h.detail)), '只换了字体族的按钮是提示');
+    assert.ok(!font.some(h => h.selector.includes('#ico')), 'font: inherit 的按钮不报');
+    const glyph = hitsOf(row, 'glyph');
+    assert.deepEqual(glyph.map(h => h.selector.split(' > ').pop()).sort(), ['button#ico', 'span#emo']);
+    assert.ok(glyph.every(h => h.level === 'warn'));
+    const contrast = hitsOf(row, 'contrast');
+    assert.ok(contrast.every(h => h.level === 'warn'), '对比度先只出提示');
+    assert.ok(contrast.some(h => h.selector === 'p#low' && /对比度 2\.84，要求不低于 4\.5/.test(h.detail)));
+    assert.ok(contrast.some(h => h.selector === 'p#grad' && /渐变或图片，量不准/.test(h.detail)));
+    assert.equal(row.checks.contrast.pass, true, '提示不影响这一项通过');
+    assert.equal(row.checks.glyph.pass, true);
+    assert.ok(row.styles.fontSizes.length >= 2 && row.styles.fontFamilies.some(([f]) => f === 'georgia'));
     assert.ok(fs.existsSync(row.screenshot) && fs.existsSync(row.annotated));
   }
   const md = fs.readFileSync(path.join(run, 'report.md'), 'utf8');
   assert.match(md, /## 命中明细/);
+  assert.match(md, /## 样式清单/);
   const folded = await main(['--url', url('bad.html'), '--out', out, '--no-baseline', '--no-details']);
   const rep2 = JSON.parse(fs.readFileSync(path.join(folded.run, 'report.json'), 'utf8'));
   assert.equal(hitsOf(rep2.rows[0], 'align').filter(h => /表头「占比」/.test(h.detail)).length, 0, '--no-details 时不展开');
@@ -171,7 +245,7 @@ test('正例页：全部通过；有意的横向滚动区只算提示，--ignore
   const rep = JSON.parse(fs.readFileSync(path.join(r1.run, 'report.json'), 'utf8'));
   for (const row of rep.rows) {
     assert.deepEqual(hitsOf(row, 'overflow').map(h => h.level), ['warn']);
-    for (const k of ['align', 'clip', 'zero']) assert.deepEqual(hitsOf(row, k), [], `${row.width} ${k}`);
+    for (const k of ['align', 'clip', 'zero', 'squeeze', 'font', 'glyph', 'contrast']) assert.deepEqual(hitsOf(row, k), [], `${row.width} ${k}`);
     assert.equal(row.annotated !== null, true);
   }
   const r2 = await main(['--url', url('good.html'), '--out', out, '--no-baseline', '--ignore', '#scroll']);

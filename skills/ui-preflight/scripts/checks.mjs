@@ -1,4 +1,4 @@
-// ui-preflight 的四项断言。上半部分是纯函数（只吃数字，node 里能直接测）；
+// ui-preflight 的八项断言和一张样式清单。上半部分是纯函数（只吃数字和字符串，node 里能直接测）；
 // domChecks 在页面里跑，buildPageScript 把纯函数和 domChecks 拼成一段表达式交给 page.evaluate。
 
 // 同一组框的某条边（left / right / center）彼此差多少以内算「齐」
@@ -55,13 +55,75 @@ export function nearMisses(lefts, min = NEAR_MIN, max = NEAR_MAX) {
   return out;
 }
 
+// —— 1.1.0 加的四项：正文挤成窄栏、默认字体漏出、字符当图标、文字对比度 ——
+
+// 正文挤成窄栏：字不少（≥8 个）、折了 3 行以上、每行还不到 4 个字宽
+export const SQUEEZE_CHARS = 8;
+export const SQUEEZE_LINES = 3;
+export const SQUEEZE_EMS = 4;
+export function isSqueezed({ chars, lines, width, fontSize }) {
+  return chars >= SQUEEZE_CHARS && lines >= SQUEEZE_LINES && width < fontSize * SQUEEZE_EMS;
+}
+
+// 默认字体漏出：按钮、输入框没继承页面字体。ua 是浏览器给控件的默认字体族和字号（页面里现量，量不到时字号按 13.3333px）。
+// 字体族还是浏览器默认的、所在容器却不是，或者字号还是默认值、和所在容器不一样：没写 font: inherit（不通过）；
+// 字体族是自己另定的、和容器不一样，可能是有意的（提示）
+export const UA_CONTROL_SIZE = 13.3333;
+export function primaryFamily(s) { return String(s ?? '').split(',')[0].trim().replace(/^["']|["']$/g, '').toLowerCase(); }
+export function fontLeak(ctrl, parent, ua = {}) {
+  const near = (a, b) => Math.abs(a - b) < 0.01;
+  const [cf, pf, uf] = [ctrl.family, parent.family, ua.family].map(primaryFamily);
+  if (uf && cf === uf && pf !== uf) return 'fail';
+  if (near(ctrl.size, ua.size ?? UA_CONTROL_SIZE) && !near(parent.size, ctrl.size)) return 'fail';
+  return cf !== pf ? 'warn' : null;
+}
+
+// 字符当图标：整个元素只有 1～3 个箭头、几何符号、杂项符号、装饰符号或 emoji
+export const GLYPH = /^[\u2190-\u21ff\u2300-\u23ff\u25a0-\u25ff\u2600-\u27bf\u2900-\u297f\u2b00-\u2bff\ufe0f\u200d\p{Extended_Pictographic}]{1,3}$/u;
+export function isGlyphIcon(t) { return GLYPH.test(String(t ?? '').trim()); }
+
+// 文字对比度（WCAG 2）：小字不低于 4.5，大字（≥24px，或 ≥18.66px 且加粗）不低于 3
+export const CONTRAST_MIN = 4.5;
+export const CONTRAST_MIN_LARGE = 3;
+export function isLargeText(px, weight) { return px >= 24 || (px >= 18.66 && weight >= 700); }
+// 只认计算样式里常见的三种写法：rgb(r, g, b) / rgba(r, g, b, a) / color(srgb r g b / a)；认不出返回 null（那个元素不查）
+export function parseColor(s) {
+  const str = String(s ?? '').trim();
+  let m = str.match(/^rgba?\(([^)]+)\)$/);
+  if (m) {
+    const p = m[1].split(/[\s,\/]+/).filter(Boolean).map(v => (v.endsWith('%') ? parseFloat(v) / 100 : parseFloat(v)));
+    if (p.length < 3 || p.slice(0, 3).some(Number.isNaN)) return null;
+    return { r: p[0], g: p[1], b: p[2], a: p.length > 3 && !Number.isNaN(p[3]) ? p[3] : 1 };
+  }
+  m = str.match(/^color\(srgb\s+([^)]+)\)$/);
+  if (m) {
+    const p = m[1].split(/[\s\/]+/).filter(Boolean).map(parseFloat);
+    if (p.length < 3 || p.slice(0, 3).some(Number.isNaN)) return null;
+    return { r: p[0] * 255, g: p[1] * 255, b: p[2] * 255, a: p.length > 3 && !Number.isNaN(p[3]) ? p[3] : 1 };
+  }
+  return null;
+}
+// 半透明的 fg 叠在不透明的 bg 上
+export function blend(fg, bg) {
+  const a = fg.a ?? 1;
+  return { r: fg.r * a + bg.r * (1 - a), g: fg.g * a + bg.g * (1 - a), b: fg.b * a + bg.b * (1 - a), a: 1 };
+}
+export function luminance(c) {
+  const f = v => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b);
+}
+export function contrastRatio(fg, bg) {
+  const a = luminance(fg), b = luminance(bg);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
 // 卡头、工具栏这类「本该一行」的横排容器：看类名、标签和是否直接含标题
 export const HEADERISH = /(^|[-_\s])(head|header|heading|title|toolbar|tools|bar|actions|extra|meta|tabs)([-_\s]|$)/i;
 
 // —— 以下在页面里运行 ——
 export function domChecks(opts) {
   const MAX_HITS = 50;
-  const hits = { overflow: [], align: [], clip: [], zero: [] };
+  const hits = { overflow: [], align: [], clip: [], zero: [], squeeze: [], font: [], glyph: [], contrast: [] };
   const els = (window.__uipEls = []);
   const root = (opts.scope && document.querySelector(opts.scope)) || document.body;
   const ignore = (opts.ignore || []).join(',');
@@ -242,12 +304,121 @@ export function domChecks(opts) {
     add('zero', el, `容器${r.height < 1 ? '高' : '宽'}是 0，里面的内容看不见`);
   }
 
-  return { width: vw, pageOverflow, hits };
+  // ⑤ 正文挤成窄栏：一段字被挤进不到 4 个字宽的栏里，逐字折行。
+  // 只量元素自己直接带的文字（不算子元素里的）：图标、文字、去向各占一行的按钮这类结构上多行的不会误报；
+  // 文字直接放在 grid / flex 容器里、掉进一个窄格子的能查到。标题、按钮折行已在 ③ 里报过的不重复报
+  for (const el of vis) {
+    if (!hasDirectText(el) || srOnly(el) || el.querySelector(':scope > br')) continue;
+    const s = st(el);
+    if (s.writingMode && !s.writingMode.startsWith('horizontal')) continue;
+    if (hits.clip.some(h => els[h.id] === el)) continue;
+    const nodes = [...el.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim());
+    const chars = nodes.reduce((sum, n) => sum + n.textContent.trim().replace(/\s+/g, ' ').length, 0);
+    if (chars < SQUEEZE_CHARS) continue;
+    const rects = nodes.flatMap(n => { const rg = document.createRange(); rg.selectNodeContents(n); return [...rg.getClientRects()]; }).filter(r => r.width > 0 && r.height > 0);
+    if (!rects.length) continue;
+    const lines = countLines(rects);
+    const width = Math.max(...rects.map(r => r.right)) - Math.min(...rects.map(r => r.left));
+    if (isSqueezed({ chars, lines, width, fontSize: parseFloat(s.fontSize) })) add('squeeze', el, `${chars} 个字被挤成 ${lines} 行，每行只有 ${Math.round(width)}px 宽（不到 ${SQUEEZE_EMS} 个字）`);
+  }
+
+  // ⑥ 默认字体漏出：按钮、输入框、下拉框没继承页面字体
+  const px = v => Math.round(parseFloat(v) * 100) / 100;
+  // 现量浏览器给控件的默认字体：临时放一个撤掉页面样式（all: revert）的按钮，量完就删
+  const ua = (() => {
+    const probe = document.createElement('button');
+    probe.setAttribute('data-uip-overlay', '');
+    probe.style.cssText = 'all: revert; position: absolute; visibility: hidden; pointer-events: none;';
+    document.body.appendChild(probe);
+    const s = getComputedStyle(probe);
+    const out = { family: s.fontFamily, size: parseFloat(s.fontSize) || UA_CONTROL_SIZE };
+    probe.remove();
+    return out;
+  })();
+  for (const el of vis) {
+    const tag = el.tagName;
+    const textInput = tag === 'INPUT' && !/^(checkbox|radio|range|color|file|hidden|image)$/.test(el.type);
+    if (!(tag === 'BUTTON' || tag === 'SELECT' || tag === 'TEXTAREA' || textInput)) continue;
+    if (tag === 'BUTTON' && !text(el)) continue;
+    const p = el.parentElement;
+    if (!p) continue;
+    const s = st(el), ps = st(p);
+    const level = fontLeak({ family: s.fontFamily, size: parseFloat(s.fontSize) }, { family: ps.fontFamily, size: parseFloat(ps.fontSize) }, ua);
+    if (level === 'fail') add('font', el, `用的还是浏览器默认字体（${primaryFamily(s.fontFamily)} ${px(s.fontSize)}px），没有继承所在容器的 ${primaryFamily(ps.fontFamily)} ${px(ps.fontSize)}px`);
+    else if (level === 'warn') add('font', el, `字体是 ${primaryFamily(s.fontFamily)}，所在容器是 ${primaryFamily(ps.fontFamily)}（确认是有意的）`, 'warn');
+  }
+
+  // ⑦ 字符当图标：整个元素只有箭头、符号或 emoji。aria-hidden 的装饰图标看得见，也算
+  for (const el of all) {
+    if (el.children.length || !hasDirectText(el)) continue;
+    if (!el.checkVisibility({ opacityProperty: true, visibilityProperty: true }) || srOnly(el)) continue;
+    const t = (el.textContent || '').trim();
+    if (isGlyphIcon(t)) add('glyph', el, `用字符「${t}」当图标（图标要出自同一套；确认是有意的）`, 'warn');
+  }
+
+  // ⑧ 文字对比度：文字颜色叠上祖先的透明度，底色从自己往外找到第一层不透明的为止。
+  // 禁用的控件不查；渐变、图片底和渐变字量不准，单独注明
+  const bgUnder = el => {
+    const layers = [];
+    let image = false;
+    for (let e = el; e; e = e.parentElement) {
+      const s = st(e);
+      if (s.backgroundImage && s.backgroundImage !== 'none') image = true;
+      const c = parseColor(s.backgroundColor);
+      if (c && c.a > 0) { layers.push(c); if (c.a >= 1) break; }
+    }
+    let base = { r: 255, g: 255, b: 255, a: 1 };
+    for (let i = layers.length - 1; i >= 0; i--) base = blend(layers[i], base);
+    return { color: base, image };
+  };
+  for (const el of vis) {
+    if (!hasDirectText(el) || srOnly(el) || el.closest(':disabled,[aria-disabled="true"]')) continue;
+    const s = st(el);
+    const fg0 = parseColor(s.color);
+    if (!fg0 || fg0.a === 0 || s.webkitBackgroundClip === 'text' || s.backgroundClip === 'text') continue;
+    let opacity = 1;
+    for (let e = el; e; e = e.parentElement) { const o = Number(st(e).opacity); if (!Number.isNaN(o)) opacity *= o; }
+    const { color: bg, image } = bgUnder(el);
+    const ratio = contrastRatio(blend({ ...fg0, a: fg0.a * opacity }, bg), bg);
+    const size = parseFloat(s.fontSize);
+    const need = isLargeText(size, parseInt(s.fontWeight, 10) || 400) ? CONTRAST_MIN_LARGE : CONTRAST_MIN;
+    if (ratio >= need) continue;
+    const shown = Math.floor(ratio * 100) / 100;
+    add('contrast', el, image
+      ? `对比度约 ${shown}（要求不低于 ${need}）；底是渐变或图片，量不准，人工看一眼`
+      : `对比度 ${shown}，要求不低于 ${need}（${px(size)}px 字）`, 'warn');
+  }
+
+  // 样式清单：本页实际用到的字号、字重、字体族（按字符数计）和间距、圆角（按元素数计）。只供参考，不判通过与否
+  const tally = () => {
+    const sizes = new Map(), weights = new Map(), families = new Map(), spacings = new Map(), radii = new Map();
+    const bump = (m, k, n = 1) => m.set(k, (m.get(k) ?? 0) + n);
+    for (const el of vis) {
+      if (srOnly(el)) continue;
+      const s = st(el);
+      for (const k of ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft', 'rowGap', 'columnGap']) {
+        const v = px(s[k]);
+        if (v > 0 && v < 200) bump(spacings, `${v}px`);
+      }
+      if (parseFloat(s.borderTopLeftRadius) > 0) bump(radii, s.borderTopLeftRadius);
+      const n = [...el.childNodes].filter(c => c.nodeType === 3).reduce((sum, c) => sum + c.textContent.trim().length, 0);
+      if (!n) continue;
+      bump(sizes, `${px(s.fontSize)}px`, n);
+      bump(weights, s.fontWeight, n);
+      bump(families, primaryFamily(s.fontFamily), n);
+    }
+    const list = m => [...m].sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0]), 'en', { numeric: true }));
+    return { fontSizes: list(sizes), fontWeights: list(weights), fontFamilies: list(families), spacings: list(spacings), radii: list(radii) };
+  };
+
+  return { width: vw, pageOverflow, hits, styles: tally() };
 }
 
 // 页面里执行的完整表达式：纯函数 + 常量 + domChecks(opts)
 export function buildPageScript(opts) {
-  const fns = [edge, alignModes, headerAlignment, countLines, nearMisses, domChecks].map(f => f.toString()).join('\n');
-  const consts = `const EDGE_TOL = ${EDGE_TOL}, HEADER_TOL = ${HEADER_TOL}, NEAR_MIN = ${NEAR_MIN}, NEAR_MAX = ${NEAR_MAX}, HEADERISH = ${HEADERISH};`;
+  const fns = [edge, alignModes, headerAlignment, countLines, nearMisses, isSqueezed, primaryFamily, fontLeak, isGlyphIcon, isLargeText, parseColor, blend, luminance, contrastRatio, domChecks].map(f => f.toString()).join('\n');
+  const consts = `const EDGE_TOL = ${EDGE_TOL}, HEADER_TOL = ${HEADER_TOL}, NEAR_MIN = ${NEAR_MIN}, NEAR_MAX = ${NEAR_MAX}, HEADERISH = ${HEADERISH},
+    SQUEEZE_CHARS = ${SQUEEZE_CHARS}, SQUEEZE_LINES = ${SQUEEZE_LINES}, SQUEEZE_EMS = ${SQUEEZE_EMS}, UA_CONTROL_SIZE = ${UA_CONTROL_SIZE}, GLYPH = ${GLYPH},
+    CONTRAST_MIN = ${CONTRAST_MIN}, CONTRAST_MIN_LARGE = ${CONTRAST_MIN_LARGE};`;
   return `(() => { ${consts}\n${fns}\nreturn domChecks(${JSON.stringify(opts)}); })()`;
 }
