@@ -4,6 +4,17 @@
 
 还没过闸 2（没做 `skill-governance-audit` 审计，也没经常浩在 PR 上按准入批准），所以停在 0.x。
 
+## 0.5.0 - 2026-11-20
+
+Fable 5.2 独立评估挂起 5、挂起 10（常浩 11-20「剩下10项直接开始做」；挂起 5 的规则 11-20 选甲）。
+
+- 改动（行为）：`scripts/hooks/commit-msg.mjs` 认修复类提交的范围变宽。原来只认标题以 fix 或「修」开头；现在标题任意位置有返修、返工、回滚、热修、修复、修正、hotfix、bugfix 也算。不查的：写明别的类型的（`feat:`、`docs:` 等，带 scope 也算）、以 CURRENT / 交接 / 记录 / 文档 开头的，「回退」不算。报错加一句「确实不是修复，写『同类：不适用，<原因>』」。拿 2026-09 以来各仓库 2796 条不重复的真实标题试跑：原来拦 223 条，现在拦 336 条，多拦的里约 10 条是提到返修字样的非修复提交，补一行就过。
+- 修复：commit-msg 把 `#` 开头的行一律当注释，「#172 返修：…」这种以编号开头的标题整个被跳过（用 `-m` 提交时 git 不删 `#` 行）。改为只认 git 模板的「# 」和单独的「#」。
+- 新增（骨架带回）：`scripts/ui-baseline.mjs` 按 niuma-home main（c8452f2，carvomoto 版是它的子集）接入时的修正带回：`pages.json` 可选项 setup、style、clock、ready、baseline；单像素阈值 0.02（默认 0.2 时米色底、主色调亮一档都比不出来）；workers 1、reducedMotion、关 LCD 子像素文字；截图前逐个加载字体；登录状态放临时目录、跑完删。测试补可选项和固定时间的样本。不带：niuma-home 专用的隔离服务脚本 `ui-baseline-setup.mjs` / `preload`，注释里指过去当写法参照。
+- 测试：`tests/hooks.test.mjs` 加一条，样本是 digital-twin、postpane、chatgpt-clipper 等的真实标题（漏拦的 10 条、不该拦的 11 条）；旧钩子跑这条失败。原用例里的非修复样本「prefix: 不是修复」本身含「修复」，换成「prefix: 加导出按钮」。
+- 验证：骨架复制到空目录、填占位、`git init`，借 niuma-home 的 node_modules（真 Playwright + Chromium）跑 `node --test tests/*.test.mjs` 原样 `ℹ tests 13` / `ℹ pass 13` / `ℹ fail 0` / `ℹ skipped 0`，`check-rules` 通过；装上钩子后从 worktree 提交、推送实测，主仓库没被改动。验证环境：替身（临时仓库、文件页面）。evals 没重跑（判定标准不涉及钩子和基线工具的选项）。
+- 已经装过 0.4.x 钩子的项目要各自换 `scripts/hooks/commit-msg.mjs`；之前它们照旧按开头认。
+
 ## 0.4.1 - 2026-11-20
 
 - 修复：`scripts/hooks/pre-push` 从 worktree 推送时会把测试里的 git 操作落到真实仓库上。git 在 worktree 里跑钩子时会带上仓库位置（`GIT_DIR`），测试在临时目录建仓库、提交、推送都继承了它：推送的分支多出测试的提交，主目录被改成裸仓库、不能用，而测试照样全过。钩子现在在跑检查前清掉这些变量（`unset $(git rev-parse --local-env-vars)`）；`tests/hooks.test.mjs` 自己的 git 调用也不再继承。
