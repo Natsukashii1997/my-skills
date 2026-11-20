@@ -167,8 +167,8 @@ test('P2 报告等级按输入判定：缺什么降到哪一级', () => {
   assert.equal(allowedGrade({ digest: DIGEST(true, true), products: '- **没有产品能力卡**', mainSkus: main }).grade, '研究假设版');
   assert.equal(allowedGrade({ digest: DIGEST(true, false), products: PRODUCTS(FULL), mainSkus: main }).grade, '条件性策略版');
   assert.match(allowedGrade({ digest: DIGEST(true, true), products: PRODUCTS({ ...FULL, 安心学Max: 4 }), mainSkus: main }).why.join(), /主推 SKU 能力卡没填满：安心学Max/);
-  assert.match(allowedGrade({ digest: DIGEST(true, true), products: PRODUCTS(FULL, false), mainSkus: main }).why.join(), /活动基线不是本月/);
-  assert.equal(allowedGrade({ digest: DIGEST(true, true), products: PRODUCTS(FULL), mainSkus: main }).grade, '可执行策略版');
+  assert.match(allowedGrade({ digest: DIGEST(true, true), products: PRODUCTS(FULL, false), mainSkus: main, month: '2026-12' }).why.join(), /活动基线不是本月/);
+  assert.equal(allowedGrade({ digest: DIGEST(true, true), products: PRODUCTS(FULL), mainSkus: main, month: '2026-12' }).grade, '可执行策略版');
 });
 
 test('P2 报告等级虚标就拦，保守只提示', () => {
@@ -276,4 +276,35 @@ test('产品能力卡：按 SKU 统计已填项，空模板全部算未填', () 
   assert.match(text, /- 匹配到老师多快：未填/);
   assert.match(text, /### 安心学Max（已填 0\/5）/);
   assert.match(text, /1 张卡/);
+});
+
+// Codex 审查 PR #81 ②：标题还在、正文清空时，该章的必需结构照样要查
+const blankChapter = (text, title) => text.replace(new RegExp(`(## ${title}\\n)[\\s\\S]*?(?=\\n## )`), '$1');
+test('Codex ② 必需章节只留标题、正文清空：报正文为空，该章硬性检查照样跑', () => {
+  const checks = {
+    '第一章 月度策略总览': /第一章缺「### 1\.1/,
+    '第三章 六地区用户需求深度分析': /第三章缺地区小节/,
+    '第四章 地区优先级与机会判断': /第四章缺地区决策表/,
+    '第五章 SKU 与产品价值策略': /第五章缺七个 SKU 的角色表/,
+    '第六章 营销主张与促销策略': /第六章既没有/,
+    '第八章 关键假设与验证事项': /第八章应是 3–5 项/,
+  };
+  for (const [title, specific] of Object.entries(checks)) {
+    const r = checkReport(blankChapter(report(), title), { month: '2026-12', synthesis: SYN, design: DESIGN(), digest: DIGEST(true, false), products: PRODUCTS(FULL) });
+    assert.match(errs(r), new RegExp(`「${title}」只有标题、没有正文`), title);
+    assert.match(errs(r), specific, title);
+  }
+});
+
+// Codex 审查 PR #81 ④：报告等级要核对的是目标月的活动基线，不是任意一个月
+test('Codex ④ 报告等级：产品摘要是别的月份的，不能判可执行，也要报月份对不上', () => {
+  const main = ['安心学Max'];
+  const nov = PRODUCTS(FULL).replace('2026-12', '2026-11');
+  assert.match(allowedGrade({ digest: DIGEST(true, true), products: nov, mainSkus: main, month: '2026-12' }).why.join(), /活动基线不是本月/);
+  assert.match(allowedGrade({ digest: DIGEST(true, true), products: PRODUCTS(FULL), mainSkus: main }).why.join(), /没给目标月份/);
+  const r = checkReport(report({ grade: '可执行策略版' }), { month: '2026-12', digest: DIGEST(true, true), products: `# 产品与活动输入 · 2026-11\n${nov}` });
+  assert.match(errs(r), /报告等级写成「可执行策略版」，输入只够「条件性策略版」/);
+  assert.match(errs(r), /产品与活动输入是 2026-11 的，目标月份是 2026-12/);
+  const d = checkReport(report(), { month: '2026-12', digest: `# 事实底稿摘要 2026-11\n${DIGEST(true, true)}`, products: PRODUCTS(FULL) });
+  assert.match(errs(d), /事实底稿摘要是 2026-11 的，目标月份是 2026-12/);
 });

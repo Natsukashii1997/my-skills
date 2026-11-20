@@ -54,7 +54,7 @@ test('P1-01 没填共同能力、没写版本时照实写', () => {
 
 test('P1-02 打法卡解析元信息与定位句，摘要要求读原文', () => {
   const c = parsePlaybookCard(P0901, 'P0901-老学员续报价.md');
-  assert.deepEqual(c, { id: 'P0901', name: '老学员续报价', file: 'P0901-老学员续报价.md', stage: '续费', barriers: ['B1', 'A2'], mechanisms: ['M19', 'M16'], position: '老学员续报价是给在读或刚结课的学员一个低于公开价的专属价格。' });
+  assert.deepEqual({ ...c, sha: undefined }, { sha: undefined, id: 'P0901', name: '老学员续报价', file: 'P0901-老学员续报价.md', stage: '续费', barriers: ['B1', 'A2'], mechanisms: ['M19', 'M16'], position: '老学员续报价是给在读或刚结课的学员一个低于公开价的专属价格。' });
   const { text } = summarize({ month: '2026-12', promos: [], skus: [], card: null, playbook: [c], playbookDir: '/x/打法库' });
   assert.match(text, /\| P0901 \| 老学员续报价 \| 续费 \| B1 嫌贵（BR-C1；续费近似 BR-R5）；A2 觉得还来得及（BR-M2） \| M19 M16 \| 老学员续报价是给在读或刚结课的学员一个低于公开价的专属价格。 \| P0901-老学员续报价.md \|/);
   assert.match(text, /进入候选的卡必须读原文\*\*（`\/x\/打法库\/<文件>`）/);
@@ -110,9 +110,9 @@ test('P1-03 没有适用范围的业务证据写「未填（范围不明）」',
 test('评测夹具：E9 / E12 / E13 的输入按规格 8.4 分别够到研究假设版、可执行策略版', async () => {
   const { allowedGrade } = await import('../scripts/report-check.mjs');
   const md = f => readFileSync(join(fixtures, f), 'utf8');
-  assert.equal(allowedGrade({ digest: digest('facts-e1-timeline-only.json'), products: md('products-e9.md'), mainSkus: ['安心学Max'] }).grade, '研究假设版');
-  assert.equal(allowedGrade({ digest: digest('facts-e7-with-behavior.json'), products: md('products-e12.md'), mainSkus: ['安心学Max', '学考无忧Pass'] }).grade, '可执行策略版');
-  assert.equal(allowedGrade({ digest: digest('facts-e13-conflict.json'), products: md('products-e13.md'), mainSkus: ['安心学Max'] }).grade, '可执行策略版');
+  assert.equal(allowedGrade({ digest: digest('facts-e1-timeline-only.json'), products: md('products-e9.md'), mainSkus: ['安心学Max'], month: '2026-12' }).grade, '研究假设版');
+  assert.equal(allowedGrade({ digest: digest('facts-e7-with-behavior.json'), products: md('products-e12.md'), mainSkus: ['安心学Max', '学考无忧Pass'], month: '2026-12' }).grade, '可执行策略版');
+  assert.equal(allowedGrade({ digest: digest('facts-e13-conflict.json'), products: md('products-e13.md'), mainSkus: ['安心学Max'], month: '2026-12' }).grade, '可执行策略版');
   // E13 的交付限制要在 products 摘要里看得到
   assert.match(md('products-e13.md'), /### 安心学Max（已填 5\/5）[\s\S]*?- 能否加急：不能加急；12 月英国、香港商科老师已排满/);
   // 夹具都是占位内容，打法库只给索引并要求读原文
@@ -128,4 +128,16 @@ test('结束日分旬按学校计数：同一所学校同一旬两段日期只�
   writeFileSync(join(dir, 'facts.json'), JSON.stringify(f));
   const text = execFileSync('node', [join(here, '../scripts/digest.mjs'), join(dir, 'facts.json')], { encoding: 'utf8' });
   assert.match(text, /中旬（11–20 日）2 所：格拉斯哥大学 12-18、12-16；布里斯托大学 12-18/);
+});
+
+// Codex 审查 PR #81 ⑤：打法卡正文条款变了（名称、元信息、定位句不变），交付前比 products.md 也要看得出来
+test('Codex ⑤ 打法卡正文改了，指纹变，products.md 跟着变', () => {
+  const v1 = `${P0901}\n\n## 二、叠加规则\n\n不可与其他活动叠加。\n`;
+  const v2 = v1.replace('不可与其他活动叠加', '可与所有活动叠加');
+  const a = parsePlaybookCard(v1, 'P0901-老学员续报价.md'), b = parsePlaybookCard(v2, 'P0901-老学员续报价.md');
+  assert.match(a.sha, /^[0-9a-f]{12}$/);
+  assert.notEqual(a.sha, b.sha);
+  const md = c => summarize({ month: '2026-12', promos: [], skus: [], card: null, playbook: [c], playbookDir: '/x/打法库' }).text;
+  assert.notEqual(md(a), md(b));
+  assert.match(md(a), new RegExp(`\\| P0901-老学员续报价\\.md \\| ${a.sha} \\|`));
 });

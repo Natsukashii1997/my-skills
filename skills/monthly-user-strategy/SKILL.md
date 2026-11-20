@@ -108,7 +108,7 @@ metadata:
 
 **交付前复核输入有没有变**（写报告要几个小时，期间常浩可能同步了时间线、改了活动或能力卡）：
 1. 重取底稿存为 `facts-recheck.json`，比较它和 `facts.json` 的 `inputFingerprint`。
-2. 重跑 `product-context.mjs`，`--out-dir` 指向 `<工作目录>/recheck/`（目录不存在会自动建），`diff products.md recheck/products.md`。
+2. 重跑 `product-context.mjs`，`--out-dir` 指向 `<工作目录>/recheck/`（目录不存在会自动建），`diff products.md recheck/products.md`。打法库表里有「全文指纹」：名称、定位句没变而正文条款（叠加、期限、业务边界）改了，指纹也会变；指纹变了的卡在 `design.md` 候选卡核对表里的，重读原文、重核这张卡和用到它的方案。
 3. 都没变：报告头的「资料截至」写复核时间。变了：判断影响哪几章；影响结论的，回到对应轮次改，重跑 `report-check.mjs`；来不及改的，在报告头和答复里写明「交付前输入有变：……，以下章节按旧输入」，不悄悄交付。
 
 答复常浩：

@@ -355,3 +355,19 @@ test('P1-05 digest 按事件列出各校结束日落在上 / 中 / 下旬（GPT 
   assert.match(md, /结束日分旬/);
   assert.match(md, /- Final：上旬（1–10 日）0 所｜中旬（11–20 日）1 所：格拉斯哥大学 12-18｜下旬（21 日起）1 所：爱丁堡大学 12-21/);
 });
+
+// Codex 审查 PR #81 ③：submit.md「底稿变了」的恢复命令照着跑，要能拿到新指纹对应的提交参数
+test('Codex ③ 底稿变了：照 submit.md 的恢复命令重组装，生成新指纹的 submit-args.json', () => {
+  const doc = readFileSync(join(here, '..', 'references', 'submit.md'), 'utf8');
+  const cmd = doc.match(/`(node scripts\/assemble\.mjs [^`]*--prev-facts[^`]*)`/)?.[1];
+  assert.ok(cmd, 'submit.md 里找不到带 --prev-facts 的重组装命令');
+  const dir = mkdtempSync(join(tmpdir(), 'mus-stale-'));
+  writeFileSync(join(dir, 'facts.json'), JSON.stringify(facts()));
+  writeFileSync(join(dir, 'facts-new.json'), JSON.stringify(facts({ inputFingerprint: 'fp_new_snapshot0' })));
+  writeFileSync(join(dir, 'draft.json'), JSON.stringify(draft()));
+  const args = cmd.split(/\s+/).slice(1).map(a => a === 'scripts/assemble.mjs' ? join(here, '..', 'scripts', 'assemble.mjs') : a === '<目录>' ? join(dir, 'out') : a);
+  execFileSync('node', args, { cwd: dir, stdio: 'pipe' });
+  const sub = JSON.parse(readFileSync(join(dir, 'out', 'submit-args.json'), 'utf8'));
+  assert.equal(sub.inputFingerprint, 'fp_new_snapshot0');
+  assert.match(sub.idempotencyKey, /fp_new_snapshot0/);
+});

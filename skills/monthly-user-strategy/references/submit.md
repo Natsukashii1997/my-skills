@@ -21,7 +21,7 @@
 
 `inputFingerprint` 和研判时不同（提交前复核发现，或提交返回 `stale: true`）：
 
-1. 用新底稿重组装，并带上研判时的旧底稿：`node scripts/assemble.mjs facts-new.json draft.json --out-dir <目录> --prev-facts facts.json`。研判稿的 `basedOnFingerprint` 和新底稿不同时，不给 `--prev-facts` 脚本直接拦截，不会把旧判断悄悄换成新版本。脚本会拦下引用的 Evidence 版本变了或消失的对象：只重新研判这些对象，其余不动；全部没变的，`basedOnFingerprint` 保持研判时的值，不要改成新指纹。
+1. 用新底稿重组装，并带上研判时的旧底稿：`node scripts/assemble.mjs facts-new.json draft.json --out-dir <目录> --prev-facts facts.json --submit-args`（要提交才走到这一步，所以带 `--submit-args`；不带只写 `document.json`，没有可提交的参数）。研判稿的 `basedOnFingerprint` 和新底稿不同时，不给 `--prev-facts` 脚本直接拦截，不会把旧判断悄悄换成新版本。脚本会拦下引用的 Evidence 版本变了或消失的对象：只重新研判这些对象，其余不动；全部没变的，`basedOnFingerprint` 保持研判时的值，不要改成新指纹。
 2. 通过后提交新的那份（指纹变了，键自然变），旧文件改名留档（`-1` 后缀）。
 3. **只重做一次**。重交后仍然 `stale: true`，或几分钟内指纹又变，不再循环：把两次的 `inputFingerprint`、变化的内容（用 digest 对比）报告给常浩，由他决定。
 4. 之前那条过期的 submission 不用 skill 处理：常浩确认新的那条时，同月其余待确认提交会自动转为过期；他也可以在页面直接拒绝。答复里写明两条的 id 和哪条是新的。

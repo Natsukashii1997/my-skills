@@ -100,7 +100,7 @@ export function repetition(body) {
 }
 
 // 按输入判断报告最高能写到哪一级（规格 report-v2.1 第 8.4 节）
-export function allowedGrade({ digest, products, mainSkus = [] }) {
+export function allowedGrade({ digest, products, mainSkus = [], month }) {
   const why = [];
   const biz = (digest.match(/^- 业务背景卡：(.*)$/m) || [])[1] || '';
   const has = k => new RegExp(`${k}✓`).test(biz);
@@ -109,7 +109,8 @@ export function allowedGrade({ digest, products, mainSkus = [] }) {
   const filled = {};
   for (const m of products.matchAll(/^### (\S+?)（已填 (\d)\/5）/gm)) filled[m[1]] = Number(m[2]);
   const empty = SKUS.filter(s => !filled[s]).length;
-  const current = /本月（\d{4}-\d{2}）已录入/.test(products);
+  // 活动基线必须是目标月（规格 8.4）：只认「本月（<目标月>）已录入」，别的月份的摘要不算（Codex 审查 PR #81 ④）
+  const current = Boolean(month) && products.includes(`本月（${month}）已录入`);
   if (!obs && !stock) why.push('业务背景卡「用户观察」「存量用户情况」都没填');
   if (noCard) why.push('没有产品能力卡');
   else if (empty >= 4) why.push(`产品能力卡 ${empty} 个 SKU 一项没填`);
@@ -119,7 +120,8 @@ export function allowedGrade({ digest, products, mainSkus = [] }) {
   const partial = mainSkus.filter(s => (filled[s] ?? 0) < 5);
   if (!mainSkus.length) why.push('第五章没有主推 SKU');
   if (partial.length) why.push(`主推 SKU 能力卡没填满：${partial.join('、')}`);
-  if (!current) why.push('活动基线不是本月');
+  if (!month) why.push('没给目标月份，核对不了活动基线是不是本月');
+  else if (!current) why.push(`活动基线不是本月（${month}）`);
   return why.length ? { grade: GRADES[1], why } : { grade: GRADES[2], why: [] };
 }
 
@@ -200,10 +202,13 @@ export function checkReport(text, { month, synthesis, design, digest, products }
   const extra = titles.filter(t => !expected.includes(t));
   if (extra.length) warnings.push(`有规格以外的二级标题（会挤占正文结构）：${extra.join('、')}`);
   const get = name => sections.find(s => s.title === name)?.body ?? '';
+  // 标题在就查该章结构；正文为空另报一条（Codex 审查 PR #81 ②：原来 if (chN) 让空正文跳过了全部硬性检查）
+  const has = name => titles.includes(name);
+  for (const [name] of CHAPTERS) if (has(name) && !get(name).trim()) errors.push(`「${name}」只有标题、没有正文`);
 
   // 第一章
   const ch1 = get(CHAPTERS[0][0]);
-  if (ch1) {
+  if (has(CHAPTERS[0][0])) {
     const para = firstParagraph(ch1, '### 1.1');
     if (para === null) errors.push('第一章缺「### 1.1 月度整体定性」');
     else {
@@ -218,7 +223,7 @@ export function checkReport(text, { month, synthesis, design, digest, products }
 
   // 第三章：六个地区都要检查
   const ch3 = get(CHAPTERS[2][0]);
-  if (ch3) {
+  if (has(CHAPTERS[2][0])) {
     const heads = ch3.split('\n').filter(l => /^###\s/.test(l)).join('\n');
     const lack = REGIONS.filter(r => !heads.includes(r));
     if (lack.length) errors.push(`第三章缺地区小节（三级标题里要有地区名）：${lack.join('、')}`);
@@ -226,7 +231,7 @@ export function checkReport(text, { month, synthesis, design, digest, products }
 
   // 第四章：投入优先级
   const ch4 = get(CHAPTERS[3][0]);
-  if (ch4) {
+  if (has(CHAPTERS[3][0])) {
     const t = tables(ch4).find(x => x.header[0] === '地区' && x.header.includes('推荐优先级'));
     if (!t) errors.push('第四章缺地区决策表（第一列「地区」，含「推荐优先级」列）');
     else {
@@ -249,7 +254,7 @@ export function checkReport(text, { month, synthesis, design, digest, products }
   // 第五章：七个 SKU 都要表态
   const ch5 = get(CHAPTERS[4][0]);
   let mainSkus = [];
-  if (ch5) {
+  if (has(CHAPTERS[4][0])) {
     const t = findTable(ch5, ROLE_HEADER);
     if (!t) errors.push(`第五章缺七个 SKU 的角色表，表头应为：| ${ROLE_HEADER.join(' | ')} |`);
     else {
@@ -269,8 +274,8 @@ export function checkReport(text, { month, synthesis, design, digest, products }
 
   // 第六章：促销方案六件事，或明确不额外促销
   const ch6 = get(CHAPTERS[5][0]);
-  const plans = ch6 ? promoPlans(ch6) : [];
-  if (ch6) {
+  const plans = promoPlans(ch6);
+  if (has(CHAPTERS[5][0])) {
     const prose = ch6.split('\n').filter(l => !/^#/.test(l)).join('\n');
     if (!plans.length && !prose.includes('本月不额外促销')) errors.push('第六章既没有「#### 方案 N：标题」，也没在正文写明「本月不额外促销」及理由');
     for (const p of plans) {
@@ -283,7 +288,7 @@ export function checkReport(text, { month, synthesis, design, digest, products }
 
   // 第八章：3–5 项
   const ch8 = get(CHAPTERS[7][0]);
-  if (ch8) {
+  if (has(CHAPTERS[7][0])) {
     const rows = ch8.split('\n').filter(l => /^\|/.test(l.trim()) && !/^\|\s*-/.test(l.trim()));
     const n = Math.max(0, rows.length - 1);
     if (n < 3 || n > 5) errors.push(`第八章应是 3–5 项关键假设（表格行），现在 ${n} 项；其余未知放附录`);
@@ -301,9 +306,16 @@ export function checkReport(text, { month, synthesis, design, digest, products }
   if (design !== undefined) errors.push(...checkTrace(design, { synthesis, mainSkus, planTitles: plans.map(p => p.title) }));
   else warnings.push('没给 --design：没核对决策追溯表和候选卡核对表');
 
+  // 内部输入要是目标月的（Codex 审查 PR #81 ④）
+  const target = month || tm?.[1];
+  for (const [label, src, re] of [['事实底稿摘要', digest, /^# 事实底稿摘要 (\d{4}-\d{2})/m], ['产品与活动输入', products, /^# 产品与活动输入 · (\d{4}-\d{2})/m]]) {
+    const m = src !== undefined && src.match(re);
+    if (m && target && m[1] !== target) errors.push(`${label}是 ${m[1]} 的，目标月份是 ${target}：换成目标月的输入重跑`);
+  }
+
   // 报告等级不能高于输入能支撑的等级
   if (grade && digest !== undefined && products !== undefined) {
-    const allowed = allowedGrade({ digest, products, mainSkus });
+    const allowed = allowedGrade({ digest, products, mainSkus, month: target });
     const rank = g => GRADES.indexOf(g);
     if (rank(grade) > rank(allowed.grade)) errors.push(`报告等级写成「${grade}」，输入只够「${allowed.grade}」：${allowed.why.join('；')}`);
     else if (rank(grade) < rank(allowed.grade)) warnings.push(`输入够「${allowed.grade}」，报告写成「${grade}」：保守可以，但要在第一章说明为什么`);
