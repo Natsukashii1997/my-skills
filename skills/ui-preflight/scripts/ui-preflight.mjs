@@ -1,6 +1,6 @@
 // 界面交付前自查：用项目自己装的 Playwright（Chromium）在 1280、1440 两个桌面宽度打开每个页面，
 // 查横向溢出、同列对齐、文字截断与折行、0 高容器、正文挤成窄栏、默认字体漏出、字符当图标、文字对比度八项，
-// 出一张表（report.md / report.json）、一张只供参考的样式清单和整页截图、标注截图。
+// 出一张表（report.md / report.json）、一张只供参考的样式清单和整页截图、标注截图。报告头部写明这次排除了哪些元素。
 // 项目有 scripts/ui-baseline.mjs（起步骨架的基线截图）时，自查完直接调它的 compare，结果并进同一张表。
 //
 // 用法（在项目根目录跑，或用 --root 指过去）：
@@ -165,7 +165,8 @@ async function annotate(page, ids) {
 async function checkPage(browser, page0, width, run, plan) {
   const ctx = await browser.newContext({ viewport: { width, height: HEIGHT }, deviceScaleFactor: 1, reducedMotion: 'reduce', ...(plan.state ? { storageState: plan.state } : {}) });
   const page = await ctx.newPage();
-  const row = { page: page0.name, url: page0.url, width, error: null, checks: {}, screenshot: null, annotated: null };
+  // ignore：这次排除了哪些选择器、各匹配到几个元素，写进报告好核对；页面没查完时数不出来，matched 留 null
+  const row = { page: page0.name, url: page0.url, width, error: null, ignore: page0.ignore.map(selector => ({ selector, matched: null })), checks: {}, screenshot: null, annotated: null };
   try {
     if (plan.clock) await page.clock.setFixedTime(new Date(plan.clock));
     await page.goto(page0.url, { waitUntil: 'load', timeout: 30000 });
@@ -175,6 +176,7 @@ async function checkPage(browser, page0, width, run, plan) {
       if (opened) await settle(page, null);
       row.openedDetails = opened;
     }
+    row.ignore = await page.evaluate(sels => sels.map(selector => { try { return { selector, matched: document.querySelectorAll(selector).length }; } catch { return { selector, matched: null }; } }), page0.ignore);
     const res = await page.evaluate(buildPageScript({ ignore: page0.ignore }));
     row.pageOverflow = res.pageOverflow;
     row.styles = res.styles;
@@ -221,6 +223,18 @@ export function mark(c) {
 }
 const cell = s => String(s ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ');
 
+// 报告头部的「排除项」一行：每页取查完的那一行；各页一样就只写一遍，不一样分页列
+function ignoreLine(rows) {
+  const count = i => (i.matched == null ? '页面没查完，没数' : i.matched === 0 ? '没匹配到元素，检查选择器' : `${i.matched} 个元素`);
+  const fmt = list => (list?.length ? list.map(i => `\`${cell(i.selector)}\`（${count(i)}）`).join('、') : '无');
+  const byPage = new Map();
+  for (const r of rows) if (!byPage.has(r.page) || (byPage.get(r.page).error && !r.error)) byPage.set(r.page, r);
+  const parts = [...byPage].map(([page, r]) => [page, fmt(r.ignore)]);
+  if (parts.every(([, t]) => t === '无')) return '- 排除项：无';
+  const same = parts.every(([, t]) => t === parts[0][1]);
+  return `- 排除项（这些元素和它们里面的内容没有查）：${same ? parts[0][1] : parts.map(([page, t]) => `${cell(page)}：${t}`).join('；')}`;
+}
+
 export function renderReport(report) {
   const rel = p => (p ? `[${path.basename(p)}](${encodeURI(path.relative(report.run, p))})` : '—');
   const L = [];
@@ -228,6 +242,7 @@ export function renderReport(report) {
   L.push(`- 项目：\`${report.root}\``);
   L.push(`- 时间：${report.time}；宽度：${WIDTHS.join('、')}（高 ${HEIGHT}，只查电脑版）；引擎：Playwright Chromium（无头），截图只作自查参考，不单独当验收（G-11）`);
   L.push(`- 页面来源：${report.source}；证据目录：\`${report.run}\``);
+  L.push(ignoreLine(report.rows));
   const warns = report.rows.reduce((n, r) => n + (r.error ? 0 : CHECKS.reduce((m, [k]) => m + r.checks[k].hits.filter(h => h.level === 'warn').length, 0)), 0);
   L.push(`- 结论：**${report.pass ? '全部通过' : '有不通过'}**${warns ? `；另有 ${warns} 条 ⚠️ 提示，逐条处理：有意的设计确认后可写进 ignore；对比度不够的该改就改，这一项先只提示、不拦` : ''}`, '');
   L.push(`| 页面 | 宽度 | ${CHECKS.map(c => c[1]).join(' | ')} | 截图 |`);
