@@ -4,6 +4,14 @@
 
 还没过闸 2（没做 `skill-governance-audit` 审计，也没经常浩在 PR 上按准入批准），所以停在 0.x。
 
+## 0.4.0 - 2026-11-20
+
+复盘 P4、P5、P6 落到骨架（常浩 11-20 批：P4、P5「批」，P6「批（按改过的）」）。
+
+- 新增：`scripts/hooks/pre-push`（推送前跑 `check-rules.mjs` 和测试，不过就不推；慢项目把 `TESTS` 改成只跑快的部分）、`scripts/hooks/commit-msg` + `commit-msg.mjs`（标题以 fix 或「修」开头的提交，正文没有「同类：」一行就拒绝；「修改」「修订」和 Merge、Revert、fixup!、squash! 不查）；`tests/hooks.test.mjs` 单测加临时仓库真跑，样本含 agent-autoloop #280 的真实提交说明。SKILL.md 加第 7b 步装钩子，骨架 AGENTS「运行」加安装命令。`--no-verify` 由 agent-kit guard-git 拦（agent-kit#97）。
+- 改动（格式）：交接模板、PR 模板、OPERATIONS 的「验证」一行拆成「验证环境：真实 / 替身 / 无需」和「外部前提与实测」两行；`tests/handoff-format.test.mjs` 查这两行，验证环境须以真实、替身、无需或「未在真实环境验证」开头（全局第 11 节「替身上通过不算验收」）。已起步的项目手里是旧版测试，不受影响；要跟上就复制新版测试和模板。
+- 验证：骨架复制到空目录、填占位、`git init` 后 `node --test tests/*.test.mjs` 原样 `ℹ tests 11` / `ℹ pass 10` / `ℹ fail 0`（ui-baseline 没装 Playwright 跳过 1 条），`check-rules` 通过。验证环境：替身（临时仓库）；evals 没重跑（判定标准不涉及钩子，E1、E2 的计划清单会多出 `scripts/hooks/`，下次重跑时补进期望）。
+
 ## 0.3.2 - 2026-11-19
 
 - 改动：骨架 LESSONS「怎么升级」的状态词加「关闭」（坑本身已被代码消除，不再需要升级），写法「〔层级〕关闭（日期，依据）：证据」，同 agent-kit 全局 LESSONS（agent-kit#84，常浩 11-19 批）。只改措辞，`check-rules.mjs` 只查层级词开头，不用改；evals 判定标准不涉及这一句，没重跑。
