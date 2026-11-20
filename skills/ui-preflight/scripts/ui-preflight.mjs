@@ -1,5 +1,6 @@
 // 界面交付前自查：用项目自己装的 Playwright（Chromium）在 1280、1440 两个桌面宽度打开每个页面，
-// 查横向溢出、同列对齐、文字截断与折行、0 高容器四项，出一张表（report.md / report.json）和整页截图、标注截图。
+// 查横向溢出、同列对齐、文字截断与折行、0 高容器、正文挤成窄栏、默认字体漏出、字符当图标、文字对比度八项，
+// 出一张表（report.md / report.json）、一张只供参考的样式清单和整页截图、标注截图。
 // 项目有 scripts/ui-baseline.mjs（起步骨架的基线截图）时，自查完直接调它的 compare，结果并进同一张表。
 //
 // 用法（在项目根目录跑，或用 --root 指过去）：
@@ -33,7 +34,20 @@ export const CHECKS = [
   ['align', '同列对齐'],
   ['clip', '截断与折行'],
   ['zero', '0 高容器'],
+  ['squeeze', '正文挤成窄栏'],
+  ['font', '默认字体漏出'],
+  ['glyph', '字符当图标'],
+  ['contrast', '文字对比度'],
 ];
+// 样式清单的五行：只列出来给人看，不计入通过 / 不通过
+export const STYLE_ROWS = [
+  ['fontSizes', '字号', '字符'],
+  ['fontWeights', '字重', '字符'],
+  ['fontFamilies', '字体族', '字符'],
+  ['spacings', '间距', '处'],
+  ['radii', '圆角', '处'],
+];
+const STYLE_SHOW = 12;
 const SELF = fileURLToPath(import.meta.url);
 const home = p => p.replace(/^~(?=\/|$)/, os.homedir());
 
@@ -163,6 +177,7 @@ async function checkPage(browser, page0, width, run, plan) {
     }
     const res = await page.evaluate(buildPageScript({ ignore: page0.ignore }));
     row.pageOverflow = res.pageOverflow;
+    row.styles = res.styles;
     let n = 0;
     const numbered = [];
     for (const [key] of CHECKS) {
@@ -214,7 +229,7 @@ export function renderReport(report) {
   L.push(`- 时间：${report.time}；宽度：${WIDTHS.join('、')}（高 ${HEIGHT}，只查电脑版）；引擎：Playwright Chromium（无头），截图只作自查参考，不单独当验收（G-11）`);
   L.push(`- 页面来源：${report.source}；证据目录：\`${report.run}\``);
   const warns = report.rows.reduce((n, r) => n + (r.error ? 0 : CHECKS.reduce((m, [k]) => m + r.checks[k].hits.filter(h => h.level === 'warn').length, 0)), 0);
-  L.push(`- 结论：**${report.pass ? '全部通过' : '有不通过'}**${warns ? `；另有 ${warns} 条 ⚠️ 提示，逐条确认是有意的（确认后可写进 ignore）` : ''}`, '');
+  L.push(`- 结论：**${report.pass ? '全部通过' : '有不通过'}**${warns ? `；另有 ${warns} 条 ⚠️ 提示，逐条处理：有意的设计确认后可写进 ignore；对比度不够的该改就改，这一项先只提示、不拦` : ''}`, '');
   L.push(`| 页面 | 宽度 | ${CHECKS.map(c => c[1]).join(' | ')} | 截图 |`);
   L.push(`|---|---|${CHECKS.map(() => '---').join('|')}|---|`);
   for (const r of report.rows) {
@@ -238,6 +253,21 @@ export function renderReport(report) {
       L.push('| # | 检查项 | 级别 | 元素 | 文字 | 位置（x,y 宽×高） | 说明 |', '|---|---|---|---|---|---|---|');
       for (const [k, label] of CHECKS) for (const h of r.checks[k].hits) {
         L.push(`| ${h.n} | ${label} | ${h.level === 'warn' ? '⚠️ 提示' : '❌ 不通过'} | \`${cell(h.selector)}\` | ${cell(h.text)} | ${h.rect.x},${h.rect.y} ${h.rect.w}×${h.rect.h} | ${cell(h.detail)} |`);
+      }
+      L.push('');
+    }
+  }
+  const listed = report.rows.filter(r => !r.error && r.styles);
+  if (listed.length) {
+    L.push('## 样式清单（只供参考，不计入通过 / 不通过）', '');
+    L.push('本页实际用到的值，按用量从多到少排。种类多不等于有问题；用来看有没有相近的值（12px 和 12.5px）、有没有不在这次设计层级表和刻度里的值。', '');
+    for (const r of listed) {
+      L.push(`### ${r.page} · ${r.width}`, '');
+      L.push('| 项目 | 种类 | 取值（括号里是用量） |', '|---|---|---|');
+      for (const [k, label, unit] of STYLE_ROWS) {
+        const vals = r.styles[k] ?? [];
+        const shown = vals.slice(0, STYLE_SHOW).map(([v, n]) => `${cell(v)}（${n} ${unit}）`).join('、');
+        L.push(`| ${label} | ${vals.length} | ${shown || '—'}${vals.length > STYLE_SHOW ? `，另有 ${vals.length - STYLE_SHOW} 种` : ''} |`);
       }
       L.push('');
     }

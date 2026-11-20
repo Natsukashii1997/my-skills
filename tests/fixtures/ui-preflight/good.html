@@ -17,6 +17,9 @@
   .stack > div { width: 200px; height: 20px; background: #def; margin: 4px 0; }
   .stack > .indent { margin-left: 16px; }                                          /* 有意缩进，不算没对齐 */
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  button, input { font: inherit; }                                                 /* 控件继承页面字体 */
+  .big { font-size: 26px; color: #888; margin: 0; }                               /* 大字只要求 3，3.54 够 */
+  .col { width: 200px; margin: 0; }                                               /* 窄一点但每行够 4 个字 */
 </style></head>
 <body><main>
   <div class="wide">wide</div>
@@ -29,4 +32,10 @@
   <details><summary>完整数值</summary><table><thead><tr><th>月份</th><th class="num">占比</th></tr></thead>
     <tbody><tr><td>1 月</td><td class="num">12.50%</td></tr><tr><td>2 月</td><td class="num">8.25%</td></tr></tbody></table></details>
   <div class="stack"><div></div><div class="indent"></div><div></div></div>
+  <p class="big">大字标题</p>
+  <p class="col">这一段文字放在两百像素宽的栏里，会折成几行，但每行都够宽</p>
+  <button disabled style="color:#bbb">不可用</button>
+  <input value="订单号">
+  <p>下一步 → 审核</p>
+  <button style="width:140px"><span style="display:block">▶ 测试</span><small style="display:block">交给 Codex 跑</small></button>
 </main></body></html>

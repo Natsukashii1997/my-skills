@@ -16,6 +16,10 @@
   .zero { height: 0; overflow: hidden; }                                           /* 0 高把内容藏掉 */
   .stack > div { width: 200px; height: 20px; background: #def; margin: 4px 0; }
   .stack > .off { margin-left: 2px; }                                              /* 左边缘差 2px */
+  .narrow { width: 44px; margin: 0; }                                             /* 正文挤成窄栏：每行只放得下 3 个字 */
+  .gridrow { display: grid; grid-template-columns: 40px minmax(0, 1fr); margin: 0; } /* 文字直接放在 grid 里，掉进 40px 那一格 */
+  .low { color: #999; margin: 0; }                                                /* 灰字对比度 2.85 */
+  .grad { background: linear-gradient(#333, #999); color: #777; margin: 0; }      /* 渐变底：量不准 */
 </style></head>
 <body><main>
   <div class="wide" id="wide">wide</div>
@@ -29,4 +33,9 @@
   <details><summary>完整数值</summary><table id="t2"><thead><tr><th>月份</th><th>占比</th></tr></thead>
     <tbody><tr><td>1 月</td><td class="num">12.50%</td></tr><tr><td>2 月</td><td class="num">8.25%</td></tr></tbody></table></details>
   <div class="stack"><div></div><div class="off" id="off"></div><div></div></div>
+  <p class="narrow" id="narrow">会话认不准时不该自动猜，要先问清楚再继续</p>
+  <p class="gridrow" id="gridrow">区分送到了和审完了两种状态</p>
+  <p class="low" id="low">灰色小字对比度不够</p>
+  <p class="grad" id="grad">渐变底上的字量不准</p>
+  <div id="ctl"><button id="famb" style="font-size:14px;font-family:Georgia">换了字体的按钮</button> <button id="ico" style="font:inherit">✎</button> <span id="emo">🚀</span></div>
 </main></body></html>
