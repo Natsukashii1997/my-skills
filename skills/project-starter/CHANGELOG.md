@@ -4,6 +4,15 @@
 
 还没过闸 2（没做 `skill-governance-audit` 审计，也没经常浩在 PR 上按准入批准），所以停在 0.x。
 
+## 0.5.2 - 2026-11-20
+
+agent-autoloop L-07（常浩 11-20「L-07 同步到骨架和 8 个仓库」）。
+
+- 修复：`scripts/hooks/pre-push` 在跑检查前，把 git 放进 PATH 开头的 `$(git --exec-path)` 去掉，并 `unset GIT_EXEC_PATH`。git 运行钩子时会这样改环境，测试里 `command -v git` 找到的就成了 libexec 里的 git；测试换了 PATH 再跑它，它找不到 `git-upload-pack` 等子命令。agent-autoloop 第一次带钩子推送时，3 条安装测试只在钩子里失败，终端里全过。和 0.4.1 的 `GIT_DIR` 属同一类：钩子里的环境和终端不一样。
+- 新增测试：`tests/hooks.test.mjs`「测试命令找到的 git 和终端里一样」，旧钩子下这条失败。
+- 验证：骨架复制到空目录、填占位、`git init`，借 niuma-home 的 node_modules，`node --test tests/*.test.mjs` 原样 `ℹ tests 14` / `ℹ pass 14` / `ℹ fail 0`，`check-rules` 通过；换回 0.5.1 的 `pre-push` 后 `tests/hooks.test.mjs` 为 `ℹ pass 5` / `ℹ fail 1`。验证环境：替身（临时仓库）。
+- 已经装过骨架钩子的项目要各自补这一处（本次同步到装了骨架钩子的 11 个仓库，各自 PR）。
+
 ## 0.5.1 - 2026-11-20
 
 跨项目复盘补充报告新提案 N4（常浩 11-20「全部批」，改法选推荐：只扩写 G-39、加 PR 模板一栏，不往全局第 11 节加字）。
