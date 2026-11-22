@@ -34,8 +34,10 @@ NOT_USER = (
 BUSY_SECONDS = 180
 # 别的会话发来的消息：可能是转达的答复，也可能只是通知，不能当作常浩已经回复。
 PEER = "Another Claude session sent a message"
-# 回复过了这么久还没出新状态，多半是没被接走，要重新列出来。
+# 回复过了这么久会话还没动过，多半是没被接走，要重新列出来。
 STALE_REPLY_HOURS = 2
+# 驿窗转来的话外面包着一层固定说明，给人看时只留里面那句。
+RELAYED = re.compile(r"The \S+ plugin sent a message:\n(.*?)(?:\n\nThis is how Claude Code.*)?$", re.S)
 
 
 def texts(message):
@@ -55,49 +57,63 @@ def user_words(entry):
         return None
     if entry.get("turnOrigin") == "host_synthetic":
         return None
-    text = "\n".join(texts(entry.get("message", {}))).strip()
-    if not text or text.startswith(NOT_USER):
-        return None
-    return text
+    # 逐块看：宿主会在本人的话前面插一块提醒，只丢掉注入的那几块。
+    words = [text.strip() for text in texts(entry.get("message", {}))]
+    return "\n".join(text for text in words if text and not text.startswith(NOT_USER)) or None
 
 
-def read_log(path):
-    """返回（最后一次带「当前状态」的答复，其后的用户消息，读不了的行数）。"""
-    last, after, bad = None, [], 0
-    with open(path, errors="replace") as handle:
-        for line in handle:
-            try:
-                entry = json.loads(line)
-            except ValueError:
-                bad += 1
-                continue
-            if entry.get("isSidechain"):
-                continue
-            if entry.get("type") == "assistant":
-                for text in texts(entry.get("message", {})):
-                    # 取这条答复里最后一次出现的状态行：正文里可能先引用了别的会话的状态。
-                    marks = list(STATUS.finditer(text))
-                    if not marks:
-                        continue
-                    found = marks[-1]
-                    step = NEXT.search(text, found.end())
-                    last = {
-                        "at": entry.get("timestamp") or "",
-                        "word": found.group(1).strip(),
-                        "status": found.group(2).strip()[:300],
-                        "next": (step.group(1).strip() if step else "")[:400],
-                    }
-                    after = []
-            else:
-                words = user_words(entry)
-                if words and last:
-                    after.append(
-                        {
+def read_log(paths):
+    """按先后读同一会话的几份记录，返回（最后一次带「当前状态」的答复，其后的用户消息，读不了的行数）。
+
+    答复里的 moved：最后一句本人的话之后，会话动过没有（助手答复或工具调用）。
+    """
+    last, after, bad, moved, copied = None, [], 0, False, set()
+    for path in paths:
+        seen = set()
+        with open(path, errors="replace") as handle:
+            for line in handle:
+                try:
+                    entry = json.loads(line)
+                except ValueError:
+                    bad += 1
+                    continue
+                if entry.get("isSidechain"):
+                    continue
+                # 换记录文件时，旧文件的内容会原样抄进新文件：前面的文件读过的行不再算一次。
+                if entry.get("uuid") in copied:
+                    continue
+                seen.add(entry.get("uuid"))
+                if entry.get("type") == "assistant":
+                    # 宿主代写的答复（额度用尽之类）不算会话动过。
+                    moved = moved or entry.get("message", {}).get("model") != "<synthetic>"
+                    for text in texts(entry.get("message", {})):
+                        # 取这条答复里最后一次出现的状态行：正文里可能先引用了别的会话的状态。
+                        marks = list(STATUS.finditer(text))
+                        if not marks:
+                            continue
+                        found = marks[-1]
+                        step = NEXT.search(text, found.end())
+                        last = {
                             "at": entry.get("timestamp") or "",
-                            "text": words[:160],
-                            "peer": words.startswith(PEER),
+                            "word": found.group(1).strip(),
+                            "status": found.group(2).strip()[:300],
+                            "next": (step.group(1).strip() if step else "")[:400],
                         }
-                    )
+                        after, moved = [], False
+                else:
+                    words = user_words(entry)
+                    if words and last:
+                        after.append(
+                            {
+                                "at": entry.get("timestamp") or "",
+                                "text": words[:160],
+                                "peer": words.startswith(PEER),
+                            }
+                        )
+                        moved = moved and after[-1]["peer"]
+        copied |= seen - {None}
+    if last:
+        last["moved"] = moved
     return last, after, bad
 
 
@@ -167,22 +183,29 @@ def scan(meta_dir, projects_dir, days, now, only=None):
         if meta.get("isArchived"):
             skipped["已归档"] += 1
             continue
-        log = next(
+        current = next(
             (
-                logs[meta[key]]
+                meta[key]
                 for key in ("lastAssistantCliSessionId", "cliSessionId")
                 if meta.get(key) in logs
             ),
             None,
         )
-        if not log:
+        # 会话换过记录文件的，旧文件排在前面一起读：有的话只留在旧文件里。
+        older = [
+            name
+            for name in meta.get("priorCliSessionIds") or []
+            if isinstance(name, str) and name != current
+        ]
+        files = [logs[name] for name in older + [current] if name in logs]
+        if not files:
             skipped["找不到记录"] += 1
             continue
-        written = os.path.getmtime(log)
+        written = max(os.path.getmtime(file) for file in files)
         if now - written > days * 86400:
             skipped["太久没动"] += 1
             continue
-        last, after, bad = read_log(log)
+        last, after, bad = read_log(files)
         skipped["坏行"] += bad
         if not last:
             skipped["没写状态行"] += 1
@@ -203,6 +226,7 @@ def scan(meta_dir, projects_dir, days, now, only=None):
                 "stoppedDays": days_since(last["at"], now),
                 "busy": (now - written) < BUSY_SECONDS,
                 "userAfter": after[-2:],
+                "movedAfter": last["moved"],
                 "prs": [
                     {"n": pr.get("prNumber"), "state": pr.get("state")}
                     for pr in meta.get("prs") or []
@@ -221,7 +245,7 @@ def scan(meta_dir, projects_dir, days, now, only=None):
 def sift(rows, ignored, before, now=None):
     """去假：返回（留下的，筛掉的计数）。"""
     now = now or time.time()
-    dropped = {"已交给下游会话": 0, "你已回复、还在做": 0, "在忽略名单里": 0}
+    dropped = {"已交给下游会话": 0, "你已回复、还在做": 0, "你已回复、会话已接着做": 0, "在忽略名单里": 0}
     kept = []
     for row in rows:
         if row["word"] not in WAITING:
@@ -236,6 +260,10 @@ def sift(rows, ignored, before, now=None):
             waited = days_since(own[-1]["at"], now)
             if waited is None or waited * 24 < STALE_REPLY_HOURS:
                 dropped["你已回复、还在做"] += 1
+                continue
+            # 回的话被接走了：之后会话动过，而且没有再出「等你」的状态行（出了的话，上面这句回复就不在状态行之后了）。
+            if row.get("movedAfter"):
+                dropped["你已回复、会话已接着做"] += 1
                 continue
             row["replyUnanswered"] = True
         mark = ignored.get(row["id"])
@@ -285,6 +313,12 @@ def render(kept, dropped, skipped, total_waiting, last_list):
     return "\n".join(lines) + "\n"
 
 
+def quoted(text):
+    """他回的那句话：去掉驿窗的外壳，压成一行，取前 40 个字。"""
+    found = RELAYED.match(text)
+    return " ".join((found.group(1) if found else text).split())[:40]
+
+
 def flag_text(row):
     flags = []
     if row.get("prDone"):
@@ -292,7 +326,11 @@ def flag_text(row):
     if row["busy"]:
         flags.append("3 分钟内有写入，可能正在跑")
     if row.get("replyUnanswered"):
-        flags.append(f"你回过，但超过 {STALE_REPLY_HOURS} 小时没出新状态，可能没被接走")
+        reply = [item for item in row["userAfter"] if not item.get("peer")][-1]
+        flags.append(
+            f"你 {days_since(reply['at'], time.time())} 天前回了「{quoted(reply['text'])}」，"
+            "之后会话没有动过，可能没被接走"
+        )
     if row.get("peerAfter"):
         flags.append("之后收到过别的会话的消息")
     if row["prs"]:

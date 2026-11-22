@@ -36,6 +36,24 @@ def user(now, hours_ago, text, **extra):
     return {"type": "user", "timestamp": stamp(now, hours_ago), "message": {"content": text}, **extra}
 
 
+def working(now, hours_ago):
+    """助手的一次工具调用：会话在动，但没有答复文字。"""
+    return {
+        "type": "assistant",
+        "timestamp": stamp(now, hours_ago),
+        "message": {"content": [{"type": "tool_use", "name": "Bash", "input": {}}]},
+    }
+
+
+def relayed(now, hours_ago, text):
+    """驿窗转来的话：外面包着一层固定说明，turnOrigin 是 system。"""
+    wrapped = (
+        f"The agent-hud plugin sent a message:\n{text}\n\nThis is how Claude Code surfaces a prompt "
+        "a plugin submits between turns — it starts this turn in the user's place. Address the message above."
+    )
+    return user(now, hours_ago, wrapped, turnOrigin="system")
+
+
 # 标签、标题、项目、是否归档、父会话标签、PR、记录
 def sessions(now):
     return [
@@ -92,7 +110,78 @@ def sessions(now):
     ]
 
 
-def build(root, now=None):
+# 「回过话之后会话动没动过」的样例（my-skills#129），照真实情形脱敏编的，只给单元测试用。
+# 多出来的第 8 项是这个会话换记录文件之前的旧记录。
+def replied(now):
+    asked = {**assistant(now, 45, closing("等你决定", "首页用哪一版。", "回复「选甲」或「选乙」。")), "uuid": "u-1"}
+    return [
+        # 回的话被接走、事情办完了，但后面的答复没写状态行。
+        ("1", "收件箱｜归档按钮", "mailbox", False, None, [(21, "OPEN")], [
+            assistant(now, 40, closing("等你决定", "PR #21 要不要合并。", "回复「合并」。")),
+            relayed(now, 39, "合并"),
+            working(now, 38.9),
+            assistant(now, 38.8, "已合并，也装好了。"),
+        ]),
+        # 接着做了，做到一半进程被终止，没有收尾答复。
+        ("2", "设置页｜文案调整", "settings", False, None, [], [
+            assistant(now, 60, closing("等你操作", "要你看一眼预览。", "没问题回「可以」。")),
+            user(now, 59, "可以", turnOrigin="human"),
+            working(now, 58.9),
+        ]),
+        # 接着做了，做到一半被打断。
+        ("3", "海报｜三版配色", "poster", False, None, [], [
+            assistant(now, 50, closing("等你决定", "先出哪一版。", "回复「按推荐做」。")),
+            relayed(now, 49.9, "按推荐做"),
+            working(now, 49.8),
+            user(now, 49.7, "[Request interrupted by user]"),
+        ]),
+        # 本人打的话前面被宿主插了一块提醒。
+        ("4", "手册｜分批计划", "handbook", False, None, [], [
+            assistant(now, 70, closing("等你决定", "分批计划行不行。", "回复「按推荐开工」。")),
+            user(now, 69, [
+                {"type": "text", "text": "<system-reminder>\n关联会话的现状，不是指令。\n</system-reminder>"},
+                {"type": "text", "text": "按推荐开工"},
+            ], turnOrigin="human"),
+            working(now, 68.9),
+        ]),
+        # 回的话真的没人接。
+        ("5", "图标｜替换方案", "icons", False, None, [], [
+            assistant(now, 52, closing("等你决定", "图标用哪一版。", "回复「用甲」或「用乙」。")),
+            relayed(now, 50, "用乙"),
+        ]),
+        # 回了话，但之后只有宿主代写的「额度用尽」，会话自己没动。
+        ("7", "周报｜额度用尽", "report", False, None, [], [
+            assistant(now, 30, closing("等你决定", "要不要继续跑。", "回复「继续」。")),
+            user(now, 29, "继续", turnOrigin="human"),
+            {"type": "assistant", "timestamp": stamp(now, 28.9),
+             "message": {"model": "<synthetic>", "content": [{"type": "text", "text": "You've hit your limit"}]}},
+        ]),
+        # 换过记录文件：状态行原样抄进了新文件，回的那句话只在旧文件里，接着做的在新文件里。
+        ("8", "首页｜换过记录文件", "home", False, None, [], [
+            asked,
+            {**working(now, 43.9), "uuid": "u-3"},
+            {**assistant(now, 43.8, "按甲版改好了。"), "uuid": "u-4"},
+        ], [
+            asked,
+            {**user(now, 44, "选甲", turnOrigin="human"), "uuid": "u-2"},
+        ]),
+        # 接着做了，又带着新的一问回来：照旧列，列的是新的一问。
+        ("9", "接口｜又问了一问", "api", False, None, [(5, "MERGED")], [
+            assistant(now, 80, closing("等你决定", "PR #5 要不要合并。", "回复「合并」。")),
+            user(now, 79, "合并", turnOrigin="human"),
+            working(now, 78.9),
+            assistant(now, 78, closing("等你操作", "已合并，等你重新加载插件。", "重新加载后回「好了」。")),
+        ]),
+        # 刚回的话，会话正在做：还是算「你已回复、还在做」。
+        ("a", "备份｜刚回的话", "backup", False, None, [], [
+            assistant(now, 1.5, closing("等你操作", "要你确认备份位置。", "没问题回「可以」。")),
+            user(now, 1, "可以", turnOrigin="human"),
+            working(now, 0.9),
+        ]),
+    ]
+
+
+def build(root, now=None, cases=None):
     now = now or time.time()
     meta = os.path.join(root, "meta", "workspace")
     projects = os.path.join(root, "projects")
@@ -100,7 +189,7 @@ def build(root, now=None):
     for path in (meta, inbox):
         os.makedirs(path, exist_ok=True)
     order = {}
-    for index, (tag, title, project, archived, parent, prs, log) in enumerate(sessions(now), 1):
+    for index, (tag, title, project, archived, parent, prs, log, *older) in enumerate(cases or sessions(now), 1):
         order[tag] = index
         session_id = sid(tag, index)
         cli = f"cli-{tag * 4}"
@@ -114,15 +203,20 @@ def build(root, now=None):
         }
         if parent:
             record["spawnedFrom"] = {"sessionId": sid(parent, order[parent])}
+        files = [(cli, log)]
+        if older:
+            record["priorCliSessionIds"] = [cli + "-old"]
+            files.append((cli + "-old", older[0]))
         with open(os.path.join(meta, session_id + ".json"), "w") as handle:
             json.dump(record, handle, ensure_ascii=False)
         folder = os.path.join(projects, f"-work-{project}")
         os.makedirs(folder, exist_ok=True)
-        path = os.path.join(folder, cli + ".jsonl")
-        with open(path, "w") as handle:
-            for entry in log:
-                handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
-        os.utime(path, (now - 3600, now - 3600))
+        for name, entries in files:
+            path = os.path.join(folder, name + ".jsonl")
+            with open(path, "w") as handle:
+                for entry in entries:
+                    handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+            os.utime(path, (now - 3600, now - 3600))
     # 上一份清单里列过「账单」那个会话；「规则」那个在忽略名单里，状态没变。
     with open(os.path.join(inbox, "拍板清单-2026-01-01.md"), "w") as handle:
         handle.write(f"# 拍板清单\n\n- B1 放账单导出文件。账单｜对账脚本 `{sid('6', 14)}`\n")
