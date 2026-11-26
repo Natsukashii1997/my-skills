@@ -21,7 +21,7 @@ metadata:
 
 1. 判断要写的是哪一类：群通知、给领导的汇报、进展同步、需求反馈汇总、飞书卡片。
 2. 找业务目录：常浩点名的项目，或当前会话的目录。读它的 `AGENTS.md`，再读 `samples/README.md`。企微侧边栏、企微工作台的业务目录是 `~/企微数字人`（11-25 前叫 `~/销售数字人`）。
-3. 下面两类交给亚古兽的脚本出，本 skill 到此为止：销售侧边栏的**需求反馈日报**和**周三项目推进进度卡片**。版式由 `~/.hermes/profiles/agumon/scripts/sidebar_reports.py` 固定（`feedback` / `progress` 子命令，用法见 digital-twin `hermes/skills/sales-sidebar/references/`）。告诉常浩「这类由亚古兽出」，他要你现在出就照那份说明调脚本，不手拼消息。
+3. 下面两类交给亚古兽的脚本出，本 skill 到此为止：销售侧边栏的**需求反馈日报**和**周三项目推进进度卡片**。版式由 `~/.hermes/profiles/agumon/scripts/sidebar_reports.py` 固定（`feedback` / `progress` 子命令，用法见 digital-twin `hermes/skills/sales-sidebar/references/`）。告诉常浩「这类由亚古兽出」，他要你现在出就照那份说明调脚本，不手拼消息。侧边栏功能通知没有脚本，照常由本 skill 写（亚古兽在飞书里出的也照同一条 11-12 样例）。
 
 **做完的标志**：说得出类型和要对照的样例文件名；没有同类样例的，说「无同类样例，按写法要求写，定稿后补成样例」。
 
