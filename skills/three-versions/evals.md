@@ -41,3 +41,7 @@
 
 | 日期 | 版本 | 执行者 | E1 | E2 | E3 | 结论 | 记录 |
 |---|---|---|---|---|---|---|---|
+| 2026-11-27 | 1.0.0（第一轮，模板改前） | 每条新开一个子 agent（Opus 5.5） | 产出完成 | 产出完成，指出模板带 doctype 和 Artifact 页面规范冲突 | 产出完成 | 模板有缺陷，改后整组重跑，未评分 | `~/Library/Application Support/my-skills/evidence/2026-11-27-three-versions/blind/` |
+| 2026-11-27 | 1.0.0（重跑） | 每条新开一个子 agent（Opus 5.5，不真发布 Artifact），只给 skill 目录（含 ui-preflight、ui-styles）和本条请求、材料；另开子 agent 按判定标准打分 | 过 | 过 | 过 | 全过 | `~/Library/Application Support/my-skills/evidence/2026-11-27-three-versions/blind2/` |
+
+评分方记的弱点（不影响判定）：E1 给已定的阶段标签加了小圆点、时间票时间字号 12→13px，没先问（盲测后第 1 步已写明「尺寸、字号和装饰也不加不改」，未重跑）；`check.mjs` 只读静态 HTML，画板内容由脚本生成时「画板有内容」计数偏少；E2 依赖 Google Fonts，有一轮 ui-preflight 打开页面超时，重跑通过；E3 没写出规则来源（常浩 11-25）。
