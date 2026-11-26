@@ -1,7 +1,7 @@
 // 网页项目的基线截图：用户验收界面的当轮拍基线，之后每次改界面都和基线逐页比，防止已定的界面被一点点改偏。
 // 用 Playwright 自带的 toHaveScreenshot 比较，不另装图像库：每张截图先等页面加载完、字体加载完，再连拍到前后两张一样才算画完
 // （全局坑 G-11）；CSS 动画和过渡停在初始状态，光标隐藏；脚本驱动的动画、时钟这类停不住的区域用 mask 遮掉。
-// 先装：npm i -D @playwright/test && npx playwright install chromium（@playwright/test 已在 check-rules.mjs 的 ALLOWED_DEPS 里）。
+// 先装：npm i -D @playwright/test && npx playwright install chromium（@playwright/test 已在 scripts/hooks.json 的 checkRules.allowedDeps 里）。
 // 页面清单 docs/design/pages.json：
 //   { "evidence": "~/Library/Application Support/<项目>/evidence",
 //     "pages": [ { "name": "home", "url": "http://127.0.0.1:3000/", "widths": [1280, 1440], "mask": [".clock"] } ] }

@@ -4,6 +4,17 @@
 
 还没过闸 2（没做 `skill-governance-audit` 审计，也没经常浩在 PR 上按准入批准），所以停在 0.x。
 
+## 0.6.0 - 2026-11-27
+
+agent-kit 深度梳理批阅单第 8 项（常浩 2026-11-27「1～11 都按推荐」，Natsukashii1997/agent-kit#133）。
+
+- 改动（结构）：钩子（pre-push、commit-msg）和通用规则检查的实现搬到 agent-kit `git-hooks/`，只留那一份，由 agent-kit `node tools/install.mjs --apply` 装进本机运行目录。骨架的 `scripts/hooks/pre-push`、`commit-msg` 换成几行转发：找到运行目录里的实现就 exec，找不到就拦下推送和提交并提示装法。改钩子去 agent-kit 改，装机后所有转发的项目一起生效，不用再按 diff 手工带。
+- 新增：`scripts/hooks.json` 模板。各项目的差异（推送前跑的测试 `prePushTests`、规则检查扫的目录 `checkRules.scan`、依赖白名单 `checkRules.allowedDeps`、关掉的规则 `checkRules.off`）只写在这里，写法见 agent-kit `git-hooks/config.mjs`；拼错的键直接报错。
+- 删除：`scripts/check-rules.mjs`、`scripts/hooks/commit-msg.mjs`、`tests/check-rules.test.mjs`、`tests/hooks.test.mjs`（实现和测试都在 agent-kit）。agent-autoloop 对 G-08 的改进（同文件赋过值的变量不报）已回流到 agent-kit 那一份。
+- 跟着改：`SKILL.md` 第 6、7、7b 步和「骨架怎么进化」；`AGENTS.md`「运行」「结构」「规则」；`CURRENT.md`、`docs/LESSONS.md`、`docs/templates/handoff.md`、`scripts/ui-baseline.mjs` 里指向 `check-rules.mjs` 的地方；`evals.md` 判定标准里的 `ALLOWED_DEPS`、`SCAN`。
+- 版本：骨架文件格式变了（已经起步的项目对不上），按规则该升主版本；还没过闸 2，停在 0.x，升次版本。
+- 已起步的项目怎么换：各项目单独 PR（agent-autoloop、digiworld、niuma-home、ui-system、postpane、digital-twin；冻结项目不换）。
+
 ## 0.5.2 - 2026-11-20
 
 agent-autoloop L-07（常浩 11-20「L-07 同步到骨架和 8 个仓库」）。
