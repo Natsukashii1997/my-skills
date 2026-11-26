@@ -4,6 +4,7 @@
 //   2. 每版产品界面：借 ui-preflight 的脚本，按 #bare-a / #bare-b / #bare-c 单独打开画板，在 1280、1440 查八项；
 //   3. 外壳：借 ui-styles 的 shot.mjs，每版在 1440 和 390 宽各截一张整页图，查横向溢出和页面报错。
 // 用法：node check.mjs <三版页面.html> --out <证据目录>
+//   页面按 Artifact 的写法从 <title> 写起；脚本查之前照发布时的样子包一层 doctype 和 head（存成证据目录里的 wrapped/<原文件名>）。
 //   Playwright 从 UI_PREFLIGHT_PLAYWRIGHT 指的目录解析；没设就在 ~/Documents/ChatGPT/个人/work/*/ 里找第一个装了 @playwright/test 的项目借用。
 // 退出码：0 全部通过；1 有不通过；2 用法或环境错误。证据目录不能在 /tmp（全局坑 G-01）。
 import { spawnSync } from 'node:child_process';
@@ -56,7 +57,14 @@ fs.mkdirSync(outDir, { recursive: true });
 // 2. 每版产品界面：ui-preflight（1280、1440）
 const pw = findPlaywright();
 if (!pw) die('找不到 Playwright：设 UI_PREFLIGHT_PLAYWRIGHT=<装了 @playwright/test 的项目目录>');
-const url = pathToFileURL(file).href;
+// Artifact 发布时会给页面包上 doctype 和 head；这里照样包一层再查，不然浏览器按怪异模式渲染，查出来的不是线上的样子
+fs.mkdirSync(path.join(outDir, 'wrapped'), { recursive: true });
+const wrapped = path.join(outDir, 'wrapped', path.basename(file));
+fs.writeFileSync(wrapped, /^\s*<!doctype/i.test(html) ? html
+  : '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
+    + '<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>'
+    + '</head><body>' + html + '</body></html>');
+const url = pathToFileURL(wrapped).href;
 const pre = spawnSync(process.execPath, [PREFLIGHT,
   '--url', `${url}#bare-a`, '--name', 'A', '--url', `${url}#bare-b`, '--name', 'B', '--url', `${url}#bare-c`, '--name', 'C',
   '--out', outDir, '--no-baseline'], { encoding: 'utf8', env: { ...process.env, UI_PREFLIGHT_PLAYWRIGHT: pw }, cwd: path.dirname(file) });
@@ -68,7 +76,7 @@ add('三版产品界面 ui-preflight（1280、1440）', pre.status === 0, pre.st
 // 3. 外壳：shot.mjs（1440、390），每版各截一次
 const shotDir = path.join(outDir, 'shell');
 for (const v of ['a', 'b', 'c']) {
-  const r = spawnSync(process.execPath, [SHOT, file, shotDir, '--widths', '1440,390', '--hash', v], { encoding: 'utf8' });
+  const r = spawnSync(process.execPath, [SHOT, wrapped, shotDir, '--widths', '1440,390', '--hash', v], { encoding: 'utf8' });
   const lines = (r.stdout || '').trim().split('\n').filter((l) => l.startsWith('{'));
   const bad = lines.map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter((j) => j && (j.overflow || j.errors));
   add(`外壳 · 方案 ${v.toUpperCase()}（1440、390）`, r.status === 0, r.status === 0 ? '无横向溢出、无报错' : (bad.map((j) => JSON.stringify(j)).join('；') || (r.stderr || '').trim().split('\n').pop()));

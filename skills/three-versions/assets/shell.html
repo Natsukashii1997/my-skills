@@ -1,9 +1,6 @@
-<!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{页面名}}三版方案</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<!-- Artifact 发布时会自动包上 doctype、head、body，这里直接从 title 和 style 写起 -->
 <style>
 /* ================= 外壳（只管切换和说明，在手机上要能读） ================= */
 :root{
@@ -14,15 +11,14 @@
   --s:1; /* 画板缩放比例，脚本按容器宽度算 */
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#15171B; --card:#1E2127; --soft:#262A31; --line:#343944; --ink:#ECEEF2; --mut:#A3AAB6; --acc:#7FA8E8;
+  --bg:#15171B; --card:#1E2127; --soft:#262A31; --line:#343944; --ink:#ECEEF2; --mut:#A3AAB6; --acc:#7FA8E8; color-scheme:dark;
 }}
-:root[data-theme="dark"]{--bg:#15171B; --card:#1E2127; --soft:#262A31; --line:#343944; --ink:#ECEEF2; --mut:#A3AAB6; --acc:#7FA8E8}
+:root[data-theme="dark"]{--bg:#15171B; --card:#1E2127; --soft:#262A31; --line:#343944; --ink:#ECEEF2; --mut:#A3AAB6; --acc:#7FA8E8; color-scheme:dark}
 *{box-sizing:border-box}
-html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font-family:var(--f);font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 button{font:inherit;color:inherit}
-.wrap{max-width:1520px;margin:0 auto;padding:0 16px}
-.hd{padding:40px 0 0}
+.wrap{max-width:1520px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.hd{padding-block:40px 0}
 .hd h1{margin:0;font-size:clamp(26px,4vw,40px);line-height:1.2;font-weight:800;letter-spacing:-.02em}
 .hd p{margin:10px 0 0;max-width:760px;color:var(--mut)}
 .vsw{margin-top:20px;display:flex;flex-wrap:wrap;gap:8px}
@@ -37,7 +33,7 @@ button{font:inherit;color:inherit}
 .win>.bar span{flex:1;min-width:0;margin-left:8px;font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .zoomb{border:0;cursor:pointer;background:var(--soft);border-radius:999px;padding:2px 12px;font-size:12px;font-weight:700;white-space:nowrap}
 .cap{margin-top:10px;font-size:13px;color:var(--mut)}
-.notes{padding:40px 0 64px}
+.notes{padding-block:40px 64px}
 .notes h2{margin:0;font-size:22px}
 .nt{margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
 .nt article{background:var(--card);border-radius:12px;box-shadow:inset 0 0 0 1px var(--line);padding:16px 18px}
@@ -54,7 +50,7 @@ button{font:inherit;color:inherit}
 
 /* 只看画板（自查脚本用 #bare-a 打开）：外壳全藏，画板不缩放、按视口宽度铺开 */
 .bare .hd,.bare .notes,.bare .win>.bar,.bare .cap{display:none}
-.bare .wrap{max-width:none;padding:0}
+.bare .wrap{max-width:none;padding-left:0;padding-right:0}
 .bare .stage{margin:0}
 .bare .win{border-radius:0;box-shadow:none;overflow:visible}
 .bare .fit{height:auto;overflow:visible}
@@ -67,7 +63,6 @@ button{font:inherit;color:inherit}
 #va button,#vb button,#vc button,#va input,#vb input,#vc input{font:inherit;color:inherit}
 </style>
 </head>
-<body>
 <div class="wrap">
   <header class="hd">
     <h1>{{页面名}}：三版方案</h1>
@@ -133,5 +128,3 @@ button{font:inherit;color:inherit}
   fromHash();
 })();
 </script>
-</body>
-</html>
