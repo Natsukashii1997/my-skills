@@ -29,3 +29,5 @@ matt-flow	~/.agents/skills
 decision-inbox	~/.claude/skills
 ui-preflight	~/.claude/skills
 ui-preflight	~/.agents/skills
+business-notice	~/.claude/skills
+business-notice	~/.agents/skills

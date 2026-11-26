@@ -8,7 +8,7 @@ import { loadSkills } from '../scripts/monthly-health.mjs';
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 // AGENTS.md：此次修改的存量 Skill 必须同时补版本、CHANGELOG 和 evals。
-for (const name of ['skill-governance-audit', 'vault-backup']) {
+for (const name of ['skill-governance-audit', 'vault-backup', 'business-notice']) {
   test(`${name} 的版本、修订记录和评估材料符合生命周期约定`, () => {
     const entry = loadSkills(REPO).find((skill) => skill.name === name);
     assert.match(entry.version ?? '', /^\d+\.\d+\.\d+$/);

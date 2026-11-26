@@ -27,6 +27,7 @@
 | [matt-flow](skills/matt-flow/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「Matt 流程向导」：常浩要做软件、改代码，或开发流程进行中问「下一步呢」时自动用；先判 0–3 档（顺手改 / 轻量 / 标准 / 大雾）或认出半路入口，按 Matt Pocock 技能的顺序带着走，每站把「下一步回什么」写进收尾三项（只能手动的技能直接给出要回的命令）；分支、issue、PR 照 agent-kit 工程流程，交接、送 GPT、对外写入按常浩规则；Claude、Codex 通用 |
 | [decision-inbox](skills/decision-inbox/SKILL.md) | `~/.claude/skills` | 「拍板清单」：把 Claude 桌面应用里停下来等常浩的会话收成一张编号清单（要定什么、推荐、回这句话），常浩一条消息批量回，再把原话逐条转给对应会话并回读；脚本先筛掉已交接、已回复、已忽略的假等待，对外动作和已定内容单独问，转达前复核、问题变了就作废；只在 Claude 桌面应用里用 |
 | [ui-preflight](skills/ui-preflight/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「界面交付前自查」：任何产品界面交付前跑一遍；脚本在 1280、1440 查横向溢出、同列对齐、截断与折行、0 高容器、正文挤成窄栏、默认字体漏出、字符当图标、文字对比度，出通过 / 不通过表、样式清单和标注截图，项目有基线截图时一起调 `ui-baseline.mjs compare`；再按清单看真实与极端数据、正式运行引擎（Safari / WKWebView）、同一写法的其他出现处和相邻状态；只做电脑版 |
+| [business-notice](skills/business-notice/SKILL.md) | `~/.claude/skills`、`~/.agents/skills` | 「业务通知」：写飞书群通知、领导汇报、进展同步、反馈汇总、卡片；先读业务目录 `samples/` 里常浩确认过的同类样例学结构和调性，按他原话里的写法要求自查，私发他预览，他明确说发才对外发，定稿后存成新样例；需求反馈日报和周三进度卡片转交亚古兽脚本 |
 
 链接关系以 [links.tsv](links.tsv) 为准。
 
