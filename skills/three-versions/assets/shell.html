@@ -1,0 +1,130 @@
+<title>{{页面名}}三版方案</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<!-- Artifact 发布时会自动包上 doctype、head、body，这里直接从 title 和 style 写起 -->
+<style>
+/* ================= 外壳（只管切换和说明，在手机上要能读） ================= */
+:root{
+  --bg:#F4F5F7; --card:#FFFFFF; --soft:#ECEEF1; --line:#DDE1E7;
+  --ink:#1F232B; --mut:#5D6470; --acc:#2F67B8;
+  --sh:0 24px 60px -28px rgba(30,40,60,.28),0 2px 6px rgba(30,40,60,.06);
+  --f:"PingFang SC","Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;
+  --s:1; /* 画板缩放比例，脚本按容器宽度算 */
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#15171B; --card:#1E2127; --soft:#262A31; --line:#343944; --ink:#ECEEF2; --mut:#A3AAB6; --acc:#7FA8E8; color-scheme:dark;
+}}
+:root[data-theme="dark"]{--bg:#15171B; --card:#1E2127; --soft:#262A31; --line:#343944; --ink:#ECEEF2; --mut:#A3AAB6; --acc:#7FA8E8; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f);font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button{font:inherit;color:inherit}
+.wrap{max-width:1520px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.hd{padding-block:40px 0}
+.hd h1{margin:0;font-size:clamp(26px,4vw,40px);line-height:1.2;font-weight:800;letter-spacing:-.02em}
+.hd p{margin:10px 0 0;max-width:760px;color:var(--mut)}
+.vsw{margin-top:20px;display:flex;flex-wrap:wrap;gap:8px}
+.vsw button{border:0;cursor:pointer;text-align:left;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);border-radius:12px;padding:8px 16px 9px;min-width:0;max-width:100%}
+.vsw button[aria-selected="true"]{box-shadow:inset 0 0 0 2px var(--ink)}
+.vsw b{display:block;font-size:15px;line-height:1.35}
+.vsw small{display:block;font-size:12px;color:var(--mut);line-height:1.4}
+.stage{margin-top:20px}
+.win{background:var(--card);border-radius:14px;box-shadow:var(--sh);overflow:hidden}
+.win>.bar{display:flex;align-items:center;gap:7px;height:38px;padding:0 12px;border-bottom:1px solid var(--line)}
+.win>.bar i{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.win>.bar span{flex:1;min-width:0;margin-left:8px;font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zoomb{border:0;cursor:pointer;background:var(--soft);border-radius:999px;padding:2px 12px;font-size:12px;font-weight:700;white-space:nowrap}
+.cap{margin-top:10px;font-size:13px;color:var(--mut)}
+.notes{padding-block:40px 64px}
+.notes h2{margin:0;font-size:22px}
+.nt{margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.nt article{background:var(--card);border-radius:12px;box-shadow:inset 0 0 0 1px var(--line);padding:16px 18px}
+.nt h3{margin:0;font-size:16px}
+.nt p{margin:6px 0 0;font-size:14px;color:var(--mut)}
+.nt .rec{box-shadow:inset 0 0 0 2px var(--acc)}
+
+/* ================= 画板：产品界面按电脑版画，固定 1440 宽，整体等比缩放 ================= */
+.fit{position:relative;overflow:hidden;height:calc(var(--h,900px) * var(--s))}
+.fit.full{overflow-x:auto;height:auto}
+.board{width:1440px;height:var(--h,900px);transform:scale(var(--s));transform-origin:0 0;overflow:hidden;position:relative}
+.fit.full .board{transform:none}
+.board[hidden]{display:none}
+
+/* 只看画板（自查脚本用 #bare-a 打开）：外壳全藏，画板不缩放、按视口宽度铺开 */
+.bare .hd,.bare .notes,.bare .win>.bar,.bare .cap{display:none}
+.bare .wrap{max-width:none;padding-left:0;padding-right:0}
+.bare .stage{margin:0}
+.bare .win{border-radius:0;box-shadow:none;overflow:visible}
+.bare .fit{height:auto;overflow:visible}
+.bare .board{transform:none;width:100%;height:auto;min-height:var(--h,900px)} /* 按视口宽度铺开：1280 宽时产品界面也要完整 */
+
+/* ================= 各版自己的样式：一律写在 #va / #vb / #vc 下面，互不串 ================= */
+#va{background:#F6F7F9;color:#1F232B;font-family:var(--f)}
+#vb{background:#F6F7F9;color:#1F232B;font-family:var(--f)}
+#vc{background:#F6F7F9;color:#1F232B;font-family:var(--f)}
+#va button,#vb button,#vc button,#va input,#vb input,#vc input{font:inherit;color:inherit}
+</style>
+</head>
+<div class="wrap">
+  <header class="hd">
+    <h1>{{页面名}}：三版方案</h1>
+    <p>{{一句话：这次要解决什么问题、用的是哪种风格（ui-styles 风格名或项目已定风格）}}</p>
+    <div class="vsw" role="tablist" aria-label="切换方案">
+      <button role="tab" data-v="a" aria-selected="true"><b>A {{名字}}</b><small>{{一句话思路}}</small></button>
+      <button role="tab" data-v="b" aria-selected="false"><b>B {{名字}}</b><small>{{一句话思路}}</small></button>
+      <button role="tab" data-v="c" aria-selected="false"><b>C {{名字}}</b><small>{{一句话思路}}</small></button>
+    </div>
+  </header>
+
+  <section class="stage">
+    <div class="win">
+      <div class="bar"><i></i><i></i><i></i><span>{{产品名 / 页面路径}}</span><button class="zoomb" id="zoom" type="button">按 100% 查看</button></div>
+      <div class="fit" id="fit">
+        <div class="board" id="va" data-v="a"><!-- 方案 A 的产品界面，按 1440 宽画 --></div>
+        <div class="board" id="vb" data-v="b" hidden><!-- 方案 B --></div>
+        <div class="board" id="vc" data-v="c" hidden><!-- 方案 C --></div>
+      </div>
+    </div>
+    <p class="cap">按 1440 × 900 设计的电脑版界面，窗口窄时整体等比缩小；点「按 100% 查看」看原尺寸。键盘 1 / 2 / 3 切换方案。</p>
+  </section>
+
+  <section class="notes">
+    <h2>三版各自的取舍</h2>
+    <div class="nt">
+      <article><h3>A {{名字}}</h3><p>{{得到什么、放弃什么}}</p></article>
+      <article class="rec"><h3>B {{名字}}（推荐）</h3><p>{{得到什么、放弃什么；为什么推荐}}</p></article>
+      <article><h3>C {{名字}}</h3><p>{{得到什么、放弃什么}}</p></article>
+    </div>
+  </section>
+</div>
+<script>
+(function(){
+  var root=document.documentElement, fit=document.getElementById("fit"), zoom=document.getElementById("zoom");
+  var tabs=[].slice.call(document.querySelectorAll(".vsw [data-v]")), boards=[].slice.call(document.querySelectorAll(".board"));
+  var full=false, cur="a";
+  function boardH(b){ return parseInt(b.getAttribute("data-h")||"900",10); }
+  function scale(){
+    var b=document.getElementById("v"+cur);
+    fit.style.setProperty("--h",boardH(b)+"px");
+    var s=(full||root.classList.contains("bare"))?1:Math.min(1,fit.clientWidth/1440);
+    root.style.setProperty("--s",s.toFixed(4));
+  }
+  function show(v){
+    if(!document.getElementById("v"+v)) return;
+    cur=v;
+    tabs.forEach(function(t){t.setAttribute("aria-selected",String(t.dataset.v===v));});
+    boards.forEach(function(b){b.hidden=b.dataset.v!==v;});
+    scale();
+  }
+  function fromHash(){
+    var h=location.hash.replace("#","");
+    var m=/^bare-([abc])$/.exec(h);
+    root.classList.toggle("bare",!!m);
+    show(m?m[1]:(/^[abc]$/.test(h)?h:cur));
+  }
+  tabs.forEach(function(t){t.addEventListener("click",function(){ show(t.dataset.v); try{history.replaceState(null,"","#"+t.dataset.v);}catch(e){} });});
+  zoom.addEventListener("click",function(){ full=!full; fit.classList.toggle("full",full); zoom.textContent=full?"适应窗口":"按 100% 查看"; scale(); });
+  document.addEventListener("keydown",function(e){ var k={"1":"a","2":"b","3":"c"}[e.key]; if(k&&!e.metaKey&&!e.ctrlKey&&!/input|textarea/i.test(e.target.tagName)) show(k); });
+  window.addEventListener("resize",scale);
+  window.addEventListener("hashchange",fromHash);
+  fromHash();
+})();
+</script>

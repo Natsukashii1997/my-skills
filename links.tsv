@@ -31,3 +31,5 @@ ui-preflight	~/.claude/skills
 ui-preflight	~/.agents/skills
 business-notice	~/.claude/skills
 business-notice	~/.agents/skills
+three-versions	~/.claude/skills
+three-versions	~/.agents/skills
