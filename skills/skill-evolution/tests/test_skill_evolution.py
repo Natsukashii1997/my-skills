@@ -9,6 +9,7 @@ import io
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -72,7 +73,7 @@ class ScanCase(Base):
 
     def test_ids_unique_and_ordered(self):
         ids = [s["id"] for s in self.result["sessions"]]
-        self.assertEqual(ids, ["S%02d" % n for n in range(1, 11)])
+        self.assertEqual(ids, ["H%02d" % n for n in range(1, 11)])
 
     def test_session_summary_fields(self):
         push = self.by_sid["push-3"]
@@ -110,8 +111,20 @@ class ScanCase(Base):
         self.assertTrue(ui["own"])
         self.assertEqual(self.by_sid["page-1"]["skills"], ["ui-styles"])
 
+    def test_skill_call_and_later_lines_are_cited(self):
+        page = self.by_sid["page-1"]
+        self.assertEqual(page["skill_calls"], [{"name": "ui-styles", "line": 2, "how": "Skill 工具"}])
+        self.assertIn("skill：ui-styles×1（行 2）", self.markdown)
+        self.assertIn("「不对，说了用细线风格，你怎么用了柔光」（行 %d）" % page["later"][0]["line"], self.markdown)
+        self.assertIn("会话编号是 H01、H02", self.markdown)
+
+    def test_fixture_excel_aura_description_has_no_trigger_word(self):
+        # 样例的用意是「说明里没有这类说法，所以没触发」；说明里一旦有「美化」，该提的就变成转规则（盲测第 1 轮）
+        self.assertNotIn("美化", make_fixture.SKILLS["excel-aura"])
+
     def test_unused_own_skills(self):
         self.assertEqual(self.result["unused_own"], ["excel-aura", "idle-skill"])
+        self.assertEqual(self.result["built_after_window"], [])  # 样例目录不在 git 里，查不到建立时间就都算窗口前已有
         self.assertIn("`excel-aura`、`idle-skill`", self.markdown)
 
     def test_output_is_private(self):
@@ -150,6 +163,38 @@ class ZstGapCase(Base):
         self.assertEqual(self.result["coverage"]["codex_zst_unread"], 1)
         self.assertIn("codex_zst_unread", self.result["gaps"])
         self.assertIn("codex_zst_unread=1", self.markdown)
+
+
+class BuiltAfterWindowCase(unittest.TestCase):
+    def test_skill_created_after_window_is_listed_separately(self):
+        tmp = Path(tempfile.mkdtemp(prefix="skill-evolution-git-"))
+        try:
+            root = make_fixture.build(tmp / "week")
+            skills = root / "skills"
+
+            def git(*argv, when=None):
+                env = dict(os.environ)
+                if when:
+                    env.update(GIT_AUTHOR_DATE=when, GIT_COMMITTER_DATE=when)
+                subprocess.run(["git", "-C", str(skills), "-c", "user.name=t", "-c", "user.email=t@example.com"] + list(argv),
+                               check=True, capture_output=True, env=env)
+
+            git("init", "-q")
+            git("add", "excel-aura", "ui-styles", "matt-flow")
+            git("commit", "-q", "-m", "old", when="2026-10-01T10:00:00+08:00")
+            git("add", "idle-skill")
+            git("commit", "-q", "-m", "new", when="2026-11-20T10:00:00+08:00")
+            out = tmp / "out"
+            code, _, err = run_cli(["scan", "--start", "2026-11-02", "--end", "2026-11-09", "--claude-root", str(root / "claude"),
+                                    "--codex-root", str(root / "codex"), "--skills-root", str(skills), "--own-skills-root", str(skills),
+                                    "--out", str(out)])
+            self.assertEqual(code, 0, err)
+            result = json.loads((out / "sessions.json").read_text(encoding="utf-8"))
+            self.assertEqual(result["unused_own"], ["excel-aura"])
+            self.assertEqual(result["built_after_window"], ["idle-skill"])
+            self.assertIn("窗口结束之后才建的：`idle-skill`", (out / "sessions.md").read_text(encoding="utf-8"))
+        finally:
+            shutil.rmtree(str(tmp), ignore_errors=True)
 
 
 class WindowCase(unittest.TestCase):
@@ -191,16 +236,24 @@ class WindowCase(unittest.TestCase):
 
 GOOD = """# skill 进化提案
 
+- 覆盖：10 个会话
+- 缺口：无
+- 结论：新候选 1 条、改进 1 条
+
+## 一、最值得做的
+
+1. **N1**：做了三遍。
+
 ## 二、新 skill 候选
 
 ### N1 项目推进说明（project-push）
 
 - **做什么**：收集飞书需求、拉最新进度、按三个维度写推进说明。
-- **依据**：S01、S02、S03 三次走法一致。
+- **依据**：H01、H02、H03 三次走法一致。
 - **成熟度**：可立项
 - **为什么是 skill**：有判断点，不是固定脚本。
 - **和现有 skill 的分工**：business-notice 只管成稿语气。
-- **怎么做**：先记候选 issue。
+- **怎么做**：先开立项 issue。
 - **推荐**：做
 
 ## 三、现有 skill 改进
@@ -209,53 +262,83 @@ GOOD = """# skill 进化提案
 
 - **skill**：excel-aura
 - **问题**：该触发没触发
-- **依据**：S05、S06
+- **依据**：H05、H06
 - **改法**：description 加「美化一下」。
 - **推荐**：做
+
+## 四、上次的提案现在怎样
+
+无
+
+## 五、转交（不适合做成 skill 的）
+
+无
+
+## 六、筛掉的
+
+无
 """
+THREE = "H01、H02、H03 三次走法一致"
 
 
 class CheckCase(unittest.TestCase):
-    IDS = set("S%02d" % n for n in range(1, 11))
+    IDS = set("H%02d" % n for n in range(1, 11))
+
+    def problems(self, text, gaps=()):
+        return se.check_proposal(text, self.IDS, gaps)
 
     def test_good_proposal_passes(self):
-        self.assertEqual(se.check_proposal(GOOD, self.IDS), [])
+        self.assertEqual(self.problems(GOOD), [])
 
     def test_unknown_session_id(self):
-        problems = se.check_proposal(GOOD.replace("S05、S06", "S05、S77"), self.IDS)
-        self.assertTrue(any("S77" in p for p in problems), problems)
+        self.assertTrue(any("H77" in p for p in self.problems(GOOD.replace("H05、H06", "H05、H77"))))
+
+    def test_retro_group_ids_are_not_session_ids(self):
+        # session-retro 的「重复」分组叫 S1、S2……，写进依据不算会话编号
+        self.assertTrue(any("E1：「依据」里没有会话编号" in p for p in self.problems(GOOD.replace("H05、H06", "S12、S13"))))
 
     def test_ready_needs_two_sessions(self):
-        problems = se.check_proposal(GOOD.replace("S01、S02、S03 三次走法一致", "S01 一次"), self.IDS)
-        self.assertTrue(any("至少真做过两次" in p for p in problems), problems)
-        self.assertEqual(se.check_proposal(GOOD.replace("S01、S02、S03 三次走法一致", "S01 一次").replace("成熟度**：可立项", "成熟度**：继续观察"), self.IDS), [])
+        once = GOOD.replace(THREE, "H01 一次")
+        self.assertTrue(any("至少真做过两次" in p for p in self.problems(once)))
+        self.assertEqual(self.problems(once.replace("成熟度**：可立项", "成熟度**：继续观察").replace("- **推荐**：做\n\n## 三", "- **推荐**：观察\n\n## 三")), [])
 
     def test_ready_counts_candidate_issue_as_one(self):
-        self.assertEqual(se.check_proposal(GOOD.replace("S01、S02、S03 三次走法一致", "S01，加上候选 #70 里记的那次"), self.IDS), [])
+        self.assertEqual(self.problems(GOOD.replace(THREE, "H01，加上候选 #70 里记的那次")), [])
+
+    def test_maturity_and_advice_must_agree(self):
+        text = GOOD.replace("- **推荐**：做\n\n## 三", "- **推荐**：观察（同一天的一批）\n\n## 三")
+        self.assertTrue(any("成熟度是「可立项」，推荐只能以「做」或「不做」开头" in p for p in self.problems(text)))
+        text = GOOD.replace("成熟度**：可立项", "成熟度**：继续观察")
+        self.assertTrue(any("成熟度是「继续观察」，推荐只能以「观察」或「不做」开头" in p for p in self.problems(text)))
 
     def test_missing_field_and_bad_maturity(self):
-        problems = se.check_proposal(GOOD.replace("- **改法**：description 加「美化一下」。\n", ""), self.IDS)
-        self.assertTrue(any("E1：缺「改法」" in p for p in problems), problems)
-        problems = se.check_proposal(GOOD.replace("成熟度**：可立项", "成熟度**：很成熟"), self.IDS)
-        self.assertTrue(any("只能以「可立项」或「继续观察」开头" in p for p in problems), problems)
+        self.assertTrue(any("E1：缺「改法」" in p for p in self.problems(GOOD.replace("- **改法**：description 加「美化一下」。\n", ""))))
+        self.assertTrue(any("只能以「可立项」或「继续观察」开头" in p for p in self.problems(GOOD.replace("成熟度**：可立项", "成熟度**：很成熟"))))
 
     def test_evidence_needs_session_id(self):
-        problems = se.check_proposal(GOOD.replace("S05、S06", "上周两次"), self.IDS)
-        self.assertTrue(any("E1：「依据」里没有会话编号" in p for p in problems), problems)
+        self.assertTrue(any("E1：「依据」里没有会话编号" in p for p in self.problems(GOOD.replace("H05、H06", "上周两次"))))
+
+    def test_sections_present_and_ordered(self):
+        self.assertTrue(any("缺这几节" in p and "五、转交" in p for p in self.problems(GOOD.replace("## 五、转交（不适合做成 skill 的）\n\n无\n\n", ""))))
+        swapped = GOOD.replace("## 五、转交（不适合做成 skill 的）", "## X").replace("## 六、筛掉的", "## 五、转交").replace("## X", "## 六、筛掉的")
+        self.assertTrue(any("顺序不对" in p for p in self.problems(swapped)))
+
+    def test_gaps_must_be_mentioned(self):
+        self.assertTrue(any("codex_zst_unread" in p for p in self.problems(GOOD, ["codex_zst_unread"])))
+        self.assertEqual(self.problems(GOOD.replace("- 缺口：无", "- 缺口：codex_zst_unread=3"), ["codex_zst_unread"]), [])
 
     def test_too_many(self):
-        extra = "".join("\n### E%d x\n\n- **skill**：a\n- **问题**：b\n- **依据**：S01\n- **改法**：c\n- **推荐**：做\n" % n for n in range(2, 9))
-        problems = se.check_proposal(GOOD + extra, self.IDS)
-        self.assertTrue(any("超过上限 7 条" in p for p in problems), problems)
+        extra = "".join("\n### E%d x\n\n- **skill**：a\n- **问题**：b\n- **依据**：H01\n- **改法**：c\n- **推荐**：做\n" % n for n in range(2, 9))
+        self.assertTrue(any("超过上限 7 条" in p for p in self.problems(GOOD.replace("\n## 四、", extra + "\n## 四、"))))
 
     def test_cli(self):
         folder = Path(tempfile.mkdtemp(prefix="skill-evolution-check-"))
         try:
-            (folder / "sessions.json").write_text(json.dumps({"sessions": [{"id": i} for i in sorted(self.IDS)]}))
-            (folder / "提案.md").write_text(GOOD, encoding="utf-8")
+            (folder / "sessions.json").write_text(json.dumps({"sessions": [{"id": i} for i in sorted(self.IDS)], "gaps": ["files_unreadable"]}))
+            (folder / "提案.md").write_text(GOOD.replace("- 缺口：无", "- 缺口：files_unreadable=1"), encoding="utf-8")
             code, out, _ = run_cli(["check", str(folder / "提案.md")])
-            self.assertEqual((code, out.strip()), (0, "通过：2 条提案，会话编号都对得上。"))
-            (folder / "提案.md").write_text(GOOD.replace("S05、S06", "S99"), encoding="utf-8")
+            self.assertEqual((code, out.strip()), (0, "通过：2 条提案，六个节齐全，会话编号都对得上。"))
+            (folder / "提案.md").write_text(GOOD, encoding="utf-8")  # 缺口没写
             self.assertEqual(run_cli(["check", str(folder / "提案.md")])[0], 1)
             self.assertEqual(run_cli(["check", str(folder / "没有.md")])[0], 2)
         finally:

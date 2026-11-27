@@ -41,6 +41,7 @@ metadata:
 S=<本 skill 目录>/scripts/skill_evolution.py
 REPO=$(cd "$(dirname "$(realpath "$S")")/../../.." && pwd)        # my-skills 仓库
 
+umask 077                                                          # 这一节写出的文件都只给本人读
 python3 "$S" scan                                                  # 写 sessions.md、sessions.json，结尾打印输出目录 OUT
 python3 "$REPO/skills/session-retro/scripts/session_retro.py" scan --start <开始> --end <结束> --out "$OUT/retro"
 node "$REPO/scripts/monthly-health.mjs" --days 30 > "$OUT/monthly-health.md"
@@ -49,7 +50,8 @@ gh pr list -R Natsukashii1997/my-skills --state open --limit 50 --json number,ti
 ```
 
 - 四样各是什么：`sessions.md` 是会话清单和 skill 使用表（主材料）；`retro/signals.md` 是纠正、连续失败、重复的话（判断「容易出错」用）；`monthly-health.md` 是近 30 天每个自建 skill 的调用和版本；`issues.json` / `prs.json` 是候选池和正在改的 skill。
-- `scan` 退出码：`0` 扫完；`3` 有缺口（坏行、读不了的文件、`codex_zst_unread` 即 Codex 已压缩没读到的记录），结果照用，提案开头写明缺口；`2` 参数错或输出目录在 git 仓库里。一周的会话要跑几分钟。
+- `scan` 退出码：`0` 扫完；`3` 有缺口（坏行、读不了的文件、`codex_zst_unread` 即 Codex 已压缩没读到的记录），结果照用，提案开头写明缺口；`2` 参数错或输出目录在 git 仓库里。`scan` 后面不要接管道（`| tail` 会把退出码盖成 0）。一周的会话要跑几分钟，放到后台跑的话等它结束再往下做。
+- 编号有两套，不要混：`sessions.md` 的会话编号是 `H01`、`H02`……；`retro/signals.md` 里的 `S1`、`S2`……是「重复的话」的分组。提案的依据只认 `H` 编号。
 - 后三条里哪条失败了（没网、没装 node），不停下：在提案开头的缺口里写明缺了哪样、哪类判断因此没做。
 - 再读两样记忆：`~/skill-evolution/decisions.md`（常浩对历次提案的决定，只读，没有就当第一次）和最近两份 `~/skill-evolution/*/提案.md`。定过的不再提；提过没定的放进「上次的提案现在怎样」。
 
@@ -73,8 +75,10 @@ gh pr list -R Natsukashii1997/my-skills --state open --limit 50 --json number,ti
 
 **成熟度**只有两档，对应 my-skills 的闸 1：
 
-- **可立项**：至少真做过两次，走法一致。依据里要有 2 个以上会话编号；跨周累计的，写上候选 issue 号（`#123`）顶一次。
-- **继续观察**：只出现 1 次，或几次走法不一致。提出来是为了记进候选池，下周再对照。
+- **可立项**：至少真做过两次，走法一致。依据里要有 2 个以上会话编号；跨周累计的，写上候选 issue 号（`#123`）顶一次。推荐写「做」或「不做」。
+- **继续观察**：只出现 1 次，或几次走法不一致。提出来是为了记进候选池，下周再对照。推荐写「观察」或「不做」。
+
+同一天把同一段话发进几个项目，算 1 次，不算几次：它证明这套做法能批量用，没证明隔一段时间还会再做。这种写「继续观察」。
 
 提之前先对照现有的：你当前可用的全部 skill（含第三方和插件）、`issues.json` 里的候选和立项、`prs.json` 里正在改的。已有的不重复提。拿不准一组会话是不是同一类事，用 `context` 看，一次复盘一般不超过 15 次：
 
@@ -94,7 +98,8 @@ python3 "$REPO/skills/session-retro/scripts/session_retro.py" context <出处文
 | 不该触发却触发了 | 调用了，但和请求无关，或用户随即叫停 | 收紧 `description` 的边界 |
 | 重叠 | 两个 skill 在同一类请求里被混着用 | 合并或划清分工（只出提案） |
 
-- 调用次数排在最前面的 skill，即使没有强纠正，也抽 2 到 3 个会话用 `context` 看它走完之后用户的下一句是什么。
+- 调用次数排在最前面的 skill，即使没有强纠正，也抽 2 到 3 个会话看它走完之后用户的下一句是什么：会话那一行的「skill：名字×次数（行 …）」给了调用所在的行号，用 `context` 从那一行往后看。
+- 窗口结束之后才建的 skill（第三节末尾单列）：窗口里还没有它，不能说它「该触发没触发」。建它之前的会话如果暴露了它现在的写法没覆盖的情况，可以提改进，依据里写明「这些是建它之前的会话」。
 - 长期 0 调用、缺版本号、缺 evals 和 CHANGELOG：月度体检每月 1 号已经在报，这里不重复提。
 - 第三方和插件的 skill 改不了，只能提「换用别的」「停用」「自建一层」。
 
@@ -106,7 +111,7 @@ python3 "$REPO/skills/session-retro/scripts/session_retro.py" context <出处文
 python3 "$S" check "$OUT/提案.md" && chmod 600 "$OUT/提案.md"
 ```
 
-`check` 查四件事：引用的会话编号在 `sessions.json` 里有没有；每条的必填项齐不齐；写「可立项」的依据够不够两次；条数超没超 7。退出码 `1` 时照它说的改到通过。它不查内容对不对：片段和结论对不对得上，要你自己回读一遍。
+`check` 查这些：六个节齐不齐、顺序对不对；`sessions.json` 里的缺口有没有写进提案；引用的会话编号有没有；每条的必填项齐不齐；写「可立项」的依据够不够两次；成熟度和推荐对不对得上；条数超没超 7。退出码 `1` 时照它说的改到通过。它不查内容对不对：片段和结论对不对得上、几个会话是不是真在做同一类事，要你自己回读一遍。
 
 排序按「再手做一遍的代价 × 出现的频率」，最值的放最前面。
 

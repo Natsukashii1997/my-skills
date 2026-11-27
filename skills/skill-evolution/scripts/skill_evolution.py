@@ -2,7 +2,8 @@
 """skill 进化 · 取数与提案检查。
 
 scan  把一个时间窗口里的会话整理成「会话清单 + skill 使用表」（sessions.md / sessions.json）。
-check 查提案：引用的会话编号对不对得上、每条必填项齐不齐、「可立项」有没有两次以上的依据、条数超没超。
+check 查提案：六个节齐不齐、缺口写没写、引用的会话编号对不对得上、每条必填项齐不齐、
+      「可立项」有没有两次以上的依据、成熟度和推荐对不对得上、条数超没超。
 
 只读本机会话记录，只用标准库，不联网。解析会话、脱敏、认真人原话都复用 session-retro 的脚本
 （同一个仓库里的 skills/session-retro/scripts/session_retro.py），这里不另写一套。
@@ -14,6 +15,7 @@ import importlib.util
 import json
 import os
 import re
+import subprocess
 import sys
 from collections import Counter, defaultdict
 from datetime import date, datetime, time, timedelta, timezone
@@ -29,7 +31,7 @@ SCHEMA_VERSION = 1
 HERE = Path(__file__).resolve()
 SKILLS_DIR = HERE.parents[2]  # my-skills/skills
 MAX_PROPOSALS = 7
-FIRST_LIMIT, LATER_LIMIT, LATER_MAX, FOOTPRINT_MAX = 240, 90, 5, 6
+FIRST_LIMIT, LATER_LIMIT, LATER_MAX, FOOTPRINT_MAX = 240, 90, 6, 6
 COMMAND_NAME = re.compile(r"<command-name>/?([\w:.\-]+)</command-name>")
 # 和 scripts/monthly-health.mjs 的 codexHitsInText 同一条规则：Codex 没有「调用 skill」事件，
 # 以工具调用读取 skills/<名字>/SKILL.md 为准，同一会话只算一次。
@@ -137,8 +139,19 @@ def project_of(cwd):
     return os.path.basename(text) or text
 
 
+def created_at(skill_md):
+    """这个 skill 的 SKILL.md 第一次提交的时间；不在 git 里、查不到都返回 None。只读 git log。"""
+    try:
+        done = subprocess.run(["git", "-C", str(skill_md.parent), "log", "--diff-filter=A", "--format=%aI", "--", skill_md.name],
+                              capture_output=True, text=True, timeout=20)
+        stamps = done.stdout.split()
+        return datetime.fromisoformat(stamps[-1]) if done.returncode == 0 and stamps else None
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+
+
 def known_skills(roots, own_root=SKILLS_DIR):
-    """已装的 skill：名字 -> 是不是自建（真实路径在 own_root 下，默认 my-skills/skills）。"""
+    """已装的 skill：名字 -> 自建 skill 的 SKILL.md 真实路径（不是自建的为 None）。自建 = 真实路径在 own_root 下，默认 my-skills/skills。"""
     own_root = str(Path(own_root).expanduser().resolve())
     found = {}
     for root in roots:
@@ -149,8 +162,8 @@ def known_skills(roots, own_root=SKILLS_DIR):
             if not (entry / "SKILL.md").is_file():
                 continue
             real = str(entry.resolve())
-            own = real.startswith(own_root + os.sep)
-            found[entry.name] = found.get(entry.name, False) or own
+            own = Path(real) / "SKILL.md" if real.startswith(own_root + os.sep) else None
+            found[entry.name] = found.get(entry.name) or own
     return found
 
 
@@ -299,6 +312,7 @@ class Scan(object):
             "tool_failures": sum(1 for e in events if e.kind == "tool_result" and e.ok is False),
             "strong_corrections": [{"line": e.line, "text": retro.clip(retro.redact(e.text), LATER_LIMIT)} for e in strong],
             "skills": [c["name"] for c in calls],
+            "skill_calls": [{"name": c["name"], "line": c["line"], "how": c["how"]} for c in calls],
             "first": {"line": first.line, "text": retro.clip(retro.redact(first.text), FIRST_LIMIT)},
             "later": [{"line": e.line, "text": retro.clip(retro.redact(e.text), LATER_LIMIT)} for e in users if e is not first][:LATER_MAX],
             "later_more": max(0, len([e for e in users if e is not first]) - LATER_MAX),
@@ -315,7 +329,7 @@ class Scan(object):
             per_project[project].sort(key=lambda i: i["start"])
             for item in per_project[project]:
                 number += 1
-                item["id"] = "S%02d" % number
+                item["id"] = "H%02d" % number
                 same_day = self.local(item["start"], "%m-%d") == self.local(item["end"], "%m-%d")
                 item["start_local"], item["end_local"] = self.local(item["start"]), self.local(item["end"], "%H:%M" if same_day else "%m-%d %H:%M")
                 item["start"], item["end"] = item["start"].isoformat(), item["end"].isoformat()
@@ -324,7 +338,12 @@ class Scan(object):
             usage.append({"skill": name, "own": bool(self.known.get(name)), "known": name in self.known,
                           "calls": entry["calls"], "sessions": len(entry["sessions"]),
                           "projects": entry["projects"].most_common(), "how": entry["how"].most_common(), "after_corrections": entry["after"]})
-        unused = sorted(name for name, own in self.known.items() if own and name not in self.usage)
+        unused, newer = [], []
+        for name, own in sorted(self.known.items()):
+            if not own or name in self.usage:
+                continue
+            born = created_at(own)
+            (newer if born and born >= self.end else unused).append(name)
         coverage = dict(self.coverage)
         gaps = [k for k in ("malformed_lines", "oversized_lines_skipped", "files_unreadable") if coverage.get(k)]
         if coverage.get("roots_missing"):
@@ -332,7 +351,7 @@ class Scan(object):
         if coverage.get("codex_zst_unread"):
             gaps.append("codex_zst_unread")
         return {"schema": SCHEMA_VERSION, "projects": order, "sessions": [i for p in order for i in per_project[p]],
-                "usage": usage, "unused_own": unused, "coverage": coverage, "gaps": gaps}
+                "usage": usage, "unused_own": unused, "built_after_window": newer, "coverage": coverage, "gaps": gaps}
 
 
 def render(result, start_day, end_day):
@@ -340,7 +359,8 @@ def render(result, start_day, end_day):
     sessions = result["sessions"]
     last = end_day - timedelta(days=1)
     lines = ["# skill 进化 · 会话清单（%s 至 %s）" % (start_day.isoformat(), last.isoformat()), "",
-             "片段已脱敏并截断，只当线索；要看前后几轮，用 session-retro 的 `context <文件> --line <行号>`。", "",
+             "片段已脱敏并截断，只当线索；要看前后几轮，用 session-retro 的 `context <文件> --line <行号>`（行号都是所在会话文件里的行号）。",
+             "会话编号是 H01、H02……；`retro/signals.md` 里的 S1、S2……是另一套编号（重复的话的分组），不要混用。", "",
              "- 有真人发话的会话 %d 个（Claude %d、Codex %d）；没有真人发话的 %d 个（派单、定时任务、应用代发）不列，它们的 skill 调用照算。"
              % (len(sessions), cov.get("sessions_claude", 0), cov.get("sessions_codex", 0), cov.get("sessions_without_human", 0)),
              "- 扫了 %d 个文件。缺口：%s" % (cov.get("files_scanned", 0), "、".join(
@@ -356,18 +376,21 @@ def render(result, start_day, end_day):
             project, len(items), sum(i["user_messages"] for i in items), sum(len(i["strong_corrections"]) for i in items)))
         lines.append("")
         for item in items:
-            skills = Counter(item["skills"])
+            skills, lines_of = Counter(item["skills"]), defaultdict(list)
+            for call in item["skill_calls"]:
+                lines_of[call["name"]].append(str(call["line"]))
             head = "- **%s** %s–%s %s｜发话 %d｜工具 %d｜失败 %d｜强纠正 %d" % (
                 item["id"], item["start_local"], item["end_local"], "Claude" if item["source"] == "claude" else "Codex",
                 item["user_messages"], item["tool_calls"], item["tool_failures"], len(item["strong_corrections"]))
             if skills:
-                head += "｜skill：" + "、".join("%s×%d" % kv for kv in skills.most_common())
+                head += "｜skill：" + "、".join("%s×%d（行 %s%s）" % (
+                    name, count, "、".join(lines_of[name][:3]), " 等" if count > 3 else "") for name, count in skills.most_common())
             lines.append(head)
             lines.append("  - %s：「%s」（%s:%d）" % ("起始请求（会话始于窗口前）" if item["began_before"] else "首条",
                                                  item["first"]["text"], item["file"], item["first"]["line"]))
             if item["later"]:
-                more = "（另有 %d 条）" % item["later_more"] if item["later_more"] else ""
-                lines.append("  - 后续：" + " / ".join("「%s」" % m["text"] for m in item["later"]) + more)
+                more = "（另有 %d 条，用 context 看）" % item["later_more"] if item["later_more"] else ""
+                lines.append("  - 后续：" + " / ".join("「%s」（行 %d）" % (m["text"], m["line"]) for m in item["later"]) + more)
             if item["strong_corrections"]:
                 lines.append("  - 强纠正：" + " / ".join("「%s」（行 %d）" % (m["text"], m["line"]) for m in item["strong_corrections"][:3]))
             if item["footprint"]:
@@ -389,7 +412,9 @@ def render(result, start_day, end_day):
         lines.append("窗口内没有认到 skill 调用。")
     lines += ["", "## 三、窗口内没调用的自建 skill", "",
               ("、".join("`%s`" % n for n in result["unused_own"]) if result["unused_own"] else "无"), "",
-              "一周没用不说明该退役，去留看月度体检（`node scripts/monthly-health.mjs --days 30`）。这一节只用来对照「该触发没触发」。", ""]
+              "一周没用不说明该退役，去留看月度体检（`node scripts/monthly-health.mjs --days 30`）。这一节只用来对照「该触发没触发」。", "",
+              "窗口结束之后才建的：" + ("、".join("`%s`" % n for n in result["built_after_window"]) if result["built_after_window"] else "无")
+              + "。窗口里还没有它，不算没用上；建它之前的会话只能拿来对照它现在的写法。", ""]
     return "\n".join(lines)
 
 
@@ -445,11 +470,13 @@ def cmd_scan(args):
 
 ITEM_HEAD = re.compile(r"(?m)^#{2,4}\s*([NE])(\d+)\b.*$")
 ANY_HEAD = re.compile(r"(?m)^#{1,4}\s")
-SESSION_ID = re.compile(r"\bS\d{2,}\b")
+SESSION_ID = re.compile(r"\bH\d{2,}\b")
 ISSUE_REF = re.compile(r"#\d+")  # 跨周累计：之前记过的候选 issue 顶一次
 FIELDS = {"N": ("做什么", "依据", "成熟度", "为什么是 skill", "和现有 skill 的分工", "怎么做", "推荐"),
           "E": ("skill", "问题", "依据", "改法", "推荐")}
 MATURITY = ("可立项", "继续观察")
+ALLOWED_ADVICE = {"可立项": ("做", "不做"), "继续观察": ("观察", "不做")}
+SECTIONS = ("一、最值得做的", "二、新 skill 候选", "三、现有 skill 改进", "四、上次的提案现在怎样", "五、转交", "六、筛掉的")
 
 
 def field_value(block, name):
@@ -457,8 +484,17 @@ def field_value(block, name):
     return found.group(1).strip() if found else None
 
 
-def check_proposal(text, known_ids):
+def check_proposal(text, known_ids, gaps=()):
     problems = []
+    at = [text.find("\n## " + name) for name in SECTIONS]
+    missing = [name for name, index in zip(SECTIONS, at) if index < 0]
+    if missing:
+        problems.append("缺这几节（没有内容也要留着标题、写「无」）：%s。" % "、".join("「## %s」" % m for m in missing))
+    elif at != sorted(at):
+        problems.append("六个节的顺序不对，应依次是：%s。" % "、".join(SECTIONS))
+    for gap in gaps:
+        if gap not in text:
+            problems.append("sessions.json 里有缺口 %s，提案开头的「缺口」一行没写到它。" % gap)
     heads = list(ITEM_HEAD.finditer(text))
     if len(heads) > MAX_PROPOSALS:
         problems.append("N、E 两类加起来 %d 条，超过上限 %d 条：按「再做一遍的代价 × 出现频率」留最值的，其余写进「筛掉的」。" % (len(heads), MAX_PROPOSALS))
@@ -474,11 +510,14 @@ def check_proposal(text, known_ids):
                 problems.append("第 %d 行 %s：缺「%s」，应写成一行「- **%s**：……」。" % (line, label, name, name))
         cited = set(SESSION_ID.findall(values.get("依据") or ""))
         if values.get("依据") and not cited:
-            problems.append("第 %d 行 %s：「依据」里没有会话编号，应写出 sessions.md 里的编号（如 S03、S11）。" % (line, label))
+            problems.append("第 %d 行 %s：「依据」里没有会话编号，应写出 sessions.md 里的编号（如 H03、H11）。" % (line, label))
         if kind == "N" and values.get("成熟度"):
             level = next((m for m in MATURITY if values["成熟度"].startswith(m)), None)
             if not level:
                 problems.append("第 %d 行 %s：「成熟度」只能以「可立项」或「继续观察」开头。" % (line, label))
+            elif values.get("推荐") and not any(values["推荐"].startswith(a) for a in ALLOWED_ADVICE[level]):
+                problems.append("第 %d 行 %s：成熟度是「%s」，推荐只能以「%s」开头。拿不准够不够立项，成熟度就写「继续观察」。" % (
+                    line, label, level, "」或「".join(ALLOWED_ADVICE[level])))
             elif level == "可立项" and len(cited) + (1 if ISSUE_REF.search(values.get("依据") or "") else 0) < 2:
                 problems.append("第 %d 行 %s：写了「可立项」，但依据里只有 %d 个会话。至少真做过两次才能立项（my-skills 闸 1），"
                                 "应改成「继续观察」，或补上第二个会话编号、之前记过的候选 issue 号（#123）。" % (line, label, len(cited)))
@@ -493,13 +532,14 @@ def cmd_check(args):
     data = Path(args.sessions).expanduser() if args.sessions else path.parent / "sessions.json"
     try:
         text = path.read_text(encoding="utf-8")
-        known_ids = set(item["id"] for item in json.loads(data.read_text(encoding="utf-8"))["sessions"])
+        scanned = json.loads(data.read_text(encoding="utf-8"))
+        known_ids = set(item["id"] for item in scanned["sessions"])
     except (OSError, ValueError, KeyError) as error:
         sys.stderr.write("读不了：%s\n" % error)
         return 2
-    problems = check_proposal(text, known_ids)
+    problems = check_proposal(text, known_ids, scanned.get("gaps") or ())
     if not problems:
-        sys.stdout.write("通过：%d 条提案，会话编号都对得上。\n" % len(ITEM_HEAD.findall(text)))
+        sys.stdout.write("通过：%d 条提案，六个节齐全，会话编号都对得上。\n" % len(ITEM_HEAD.findall(text)))
         return 0
     sys.stdout.write("\n".join(problems) + "\n")
     return 1
@@ -523,7 +563,7 @@ def build_parser():
     scan.add_argument("--out", help="输出目录，默认 ~/skill-evolution/<开始>_<结束>/；已有结果时自动写到 -2、-3")
     scan.add_argument("--allow-in-repo", action="store_true", help="允许输出到 git 仓库里（默认拒绝，防止误提交）")
     scan.set_defaults(func=cmd_scan)
-    check = sub.add_parser("check", help="查提案：会话编号、必填项、「可立项」的依据、条数上限")
+    check = sub.add_parser("check", help="查提案：六个节、缺口、会话编号、必填项、「可立项」的依据、成熟度和推荐、条数上限")
     check.add_argument("proposal", help="提案.md 的路径")
     check.add_argument("--sessions", help="sessions.json 的路径，默认和提案同目录")
     check.set_defaults(func=cmd_check)
