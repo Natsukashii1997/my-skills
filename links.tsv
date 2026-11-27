@@ -33,3 +33,5 @@ business-notice	~/.claude/skills
 business-notice	~/.agents/skills
 three-versions	~/.claude/skills
 three-versions	~/.agents/skills
+skill-evolution	~/.claude/skills
+skill-evolution	~/.agents/skills
