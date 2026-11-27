@@ -35,3 +35,5 @@ three-versions	~/.claude/skills
 three-versions	~/.agents/skills
 skill-evolution	~/.claude/skills
 skill-evolution	~/.agents/skills
+card-versions	~/.claude/skills
+card-versions	~/.agents/skills
