@@ -21,7 +21,7 @@
 | `sessionId`、`cwd`、`uuid` | 会话 ID、工作目录（用于按项目筛选）、单条记录 ID（用于去重） | 实测、sheal |
 | `isSidechain` | 为 true 是旧版写法的子代理消息，跳过 | 实测（字段存在） |
 | `isMeta`、`isCompactSummary` | 系统注入的消息、压缩摘要，跳过 | 公开行为，假设 |
-| `origin.kind` | 新版本有；`human` 才算真人输入，`task-notification` 等跳过 | 实测见到 `human`；其他取值是假设 |
+| `origin`、`turnOrigin`、`entrypoint`、`pluginPrompt` | 判断这条 user 记录是不是真人发的，见下面「用户原话的来源」 | 本机实测（2026-11-27） |
 | `message.content` | 字符串：真人输入；列表：其中的 `text` 块是输入，`tool_result` 块是工具结果 | 实测、agentsesh |
 | assistant 的 `message.content[]` | `text`：AI 的话；`tool_use`：`{id, name, input}`；`thinking` 不用 | 实测、agentsesh |
 | `tool_result` 块 | `{tool_use_id, content, is_error}`；`is_error` 为 true 算失败 | 实测、agentsesh |
@@ -32,9 +32,24 @@
 
 **被打断**：用户按 Esc 后会记一条内容为 `[Request interrupted by user]` 或 `[Request interrupted by user for tool use]` 的 user 记录。【公开行为，假设】
 
+**用户原话的来源**（2026-11-27 本机实测，窗口 11-13～11-26 的 user 记录，不含工具结果）：
+
+| 记录特征 | 是什么 | 处理 |
+|---|---|---|
+| `origin.kind=human` | 桌面输入框里打的字或点的回复按钮。其中不少首块是应用注入的 `<system-reminder>`（关联会话状态、钩子提示），真人的话在后面的块里 | 算，记为「输入框」；先剥掉所有 `<system-reminder>…</system-reminder>` 再判断 |
+| `origin={kind:plugin, name:agent-hud}` | 驿窗（Agent HUD）侧栏转进来的话。原文在 `pluginPrompt.text`；`message.content` 是 `The agent-hud plugin sent a message:\n…` 包装 | 算，记为「驿窗侧栏」；但以 `ChatGPT 对「…」的` 开头的（ChatGPT 回送：审核意见、思维评审回信）、以 `驿窗接力「…」出错` 开头的（出错通知）、以 `[Agent HUD · 来自 ` 开头的（别的 agent 经驿窗发来的消息）不算。`请把这一轮的工作交给 ChatGPT 审核…（驿窗左滑「审核」发来）` 是常浩左滑触发的固定文案，算他的操作，保留 |
+| 没有 `origin`，`turnOrigin=host_synthetic` / `auto_continuation` | 应用代发：side-session 首条任务（`Background (from the session that started this one)`）、`<side-sessions-event>`、`<ci-monitor-event>` | 不算 |
+| `entrypoint=sdk-cli`，或 `turnOrigin=sdk` | `claude -p` 派单（Hermes 车间、自动化中台、权限探测） | 不算 |
+| `origin.kind` 是 `task-notification`、`peer`，或 `origin` 只有 `body`/`from` | 后台任务通知、别的会话发来的消息 | 不算 |
+| `origin`、`turnOrigin` 都没有 | 旧版记录（字段出现之前），以及 `[Request interrupted by user]` | 按真人处理，再走下面的系统包装过滤 |
+
+不算的记录计入覆盖统计 `non_human_messages_skipped`，驿窗回送和出错通知计入 `agent_hud_relays_skipped`。
+
+**按钮文字**：桌面应用里 AI 每轮收尾调 `mcp__ccd_turn__wrap_up`，`input.actions[]` 里每个 `{label}` 是一个回复按钮，第一个是 AI 的推荐；用户点按钮，记录里就是一条内容等于 `label` 的普通 user 消息，没有字段能区分「点的」和「打的」。脚本记下每条用户消息前最近一次 wrap_up 的按钮文字，用来算「等于按钮 / 等于推荐」。
+
 **系统包装的输入**：以 `<command-name>`、`<local-command-stdout>`、`<system-reminder>`、`<task-notification>`、`Caveat: The messages below…`、`This session is being continued from a previous conversation` 开头的，都不算真人发言。
 
-**续接会话**：`claude --resume` 会新开一个文件，并把旧消息连同原 `uuid` 一起带过去。脚本先按 `uuid` 去重，再按「同一文本 + 同一秒」去重。
+**续接、分叉会话**：`claude --resume` 和桌面应用的分叉会新开一个文件，并把旧消息连同原 `uuid` 一起带过去。脚本对所有用户消息跨文件按 `uuid` 去重（不去重时短话次数会明显多算），纠正 / 决定信号再按「同一文本 + 同一秒」去重。
 
 ## Codex
 
@@ -44,7 +59,7 @@
 
 | `type` | `payload` 里用到的 | 来源 |
 |---|---|---|
-| `session_meta`（首行） | `id`、`cwd`、`timestamp`；`source` 为对象且含 `subagent`，或 `agent_path` 不是 `/root` 的，是子代理会话，整份跳过 | 本仓库、sheal |
+| `session_meta`（首行） | `id`、`cwd`、`timestamp`；`source` 为对象且含 `subagent`，或 `agent_path` 不是 `/root` 的，是子代理会话，整份跳过；`originator=codex_exec`（或 `source=exec`）是 `codex exec` 派单，「用户消息」是派单内容，不算用户原话（计入 `dispatch_messages_skipped`），工具调用照常统计。Codex 桌面版是 `originator=Codex Desktop` | 本仓库、sheal；originator 为本机实测（2026-11-27：窗口内 Codex 会话 19 个是 codex_exec，1 个是 Codex Desktop） |
 | `turn_context` | `cwd`（首行没有 cwd 时补用） | 本仓库、agentsesh |
 | `event_msg` | `type=user_message` 时用 `message`（用户原话）；`turn_aborted`：被打断；`exec_command_end`：`call_id` + `exit_code`，作为退出码的后备来源 | agentsesh；后两种是假设 |
 | `response_item` | `type=message`（`role`，`content[]` 里的 `input_text` / `output_text`）；`function_call`（`name`、`arguments` 是 JSON 字符串、`call_id`）；`function_call_output`（`call_id`、`output`）；`custom_tool_call` / `custom_tool_call_output`（apply_patch）；`local_shell_call`；`reasoning` 不用 | agentsesh、本仓库 |
