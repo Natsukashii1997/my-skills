@@ -238,6 +238,36 @@ class ScanTests(FixtureCase):
         self.assertIn("拒绝写入", err)
         self.assertFalse((repo / "out").exists())
 
+    def test_default_out_does_not_overwrite_previous_scan(self):
+        # 盲测 E2（2026-11-27）实际踩到：同一窗口不带 --out 再跑一次，覆盖了上次复盘的 signals.*
+        home = self.tmp / "home"
+        home.mkdir()
+        old_home = os.environ.get("HOME")
+        os.environ["HOME"] = str(home)
+        try:
+            argv = ["scan"] + WINDOW + ["--claude-root", self.claude_root, "--codex-root", self.codex_root, "--no-default-rules"]
+            run_cli(argv)
+            first = home / "session-retro" / "2026-10-30_2026-11-01" / "signals.json"
+            first.write_text("上次的结果", encoding="utf-8")
+            _, _, err = run_cli(argv)
+            self.assertEqual(first.read_text(encoding="utf-8"), "上次的结果")
+            self.assertTrue((home / "session-retro" / "2026-10-30_2026-11-01-2" / "signals.json").exists())
+            self.assertIn("已有上次的扫描结果", err)
+            # 别的扫描正占着 -3（占位文件还在），这次跳到 -4；写完交还占位
+            busy = home / "session-retro" / "2026-10-30_2026-11-01-3"
+            busy.mkdir()
+            (busy / sr.RESERVE_MARK).write_text("", encoding="utf-8")
+            run_cli(argv)
+            self.assertFalse((busy / "signals.json").exists())
+            fourth = home / "session-retro" / "2026-10-30_2026-11-01-4"
+            self.assertTrue((fourth / "signals.json").exists())
+            self.assertFalse((fourth / sr.RESERVE_MARK).exists())
+        finally:
+            if old_home is None:
+                os.environ.pop("HOME", None)
+            else:
+                os.environ["HOME"] = old_home
+
     def test_output_files_are_private(self):
         self.scan(name="perm")
         mode = os.stat(str(self.tmp / "perm" / "signals.json")).st_mode & 0o777
@@ -293,6 +323,188 @@ class MatchTests(FixtureCase):
         existing, new = data["results"]
         self.assertEqual(existing["matches"][0]["level"], "很可能已有")
         self.assertEqual(new["matches"], [])
+
+
+class OriginTests(FixtureCase):
+    """取常浩原话的四个过滤漏洞（my-skills#135）。样例按 2026-11-13～11-26 本机真实记录的结构改写，内容已换成演示文字。"""
+
+    def gamma(self, name):
+        return next(Path(self.data / "claude_origin" / "projects" / "-Users-demo-proj-gamma").glob("*%s.jsonl" % name))
+
+    def scan_origin(self, name, *extra):
+        out = self.tmp / name
+        argv = ["scan"] + WINDOW + ["--claude-root", str(self.data / "claude_origin" / "projects"),
+                                    "--codex-root", str(self.data / "codex_exec"),
+                                    "--no-default-rules", "--rules", self.rules, "--out", str(out)] + list(extra)
+        run_cli(argv)
+        result = json.loads((out / "signals.json").read_text(encoding="utf-8"))
+        return result, (out / "signals.md").read_text(encoding="utf-8")
+
+    def users(self, name):
+        coverage = sr.Counter()
+        session = sr.parse_claude(self.gamma(name), coverage)
+        return [(e.text, e.channel) for e in session["events"] if e.kind == "user"], coverage
+
+    def test_bug1_reminder_first_block_is_kept(self):
+        # 真实样本：origin.kind=human，首块是「Linked sessions now」提醒，第二块是常浩打的「装并重启」一类短话
+        users, _ = self.users("0001")
+        self.assertEqual(users[0], ("合并", "input"))
+        self.assertNotIn("system-reminder", "".join(t for t, _ in users))
+
+    def test_bug2_records_without_origin_are_not_human(self):
+        # 真实样本：side-session 首条任务（turnOrigin=host_synthetic）、Hermes 派单（entrypoint=sdk-cli）都没有 origin
+        users, coverage = self.users("0001")
+        joined = "\n".join(t for t, _ in users)
+        self.assertNotIn("Background (from the session", joined)
+        self.assertNotIn("Hermes 派来干活", joined)
+        self.assertGreaterEqual(coverage["non_human_messages_skipped"], 2)
+
+    def test_bug3_agent_hud_replies_kept_relays_dropped(self):
+        # 真实样本：驿窗侧栏回「合并」（pluginPrompt.text）；同一路里的 ChatGPT 审核意见 / 思维评审回信回送、
+        # 接力出错通知、别的 agent 经驿窗发来的消息要排除
+        users, coverage = self.users("0001")
+        self.assertIn(("合并", "agent-hud"), users)
+        joined = "\n".join(t for t, _ in users)
+        for unwanted in ("审核意见", "思维评审回信", "出错", "Agent HUD · 来自", "The agent-hud plugin sent"):
+            self.assertNotIn(unwanted, joined)
+        self.assertEqual(coverage["agent_hud_relays_skipped"], 4)
+
+    def test_bug4_codex_exec_is_dispatch_not_user(self):
+        # 真实记录里 Codex 的「用户消息」全来自 originator=codex_exec 的派单
+        path = next((self.data / "codex_exec").glob("*.jsonl"))
+        coverage = sr.Counter()
+        session = sr.parse_codex(path, coverage)
+        self.assertTrue(session["dispatched"])
+        self.assertEqual([e for e in session["events"] if e.kind == "user"], [])
+        self.assertEqual(coverage["dispatch_messages_skipped"], 1)
+        self.assertEqual([e.ok for e in session["events"] if e.kind == "tool_result"], [False])  # 工具失败照常统计
+
+    def test_fork_copies_counted_once_across_files(self):
+        result, _ = self.scan_origin("fork")
+        self.assertEqual(result["coverage"]["duplicate_messages_removed"], 1)
+        merge = next(s for s in result["signals"]["repeats"]["short_messages"] if s["text"] == "合并")
+        self.assertEqual(merge["count"], 5)  # 输入框 4（含「合并。」）+ 驿窗 1，分叉副本不算
+
+    def test_repeat_signal_and_buttons(self):
+        result, markdown = self.scan_origin("repeat")
+        rep = result["signals"]["repeats"]
+        merge = rep["short_messages"][0]
+        self.assertEqual((merge["id"], merge["text"]), ("S1", "合并"))
+        self.assertEqual(merge["channels"], {"输入框": 4, "驿窗侧栏": 1})
+        self.assertEqual(merge["equal_button"], 2)       # 两次都紧跟在给了「合并」按钮的 wrap_up 之后
+        self.assertEqual(merge["equal_recommended"], 1)  # 只有第一次「合并」是第一个按钮（推荐）
+        self.assertEqual(merge["sessions"], 2)
+        self.assertEqual(len(rep["long_paragraphs"]), 1)
+        self.assertEqual(rep["long_paragraphs"][0]["count"], 3)
+        self.assertIn("AGENTS.md 的工程流程", rep["long_paragraphs"][0]["text"])
+        self.assertIn("## 四、重复（短话 1 组，长段 1 段）", markdown)
+        self.assertIn("等于按钮 2、等于推荐 1", markdown)
+        # 派单和 side-session 任务里的「不对 / 以后都」不再混进纠正信号
+        texts = "\n".join(s["text"] for s in result["signals"]["user_messages"])
+        self.assertNotIn("以后都", texts)
+
+    def test_short_min_sets_repeat_threshold(self):
+        # 盲测 E2 的执行者为了看长尾，另写包装脚本把门槛从 5 改成 2；改成参数
+        result, markdown = self.scan_origin("short-min-6", "--short-min", "6")
+        rep = result["signals"]["repeats"]
+        self.assertEqual(rep["short_min"], 6)
+        self.assertEqual(rep["short_messages"], [])  # 「合并」只有 5 次，不够 6
+        self.assertIn("出现 ≥ 6 次的列出", markdown)
+        low, _ = self.scan_origin("short-min-5", "--short-min", "5")
+        self.assertEqual([(x["text"], x["count"]) for x in low["signals"]["repeats"]["short_messages"]], [("合并", 5)])  # 门槛含等于
+        self.assertEqual(low["signals"]["repeats"]["short_messages_total"], rep["short_messages_total"])  # 门槛只管列哪些，不改总数
+        code, _, err = run_cli(["scan"] + WINDOW + ["--short-min", "0", "--out", str(self.tmp / "bad")])
+        self.assertEqual(code, 2)
+        self.assertIn("--short-min", err)
+
+    def test_check_proposal_split(self):
+        # 盲测 E2 三轮都卡在「合并」次数没带来源拆分；改成机检。样例的写法取自前几轮真实提案
+        self.scan_origin("check")
+        out = self.tmp / "check"
+        cases = {
+            "good": ("| 合并类 | S1「合并」5（输入框 4、驿窗侧栏 1） |\n- 后面再提「合并」5 次不用再拆\n", 0, []),
+            "bare": ("| 合并 | 合并 5、Merge 2 等，共 7 |\n", 1, ["第 1 行 S1：第一次写全窗口次数没带来源拆分"]),
+            "wrong": ("- S1「合并」5 次（输入框 3、驿窗侧栏 2）\n", 1, ["来源拆分和 signals 对不上"]),
+            "paren": ("- S1「合并」5 次（2 次等于推荐）\n", 1, ["第一次写全窗口次数没带来源拆分"]),
+            # ChatGPT 审查 P2-01：会话数、项目数不是次数
+            "sessions": ("- 「合并」在 5 个会话里反复出现\n- 「合并」覆盖 5 个会话\n- 「合并」5 个项目\n", 0, []),
+            # P2-02：同一来源写两次、来源名认不出，都要报
+            "dup": ("- S1「合并」5 次（输入框 4、驿窗侧栏 1、输入框 4）\n", 1, ["「输入框」写了两次"]),
+            "unknown": ("- S1「合并」5 次（输入框 4、侧栏 1）\n", 1, ["认不出的部分「侧栏 1」"]),
+            "total": ("- 「合并」共 5 次（输入框 4、驿窗侧栏 1）\n", 0, []),
+            # ChatGPT 审查第 2 轮 P2-01：消息数、带空格的百分号也不是次数
+            "units": ("- 「合并」5 条消息\n- 「合并」5 %\n- 合并 5 个会话\n", 0, []),
+            "forms": ("- 「合并」：5（输入框 4、驿窗侧栏 1）\n- 「合并」合计 5 次\n- 合并 5（输入框 4、驿窗侧栏 1）\n", 0, []),
+            # P2-02：一个合法来源都没有的「侧栏 1」，第一次出现和后面再出现都要报
+            "pure-unknown-first": ("- S1「合并」5 次（侧栏 5）\n", 1, ["认不出的来源「侧栏 5」"]),
+            "pure-unknown-later": ("- S1「合并」5 次（输入框 4、驿窗侧栏 1）\n- 再说一次「合并」5 次（侧栏 5）\n", 1, ["认不出的来源「侧栏 5」"]),
+            # 第 3 轮 P2-01：「次」后面跟别的计量也不是全窗口次数；半角括号的拆分照样认
+            "freq": ("- 「合并」5次以上\n- 「合并」5次/周\n", 0, []),
+            "half-paren": ("- 合并 5 (输入框 4, 驿窗侧栏 1)\n", 0, []),
+            "half-paren-wrong": ("- 合并 5 (输入框 3, 驿窗侧栏 2)\n", 1, ["来源拆分和 signals 对不上"]),
+            # 第 3 轮 P2-07：没收录的叫法在后面再提时也报；按项目拆、数字对不上的说明不报
+            "unlisted-later": ("- S1「合并」5 次（输入框 4、驿窗侧栏 1）\n- 「合并」5 次（ChatGPT 3、网页端 2）\n- 「合并」5 次（浏览器 5）\n", 1,
+                               ["认不出的来源「ChatGPT 3、网页端 2」", "认不出的来源「浏览器 5」"]),
+            "not-source": ("- S1「合并」5 次（输入框 4、驿窗侧栏 1）\n- 「合并」5 次（proj-gamma 5）\n- 「合并」5 次（输入法 2）\n- 「合并」5 次（插件 2）\n", 0, []),
+            "note-paren": ("- S1「合并」5 次（输入框 4、驿窗侧栏 1）\n- 「合并」5 次（等于推荐 1）\n", 0, []),
+            "segment": ("- 「合并」段1 2 次、段2 3 次\n- 这组 5% 不算次数\n", 0, []),
+        }
+        for name, (body, want, needles) in cases.items():
+            path = out / ("提案-%s.md" % name)
+            path.write_text(body, encoding="utf-8")
+            code, stdout, _ = run_cli(["check", str(path)])
+            self.assertEqual(code, want, (name, stdout))
+            for needle in needles:
+                self.assertIn(needle, stdout)
+            if want:
+                self.assertIn("应写成：「合并」5 次（输入框 4、驿窗侧栏 1）", stdout)
+        # 盲测 E2 复测：D 类漏了「落点」、合组只写了等于按钮
+        d_text = ("### D1 合并 · 多次\n- 重复信号：S1「合并」5 次（输入框 4、驿窗侧栏 1），等于按钮 2、等于推荐 1\n"
+                  "- 常浩在替 AI 做什么：点头\n- 建议做法：〔改规则〕\n- 落点：工程流程\n- 怎么量：下期次数\n\n"
+                  "### D2 继续 · 多次\n- 重复信号：S6、S14 合计 7 次，等于按钮 0\n- 常浩在替 AI 做什么：喊醒\n"
+                  "- 建议做法：〔做成钩子或定时任务〕\n- 怎么量：下期次数\n\n"
+                  "### D3 搬运 · 单次\n- 重复信号：L1 3 条消息、3 个会话\n- 常浩在替 AI 做什么：搬运\n"
+                  "- 建议做法：〔做成 skill〕\n- 落点：my-skills\n- 怎么量：下期 L 组\n\n"
+                  # 第 2 轮 P2-05：只有关键词没有数字；没列编号
+                  "### D4 放行 · 多次\n- 重复信号：S3「都按推荐」5 次（输入框 4、驿窗侧栏 1），等于按钮、等于推荐\n"
+                  "- 常浩在替 AI 做什么：点头\n- 建议做法：〔改规则〕\n- 落点：全局指令\n- 怎么量：下期次数\n\n"
+                  "### D6 开工 · 多次\n- 重复信号：2 组合计 9 次，等于按钮 3、等于推荐 3\n  - S4「按推荐开工」5 次\n  - S5「按计划开工」4 次\n"
+                  "- 常浩在替 AI 做什么：点头\n- 建议做法：〔改规则〕\n- 落点：全局指令\n- 怎么量：下期次数\n\n"
+                  "### D7 示例 · 多次\n- 重复信号：\n  - S1「合并」5 次（输入框 4、驿窗侧栏 1），等于按钮 2、等于推荐 1\n  - 落点：这里只是子项说明\n"
+                  "- 常浩在替 AI 做什么：点头\n- 建议做法：〔改规则〕\n- 怎么量：下期次数\n\n"
+                  "### D5 交接 · 多次\n- 重复信号：3 组合计 9 次，等于按钮 2、等于推荐 2\n"
+                  "- 常浩在替 AI 做什么：点头\n- 建议做法：〔改规则〕\n- 落点：全局指令\n- 怎么量：下期次数\n\n## 已覆盖\n- 无\n")
+        path = out / "提案-d.md"
+        path.write_text(d_text, encoding="utf-8")
+        code, stdout, _ = run_cli(["check", str(path)])
+        self.assertEqual(code, 1, stdout)
+        self.assertIn("D2：缺「落点」", stdout)
+        self.assertIn("D2：重复信号没写「等于推荐」几次", stdout)
+        self.assertIn("D4：重复信号没写「等于按钮」「等于推荐」几次", stdout)
+        self.assertIn("D5：重复信号没列 S / L 编号", stdout)
+        self.assertNotIn("D1：", stdout)
+        self.assertNotIn("D6：", stdout)  # 编号写在子项里也算列了
+        self.assertIn("D7：缺「落点」", stdout)  # 第 3 轮 P2-06：子项里的「落点」不算主字段
+        self.assertNotIn("D3：", stdout)  # L 组没有按钮数据，不要求
+        code, _, err = run_cli(["check", str(self.tmp / "nowhere" / "提案.md")])
+        self.assertEqual(code, 2)
+
+    def test_parse_split_project_names(self):
+        # ChatGPT 审查第 4 轮 P2-07：projects 只存前 5 个，第 6 个项目名不能被当成认不出的来源
+        names = ["proj-%s" % x for x in "abcdef"]
+        item = {"count": 6, "projects": dict((n, 1) for n in names[:5]), "project_names": names}
+        paren = "（%s）" % "、".join("%s 1" % n for n in names)
+        self.assertEqual(sr.parse_split(paren, item), (None, None))
+        self.assertIn("认不出的来源", sr.parse_split("（浏览器 6）", item)[1])
+        # 旧版 signals 没有完整名单、前 5 个已满：名单可能不全，不据此报
+        old = {"count": 6, "projects": item["projects"]}
+        self.assertEqual(sr.parse_split(paren, old), (None, None))
+        # 「等于…」是统计说明，不是来源
+        self.assertEqual(sr.parse_split("（等于按钮 3、等于推荐 3）", item), (None, None))
+        # 第 5 轮 P2-08：只放过这两个确切的统计说明，别的「等于…」叫法照样报
+        self.assertIn("认不出的来源", sr.parse_split("（等于浏览器 6）", item)[1])
+        self.assertIn("认不出的来源", sr.parse_split("（等于侧栏 6）", item)[1])
+        self.assertIn("认不出的来源", sr.parse_split("（等于按钮 3、等于侧栏 3）", item)[1])
 
 
 class RejectionGuardTests(unittest.TestCase):

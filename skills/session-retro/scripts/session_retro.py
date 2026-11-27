@@ -133,6 +133,13 @@ STRIP_FOR_MATCH = [
     re.compile(r"[「“\"‘][^」”\"’\n]{1,20}[」”\"’]"),  # 引号里的短词多是在引用，不是在纠正
 ]
 LONG_MESSAGE = 800
+# 「重复」信号：短话 ≤ SHORT_LIMIT 字、出现 ≥ SHORT_MIN 次列出；长消息按空行切段，段落归一化后 ≥ PARA_MIN 字、
+# 在 ≥ PASTE_MIN 条消息里出现的列出
+SHORT_LIMIT = 20
+SHORT_MIN = 5
+PARA_MIN = 20
+PASTE_MIN = 3
+CHANNEL_NAMES = {"input": "输入框", "agent-hud": "驿窗侧栏", "codex": "Codex"}
 
 
 def _search(patterns, text):
@@ -342,12 +349,59 @@ def iter_jsonl(path, coverage, skip_hint=None):
 
 
 class Event(object):
-    __slots__ = ("kind", "ts", "line", "text", "tool", "key", "ok", "call_id", "uid", "reason", "fallback")
+    __slots__ = ("kind", "ts", "line", "text", "tool", "key", "ok", "call_id", "uid", "reason", "fallback", "channel", "labels")
 
-    def __init__(self, kind, ts, line, text="", tool=None, key=None, ok=None, call_id=None, uid=None, reason=None, fallback=False):
+    def __init__(self, kind, ts, line, text="", tool=None, key=None, ok=None, call_id=None, uid=None, reason=None, fallback=False,
+                 channel=None, labels=None):
         self.kind, self.ts, self.line, self.text = kind, ts, line, text
         self.tool, self.key, self.ok, self.call_id = tool, key, ok, call_id
         self.uid, self.reason, self.fallback = uid, reason, fallback
+        self.channel, self.labels = channel, labels  # channel：用户的话从哪来；labels：wrap_up 给的按钮文字
+
+
+# ---------------------------------------------------------------- 谁说的话（依据见 references/session-formats.md「用户原话的来源」）
+
+# 桌面应用会把提醒（关联会话状态、钩子注入等）作为文字块拼在真人消息前后
+SYSTEM_REMINDER_BLOCK = re.compile(r"<system-reminder>.*?</system-reminder>", re.S)
+AGENT_HUD_WRAPPER = re.compile(r"(?s)^The agent-hud plugin sent a message:\n(.*?)\n\nThis is how Claude Code surfaces")
+# 驿窗侧栏这一路里不是常浩打的：ChatGPT 回送（审核意见、思维评审回信）、接力出错通知、别的 agent 经驿窗发来的消息
+AGENT_HUD_RELAYS = re.compile(r"(?s)^(?:ChatGPT 对「.*?」的|驿窗接力「.*?」出错|\[Agent HUD · 来自 )")
+
+
+def claude_channel(record):
+    """这条 user 记录是不是常浩亲手发的：返回 "input"（桌面输入框）、"agent-hud"（驿窗侧栏）或 None（不是）。
+
+    新版记录用 origin 标来源；没有 origin 的看 turnOrigin（host_synthetic 是应用代发的 side-session 任务和事件，
+    sdk 是 claude -p 派单）。两个字段都没有的是旧版记录，按真人处理。
+    """
+    if record.get("entrypoint") == "sdk-cli":
+        return None
+    origin = record.get("origin")
+    if isinstance(origin, dict):
+        kind = origin.get("kind")
+        if kind == "human":
+            return "input"
+        if kind == "plugin" and origin.get("name") == "agent-hud":
+            return "agent-hud"
+        return None
+    if origin is not None:
+        return None
+    return "input" if record.get("turnOrigin") in (None, "human") else None
+
+
+def agent_hud_text(record, text):
+    prompt = record.get("pluginPrompt")
+    if isinstance(prompt, dict) and isinstance(prompt.get("text"), str):
+        return prompt["text"].strip()
+    wrapped = AGENT_HUD_WRAPPER.match(text)
+    return wrapped.group(1).strip() if wrapped else ""
+
+
+def wrap_up_labels(block):
+    """wrap_up 的按钮文字，按给出顺序（第一个是 AI 的推荐）。"""
+    data = block.get("input") if isinstance(block.get("input"), dict) else {}
+    actions = data.get("actions") if isinstance(data.get("actions"), list) else []
+    return [a["label"].strip() for a in actions if isinstance(a, dict) and isinstance(a.get("label"), str) and a["label"].strip()]
 
 
 # ---------------------------------------------------------------- Claude Code
@@ -384,7 +438,8 @@ def parse_claude(path, coverage):
                 elif block.get("type") == "tool_use":
                     key = tool_key(block.get("name"), block.get("input"))
                     calls[block.get("id")] = (block.get("name"), key)
-                    events.append(Event("tool_call", stamp, number, tool=block.get("name"), key=key, call_id=block.get("id")))
+                    labels = wrap_up_labels(block) if str(block.get("name", "")).endswith("__wrap_up") else None
+                    events.append(Event("tool_call", stamp, number, tool=block.get("name"), key=key, call_id=block.get("id"), labels=labels))
             continue
         # user 记录：真人输入，或工具结果
         texts = []
@@ -415,15 +470,27 @@ def parse_claude(path, coverage):
         text = "\n".join(t for t in texts if t).strip()
         if not text:
             continue
-        origin = record.get("origin")
         if record.get("isMeta") or record.get("isCompactSummary") or record.get("isVisibleInTranscriptOnly"):
             continue
-        if isinstance(origin, dict) and origin.get("kind") not in (None, "human"):
+        channel = claude_channel(record)
+        if channel == "agent-hud":
+            text = agent_hud_text(record, text)
+            if not text or AGENT_HUD_RELAYS.match(text):
+                coverage["agent_hud_relays_skipped"] += 1
+                continue
+        else:
+            # 先剥掉注入的提醒再判断：首块是提醒的真人消息以前整条被当成系统文字丢掉
+            text = SYSTEM_REMINDER_BLOCK.sub("", text).strip()
+            if not text:
+                continue
+        if channel is None:
+            if not is_system_text(text) and not INTERRUPT_RE.match(text):
+                coverage["non_human_messages_skipped"] += 1
             continue
         if INTERRUPT_RE.match(text):
             events.append(Event("interrupt", stamp, number, text, uid=uid))
         elif not is_system_text(text):
-            events.append(Event("user", stamp, number, text, uid=uid))
+            events.append(Event("user", stamp, number, text, uid=uid, channel=channel))
     return session
 
 
@@ -484,6 +551,8 @@ def parse_codex(path, coverage):
             if (isinstance(source, dict) and "subagent" in source) or payload.get("agent_path") not in (None, "/root"):
                 session["subagent"] = True
                 return session
+            # codex exec 是脚本或别的 agent 派单，「用户消息」是派单内容；工具调用照常统计
+            session["dispatched"] = payload.get("originator") == "codex_exec" or source == "exec"
             continue
         if number == 1 and payload is None and "id" in record and "type" not in record:  # 旧版首行
             session["session_id"] = record.get("id") or session["session_id"]
@@ -503,7 +572,7 @@ def parse_codex(path, coverage):
                 has_event_user = True
                 text = codex_user_text(payload.get("message") if isinstance(payload.get("message"), str) else "")
                 if text:
-                    events.append(Event("user", stamp, number, text))
+                    events.append(Event("user", stamp, number, text, channel="codex"))
             elif sub == "turn_aborted":
                 events.append(Event("interrupt", stamp, number, "turn_aborted: %s" % payload.get("reason", "")))
             elif sub == "exec_command_end" and isinstance(payload.get("exit_code"), int):
@@ -523,7 +592,7 @@ def parse_codex(path, coverage):
             elif item.get("role") == "user":
                 text = codex_user_text(text)
                 if text:
-                    events.append(Event("user", stamp, number, text, fallback=True))
+                    events.append(Event("user", stamp, number, text, fallback=True, channel="codex"))
         elif item_type in ("function_call", "custom_tool_call", "local_shell_call"):
             name = item.get("name") or ("shell" if item_type == "local_shell_call" else "tool")
             args = item.get("arguments") if item_type == "function_call" else (
@@ -556,6 +625,10 @@ def parse_codex(path, coverage):
             event.ok = exit_codes[call_id] == 0
     if has_event_user:
         session["events"] = [e for e in events if not (e.kind == "user" and e.fallback)]
+    if session.get("dispatched"):
+        dropped = sum(1 for e in session["events"] if e.kind == "user")
+        coverage["dispatch_messages_skipped"] += dropped
+        session["events"] = [e for e in session["events"] if e.kind != "user"]
     return session
 
 
@@ -716,8 +789,11 @@ class Scanner(object):
         self.coverage = Counter()
         self.coverage["roots_missing"] = []
         self.user_signals, self.rejections, self.failures = [], [], []
-        self.seen_uids, self.seen_text_time, self.repeat_index = set(), set(), {}
+        self.seen_text_time, self.repeat_index = set(), {}
         self.seen_tool_ids = set()
+        self.seen_user_uids = set()
+        self.short_index, self.paste_index = {}, {}
+        self.short_total = Counter()
         self.projects = Counter()
         self.cwds = set()
         projects = [p.lower() for p in (args.project or [])]
@@ -771,6 +847,7 @@ class Scanner(object):
 
     def analyze(self, session):
         last_assistant, last_user, after_break = "", "", False
+        buttons = []
         key_of_call = {}
         streaks = defaultdict(list)
         project = session["cwd"] or "(未知目录)"
@@ -781,6 +858,8 @@ class Scanner(object):
                 continue
             if event.kind == "tool_call":
                 key_of_call[event.call_id] = event.key
+                if event.labels is not None:
+                    buttons = event.labels
                 continue
             if event.kind in ("rejection", "interrupt"):
                 after_break = True
@@ -801,9 +880,17 @@ class Scanner(object):
                     streaks[key].append(event)
                 continue
             if event.kind == "user":
-                if inside:
+                # 分叉、续接的会话会把旧记录连同 uuid 复制进新文件，跨文件只算一次
+                duplicate = bool(event.uid) and (session["source"], event.uid) in self.seen_user_uids
+                if event.uid:
+                    self.seen_user_uids.add((session["source"], event.uid))
+                if duplicate:
+                    if inside:
+                        self.coverage["duplicate_messages_removed"] += 1
+                elif inside:
                     self.add_user(session, event, last_assistant, after_break, project)
-                last_user, after_break = event.text, False
+                    self.add_repeat(session, event, buttons, project)
+                last_user, after_break, buttons = event.text, False, []
         for key, failed in streaks.items():
             self.close_streak(session, project, key, failed, resolved=False)
 
@@ -812,15 +899,10 @@ class Scanner(object):
         if not tags:
             return
         normalized = norm_text(event.text)
-        if event.uid and event.uid in self.seen_uids:
-            self.coverage["duplicate_messages_removed"] += 1
-            return
         stamp_key = (normalized, event.ts.replace(microsecond=0))
         if stamp_key in self.seen_text_time:
             self.coverage["duplicate_messages_removed"] += 1
             return
-        if event.uid:
-            self.seen_uids.add(event.uid)
         self.seen_text_time.add(stamp_key)
         citation = self.cite(session, event)
         if len(normalized) >= 12 and normalized in self.repeat_index:
@@ -831,13 +913,76 @@ class Scanner(object):
         signal = {
             "tags": tags, "strength": strength, "keywords": keywords,
             "text": clip(event.text, focus=keywords[0] if keywords else None),
-            "source": session["source"], "project": project, "session": session["session_id"],
+            "source": session["source"], "channel": event.channel, "project": project, "session": session["session_id"],
             "citation": citation, "prev_assistant": clip(last_assistant, CONTEXT_LIMIT),
             "after_interrupt": after_break, "long_message": len(event.text) > LONG_MESSAGE, "repeats": [],
         }
         if len(normalized) >= 12:
             self.repeat_index[normalized] = signal
         self.user_signals.append(signal)
+
+    def add_repeat(self, session, event, buttons, project):
+        """第五类信号「重复」的原料：亲手短话按归一化文本聚类，长消息按段落聚类。"""
+        text = event.text.strip()
+        key = norm_text(text)
+        if not key:
+            return
+        citation = self.cite(session, event)
+        if len(text) <= SHORT_LIMIT:
+            hit_button = any(norm_text(label) == key for label in buttons)
+            hit_first = bool(buttons) and norm_text(buttons[0]) == key
+            self.short_total["messages"] += 1
+            self.short_total["equal_button"] += hit_button
+            self.short_total["equal_recommended"] += hit_first
+            item = self.short_index.setdefault(key, {
+                "texts": Counter(), "count": 0, "equal_button": 0, "equal_recommended": 0,
+                "channels": Counter(), "sessions": set(), "projects": Counter(), "citations": []})
+            item["texts"][text] += 1
+            item["count"] += 1
+            item["equal_button"] += hit_button
+            item["equal_recommended"] += hit_first
+            item["channels"][CHANNEL_NAMES.get(event.channel, event.channel or session["source"])] += 1
+            item["sessions"].add(session["session_id"])
+            item["projects"][_project_name(project)] += 1
+            if len(item["citations"]) < 5:
+                item["citations"].append(citation)
+            return
+        seen = set()
+        for para in re.split(r"\n\s*\n", text):
+            pkey = norm_text(para)
+            if len(pkey) < PARA_MIN or pkey in seen:
+                continue
+            seen.add(pkey)
+            item = self.paste_index.setdefault(pkey, {"text": clip(para.strip(), 200), "count": 0, "sessions": set(), "citations": []})
+            item["count"] += 1
+            item["sessions"].add(session["session_id"])
+            if len(item["citations"]) < 5:
+                item["citations"].append(citation)
+
+    def repeats(self):
+        shorts = []
+        for item in self.short_index.values():
+            if item["count"] < self.args.short_min:
+                continue
+            shorts.append({
+                "text": item["texts"].most_common(1)[0][0], "variants": [t for t, _ in item["texts"].most_common(5)],
+                "count": item["count"], "equal_button": item["equal_button"], "equal_recommended": item["equal_recommended"],
+                "channels": dict(item["channels"].most_common()), "sessions": len(item["sessions"]),
+                "projects": dict(item["projects"].most_common(5)),
+                "project_names": sorted(item["projects"]),  # 完整名单，check 判「按项目拆分」时用
+                "citations": item["citations"]})
+        shorts.sort(key=lambda x: (-x["count"], x["text"]))
+        pastes = [{"text": item["text"], "count": item["count"], "sessions": len(item["sessions"]), "citations": item["citations"]}
+                  for item in self.paste_index.values() if item["count"] >= PASTE_MIN]
+        pastes.sort(key=lambda x: (-x["count"], x["text"]))
+        for prefix, items in (("S", shorts), ("L", pastes)):
+            for number, item in enumerate(items, 1):
+                item["id"] = "%s%d" % (prefix, number)
+        return {"short_limit": SHORT_LIMIT, "short_min": self.args.short_min, "paste_min": PASTE_MIN,
+                "short_messages_total": self.short_total["messages"],
+                "short_equal_button_total": self.short_total["equal_button"],
+                "short_equal_recommended_total": self.short_total["equal_recommended"],
+                "short_messages": shorts, "long_paragraphs": pastes}
 
     def add_rejection(self, session, event, last_user, project):
         uid = (session["source"], event.uid) if event.uid else (session["source"], event.kind, event.ts, event.key)
@@ -904,7 +1049,8 @@ class Scanner(object):
             "coverage_status": "partial" if (problems or truncated) else "complete_for_found_files",
             "projects": dict(self.projects.most_common()),
             "truncated": truncated,
-            "signals": {"user_messages": users, "rejections": self.rejections, "repeated_failures": self.failures},
+            "signals": {"user_messages": users, "rejections": self.rejections, "repeated_failures": self.failures,
+                        "repeats": self.repeats()},
         }
         return redact(result)
 
@@ -932,7 +1078,8 @@ def render_markdown(result):
         cov.get("files_scanned", 0), cov.get("sessions_in_window_claude", 0), cov.get("sessions_in_window_codex", 0), result["coverage_status"]))
     gaps = ["%s %s" % (k, v) for k, v in sorted(cov.items()) if k in (
         "malformed_lines", "oversized_lines_skipped", "files_unreadable", "records_without_timestamp", "subagent_sessions_skipped",
-        "sidechain_records_skipped", "duplicate_messages_removed", "repeated_messages_merged", "duplicate_rejections_removed") and v]
+        "sidechain_records_skipped", "duplicate_messages_removed", "repeated_messages_merged", "duplicate_rejections_removed",
+        "non_human_messages_skipped", "agent_hud_relays_skipped", "dispatch_messages_skipped") and v]
     if cov.get("roots_missing"):
         gaps.append("目录不存在：" + "、".join(cov["roots_missing"]))
     if gaps:
@@ -984,6 +1131,33 @@ def render_markdown(result):
         lines.append("  - 末次报错：%s" % item["error"])
         lines.append("  - 出处：%s 至 %s" % (_cite_text(item["first"]), _cite_text(item["last"])))
     lines.append("")
+    rep = signals.get("repeats") or {}
+    shorts, pastes = rep.get("short_messages", []), rep.get("long_paragraphs", [])
+    lines.append("## 四、重复（短话 %d 组，长段 %d 段）" % (len(shorts), len(pastes)))
+    lines.append("")
+    lines.append("只算用户亲手发的话（输入框、驿窗侧栏、Codex 桌面）。短话 ≤ %d 字，归一化（去空白和标点、不分大小写）后出现 ≥ %d 次的列出。"
+                 "「等于按钮」= 和 AI 上一轮 wrap_up 给的按钮文字一致，「等于推荐」= 和第一个按钮（AI 的推荐）一致。" % (rep.get("short_limit", SHORT_LIMIT), rep.get("short_min", SHORT_MIN)))
+    lines.append("")
+    total = rep.get("short_messages_total", 0)
+    if total:
+        lines.append("- 窗口内短话共 %d 条，等于按钮 %d 条（%.0f%%），等于推荐 %d 条" % (
+            total, rep.get("short_equal_button_total", 0), 100.0 * rep.get("short_equal_button_total", 0) / total,
+            rep.get("short_equal_recommended_total", 0)))
+    for item in shorts:
+        channels = "、".join("%s %d" % (k, v) for k, v in item["channels"].items())
+        lines.append("- **%s** 「%s」%d 次（%s），等于按钮 %d、等于推荐 %d，%d 个会话" % (
+            item["id"], item["text"], item["count"], channels, item["equal_button"], item["equal_recommended"], item["sessions"]))
+        if len(item["variants"]) > 1:
+            lines.append("  - 写法：" + "、".join("「%s」" % v for v in item["variants"]))
+        lines.append("  - 项目：" + "；".join("%s %d" % (k, v) for k, v in item["projects"].items()))
+        lines.append("  - 出处（前 %d 条）：%s" % (len(item["citations"]), "；".join(_cite_text(c) for c in item["citations"])))
+    lines.append("")
+    lines.append("长消息按空行切段，同一段（归一化后 ≥ %d 字）出现在 ≥ %d 条消息里的列出，多半是在会话之间搬运。" % (PARA_MIN, rep.get("paste_min", PASTE_MIN)))
+    lines.append("")
+    for item in pastes:
+        lines.append("- **%s** %d 条消息、%d 个会话：「%s」" % (item["id"], item["count"], item["sessions"], item["text"]))
+        lines.append("  - 出处（前 %d 条）：%s" % (len(item["citations"]), "；".join(_cite_text(c) for c in item["citations"])))
+    lines.append("")
     return "\n".join(lines)
 
 
@@ -1022,32 +1196,68 @@ def add_rule_args(parser):
     parser.add_argument("--no-default-rules", action="store_true", help="不读默认规则文件（~/.claude/CLAUDE.md、~/.codex/AGENTS.md、agent-kit/LESSONS.md、各项目 CLAUDE.md/AGENTS.md/docs/LESSONS.md）")
 
 
+RESERVE_MARK = ".session-retro-scanning"
+
+
+def reserve_out_dir(base):
+    """从 base、base-2、base-3……里选第一个没有上次结果、也没被别的扫描占着的目录，独占创建占位文件。"""
+    number = 1
+    while True:
+        out = base if number == 1 else base.with_name("%s-%d" % (base.name, number))
+        number += 1
+        if (out / "signals.json").exists():
+            continue
+        out.mkdir(parents=True, exist_ok=True)
+        mark = out / RESERVE_MARK
+        try:
+            with open(str(mark), "x"):
+                pass
+        except FileExistsError:
+            continue
+        if (out / "signals.json").exists():  # 别的扫描刚写完、刚交还占位
+            mark.unlink()
+            continue
+        return out, mark
+
+
 def cmd_scan(args):
     try:
         zone = ZoneInfo(args.timezone)
         start, end, start_day, end_day = resolve_window(args, zone)
-        if args.min_streak < 2 or args.max_items < 1 or (args.days is not None and args.days < 1):
-            raise ValueError("--min-streak 至少 2，--max-items、--days 至少 1")
+        if args.min_streak < 2 or args.max_items < 1 or args.short_min < 1 or (args.days is not None and args.days < 1):
+            raise ValueError("--min-streak 至少 2，--max-items、--short-min、--days 至少 1")
     except (ValueError, ZoneInfoNotFoundError) as error:
         sys.stderr.write("参数错误：%s\n" % error)
         return 2
+    reserved = None  # 默认目录的占位文件，写完结果再交还
     if args.out:
         out = Path(args.out).expanduser()
     else:
         suffix = ("_" + re.sub(r"[^\w\-]+", "-", "-".join(args.project))) if args.project else ""
-        out = Path.home() / "session-retro" / ("%s_%s%s" % (start_day.isoformat(), end_day.isoformat(), suffix))
+        base = Path.home() / "session-retro" / ("%s_%s%s" % (start_day.isoformat(), end_day.isoformat(), suffix))
+        # 同一窗口复盘过的目录里有上次的信号和据此写的提案（引用行号），默认不覆盖，另起一个目录；
+        # 用独占创建的占位文件预留目录，两个扫描同时跑也不会选中同一个
+        out, reserved = reserve_out_dir(base)
+        if out != base:
+            sys.stderr.write("%s 里已有上次的扫描结果（或别的扫描正在写），这次写到 %s（要覆盖请用 --out 指定）\n" % (short_path(base), short_path(out)))
     repo = inside_git_repo(out.parent if not out.exists() else out)
     if repo and not args.allow_in_repo:
         sys.stderr.write("拒绝写入：%s 在 git 仓库 %s 里，结果可能被误提交。换一个目录，或加 --allow-in-repo。\n" % (out, repo))
+        if reserved:
+            reserved.unlink()
         return 2
-    result = Scanner(args, start, end, zone).run()
-    out.mkdir(parents=True, exist_ok=True)
     try:
-        os.chmod(str(out), 0o700)
-    except OSError:
-        pass
-    write_private(out / "signals.json", json.dumps(result, ensure_ascii=False, indent=2) + "\n")
-    write_private(out / "signals.md", render_markdown(result))
+        result = Scanner(args, start, end, zone).run()
+        out.mkdir(parents=True, exist_ok=True)
+        try:
+            os.chmod(str(out), 0o700)
+        except OSError:
+            pass
+        write_private(out / "signals.json", json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+        write_private(out / "signals.md", render_markdown(result))
+    finally:
+        if reserved and reserved.exists():
+            reserved.unlink()  # 不管写没写成，都交还占位
     signals = result["signals"]
     sys.stdout.write("已写入 %s\n用户原话 %d 条，拒绝/中断 %d 条，连续失败 %d 组；覆盖状态 %s\n" % (
         short_path(out), len(signals["user_messages"]), len(signals["rejections"]), len(signals["repeated_failures"]), result["coverage_status"]))
@@ -1115,6 +1325,138 @@ def cmd_match(args):
     return 0
 
 
+SPLIT_PART = re.compile(r"(输入框|驿窗侧栏|Codex)\s*(\d+)")
+SPLIT_ITEM = re.compile(r"(输入框|驿窗侧栏|Codex)\s*(\d+)\s*次?")
+
+
+SPLIT_LIKE = re.compile(r"([^\d\s（）()]+?)\s*(\d+)\s*次?")
+STAT_LABELS = ("等于按钮", "等于推荐")  # 统计说明，不是来源；只认这两个确切的词
+
+
+def parse_split(paren, item=None):
+    """括号里的来源拆分 → ({来源: 次数}, 问题)。不是拆分的说明（「（20 次等于推荐）」）返回 (None, None)。
+
+    有三个合法来源名之一的，逐项解析，重复、认不出的都报。一个合法来源都没有时，只有同时满足这几条才当成写错的拆分：
+    每一项都是「叫法 + 数字」、数字加起来正好等于这一组的全窗口次数、至少一个叫法既不是这一组出现过的项目名
+    （完整名单 project_names）、也不是「等于按钮」「等于推荐」这两个统计说明（「（侧栏 5）」「（ChatGPT 3、网页端 2）」）；
+    按项目拆的、和次数对不上的说明都不报。"""
+    if not paren:
+        return None, None
+    parts = [x.strip() for x in re.split(r"[、，,；;]", paren.strip("（）() ")) if x.strip()]
+    if not SPLIT_PART.search(paren):
+        labels = [SPLIT_LIKE.fullmatch(x) for x in parts]
+        if item and parts and all(labels) and sum(int(m.group(2)) for m in labels) == item["count"]:
+            names = item.get("project_names")
+            if names is None:  # 旧版 signals 只存了前 5 个项目，名单可能不全，不据此判
+                names = list(item.get("projects", {}))
+                if len(names) >= 5:
+                    return None, None
+            # 「等于按钮 2、等于推荐 3」是统计说明，不是来源；「等于浏览器」这类照样报
+            if any(m.group(1) not in names and m.group(1) not in STAT_LABELS for m in labels):
+                return None, "来源拆分里有认不出的来源「%s」" % "、".join(parts)
+        return None, None
+    got = {}
+    for part in parts:
+        m = SPLIT_ITEM.fullmatch(part)
+        if not m:
+            return None, "来源拆分里有认不出的部分「%s」" % part
+        if m.group(1) in got:
+            return None, "来源拆分里「%s」写了两次" % m.group(1)
+        got[m.group(1)] = int(m.group(2))
+    return got, None
+
+
+def check_proposal(text, shorts):
+    """查提案里 S 组的全窗口次数有没有带来源拆分：每组第一次写到全窗口次数的地方要带，带了的要和 signals 一致。
+    只认「名字」紧跟次数的写法（中间只许空格、冒号、「共」）；次数和全窗口数不同的（分段次数、写错的总数）不查。"""
+    problems, seen = [], []
+    for item in shorts:
+        names = [item["text"]] + [v for v in item.get("variants", []) if v != item["text"]]
+        alt = "|".join(re.escape(n) for n in sorted(names, key=len, reverse=True))
+        # 名字和次数之间只许空格、冒号和「共 / 合计」；数字（或「次」）后面要紧跟空白、标点、括号或行尾，
+        # 「5 个会话」「5 条消息」「5 %」「5次以上」「5次/周」这类别的计量不是全窗口次数
+        edge = "(?=[ \\t]|[（(，,、。；;:：|)）\\]\n]|$)"
+        tail = "(?:共|合计|总共)?\\s*(\\d+)(?:\\s*次%s|(?=\\s*(?:[（(，,、。；;|)）\\]\n]|$)))\\s*([（(][^）)\n]*[）)])?" % edge
+        quoted = re.compile("[「“\"『](?:%s)[」”\"』][ \\t：:]{0,2}" % alt + tail)
+        bare = re.compile("(?<![\\w\u4e00-\u9fff])(?:%s)[ \\t：:]{0,2}" % alt + tail)  # 「合并 40」这种不加引号的写法
+        hits = sorted(list(quoted.finditer(text)) + list(bare.finditer(text)), key=lambda m: m.start())
+        if not hits:
+            continue
+        seen.append(item["id"])
+        full = [m for m in hits if int(m.group(1)) == item["count"]]
+        canon = "「%s」%d 次（%s）" % (item["text"], item["count"], "、".join("%s %d" % (k, v) for k, v in item["channels"].items()))
+        line_of = lambda m: text.count("\n", 0, m.start()) + 1
+        if not full:
+            continue  # 只提到、没写全窗口次数（比如只写分段次数），不强求
+        first = full[0]
+        if parse_split(first.group(2), item) == (None, None):  # 「（20 次等于推荐）」这种括号不算拆分
+            problems.append({"id": item["id"], "line": line_of(first), "problem": "第一次写全窗口次数没带来源拆分", "expected": canon})
+        for m in full:
+            got, problem = parse_split(m.group(2), item)
+            if problem:
+                problems.append({"id": item["id"], "line": line_of(m), "problem": problem, "expected": canon})
+            elif got is not None and got != item["channels"]:
+                problems.append({"id": item["id"], "line": line_of(m), "problem": "来源拆分和 signals 对不上：%s" % m.group(2), "expected": canon})
+    return seen, problems
+
+
+D_FIELDS = ("重复信号", "常浩在替 AI 做什么", "建议做法", "落点", "怎么量")
+D_HEADING = re.compile(r"(?m)^#{2,4}\s*(D\d+)\b")
+
+
+def check_d_items(text):
+    """D 类每条要有五项；重复信号要列 S / L 编号，有 S 组的，等于按钮、等于推荐都要写出次数（为 0 也写）。"""
+    problems = []
+    heads = list(D_HEADING.finditer(text))
+    for m in heads:
+        end = re.compile(r"(?m)^#{1,4}\s").search(text, m.end())
+        body = text[m.end():end.start() if end else len(text)]
+        line = text.count("\n", 0, m.start()) + 1
+        fields = {}
+        # 只认没有缩进的顶层字段；缩进子项里的「- 落点：」是说明，不算主字段
+        found = list(re.finditer(r"(?m)^[-*][ \t]*\**(%s)\**[ \t]*[：:]" % "|".join(re.escape(x) for x in D_FIELDS), body))
+        for i, f in enumerate(found):
+            # 一项的内容含它下面缩进的子项，到下一个顶层字段为止（各组编号常分行列在子项里）
+            fields.setdefault(f.group(1), body[f.end():found[i + 1].start() if i + 1 < len(found) else len(body)])
+        missing = [x for x in D_FIELDS if x not in fields]
+        if missing:
+            problems.append({"id": m.group(1), "line": line, "problem": "缺「%s」" % "」「".join(missing),
+                             "expected": "五项都写：" + "、".join(D_FIELDS)})
+        signal = fields.get("重复信号")
+        if signal is None:
+            continue
+        if not re.search(r"\b[SL]\d+", signal):
+            problems.append({"id": m.group(1), "line": line, "problem": "重复信号没列 S / L 编号",
+                             "expected": "列出涉及的每个 S / L 编号"})
+        elif re.search(r"\bS\d+", signal):
+            # 等于按钮、等于推荐后面（或前面）要有数字，为 0 也写
+            lack = [x for x in ("等于按钮", "等于推荐")
+                    if not re.search(r"%s\s*[:：]?\s*\d+|\d+\s*次?\s*%s" % (x, x), signal)]
+            if lack:
+                problems.append({"id": m.group(1), "line": line, "problem": "重复信号没写「%s」几次" % "」「".join(lack),
+                                 "expected": "重复信号里写等于按钮几次、等于推荐几次，为 0 也写"})
+    return problems
+
+
+def cmd_check(args):
+    proposal = Path(args.proposal).expanduser()
+    signals = Path(args.signals).expanduser() if args.signals else proposal.parent / "signals.json"
+    try:
+        text = proposal.read_text(encoding="utf-8")
+        shorts = json.loads(signals.read_text(encoding="utf-8"))["signals"]["repeats"]["short_messages"]
+    except (OSError, ValueError, KeyError) as error:
+        sys.stderr.write("读不了提案或 signals.json：%s\n" % error)
+        return 2
+    seen, problems = check_proposal(text, shorts)
+    problems += check_d_items(text)
+    lines = ["提到的 S 组：%s" % ("、".join(seen) or "无")]
+    for item in problems:
+        lines.append("- 第 %d 行 %s：%s。应写成：%s" % (item["line"], item["id"], item["problem"], item["expected"]))
+    lines.append("通过" if not problems else "共 %d 处要改" % len(problems))
+    sys.stdout.write("\n".join(lines) + "\n")
+    return 1 if problems else 0
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="session_retro.py",
@@ -1134,6 +1476,7 @@ def build_parser():
     scan.add_argument("--exclude-session", action="append", help="排除的会话 ID（比如正在做复盘的这个会话），可重复")
     scan.add_argument("--min-streak", type=int, default=3, help="同一操作失败几次算「连续失败」，默认 3")
     scan.add_argument("--max-items", type=int, default=300, help="每类信号最多保留几条，默认 300")
+    scan.add_argument("--short-min", type=int, default=SHORT_MIN, help="短话出现几次才列进「重复」，默认 %d；窗口短或想看长尾时调低" % SHORT_MIN)
     scan.add_argument("--out", help="输出目录，默认 ~/session-retro/<开始>_<结束>/")
     scan.add_argument("--allow-in-repo", action="store_true", help="允许输出到 git 仓库里（默认拒绝，防止误提交）")
     add_rule_args(scan)
@@ -1156,6 +1499,11 @@ def build_parser():
     match.add_argument("--threshold", type=float, default=0.35, help="相似度下限，默认 0.35")
     add_rule_args(match)
     match.set_defaults(func=cmd_match)
+
+    check = sub.add_parser("check", help="查提案：「重复」各组第一次写全窗口次数时有没有带来源拆分、拆分数对不对（次数本身写错的查不出）；D 类五项和等于按钮、等于推荐写全没有")
+    check.add_argument("proposal", help="提案.md 路径")
+    check.add_argument("--signals", help="signals.json 路径，默认和提案同目录")
+    check.set_defaults(func=cmd_check)
     return parser
 
 
