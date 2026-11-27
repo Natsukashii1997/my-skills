@@ -35,3 +35,5 @@ three-versions	~/.claude/skills
 three-versions	~/.agents/skills
 skill-evolution	~/.claude/skills
 skill-evolution	~/.agents/skills
+done-audit	~/.claude/skills
+done-audit	~/.agents/skills
