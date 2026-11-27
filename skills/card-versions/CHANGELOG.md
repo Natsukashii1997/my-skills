@@ -13,3 +13,5 @@
 
 - `RISK_SIGNAL_CREDENTIAL_ACCESS`（`card_preview.py` 调 `lark-cli --profile`）：用的是 lark-cli 自己保管的飞书应用凭据，脚本不读、不打印、不存凭据；profile 由调用方给，只用项目正式发这张卡的那个应用。声明已改为 `credentials: required`。确认。
 - `RISK_SIGNAL_EXTERNAL_WRITE`（发送记录追加到证据目录，以及经 lark-cli 发消息）：只往调用方给的证据目录追加一行，只发到调用方给的私聊会话；同一批有幂等键，不重复发。确认。
+
+送准入前按盲测第 1 轮打分改过一轮（记录见 evals.md）：第 6 节「选了一版、还要改」写明回复要说清定稿后登记哪几样、按什么流程改正式代码；补「卡片正文的字要和预览对得上」（第 1 轮 E1 有一版卡片写着「点按钮就算定了」，和按钮摆样子矛盾）。
