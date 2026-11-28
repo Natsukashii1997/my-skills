@@ -52,9 +52,14 @@
 
 ## 盲测记录
 
-| 日期 | 版本 | 执行者 | E1 | E2 | E3 | 结论 | 记录 |
-|---|---|---|---|---|---|---|---|
-| 2026-11-27 | 1.0.0（第一轮，模板改前） | 每条新开一个子 agent（Opus 5.5） | 产出完成 | 产出完成，指出模板带 doctype 和 Artifact 页面规范冲突 | 产出完成 | 模板有缺陷，改后整组重跑，未评分 | `~/Library/Application Support/my-skills/evidence/2026-11-27-three-versions/blind/` |
-| 2026-11-27 | 1.0.0（重跑） | 每条新开一个子 agent（Opus 5.5，不真发布 Artifact），只给 skill 目录（含 ui-preflight、ui-styles）和本条请求、材料；另开子 agent 按判定标准打分 | 过 | 过 | 过 | 全过 | `~/Library/Application Support/my-skills/evidence/2026-11-27-three-versions/blind2/` |
+| 日期 | 版本 | 执行者 | E1 | E2 | E3 | E4 | 结论 | 记录 |
+|---|---|---|---|---|---|---|---|---|
+| 2026-11-27 | 1.0.0（第一轮，模板改前） | 每条新开一个子 agent（Opus 5.5） | 产出完成 | 产出完成，指出模板带 doctype 和 Artifact 页面规范冲突 | 产出完成 | —（1.0.0 没有这条） | 模板有缺陷，改后整组重跑，未评分 | `~/Library/Application Support/my-skills/evidence/2026-11-27-three-versions/blind/` |
+| 2026-11-27 | 1.0.0（重跑） | 每条新开一个子 agent（Opus 5.5，不真发布 Artifact），只给 skill 目录（含 ui-preflight、ui-styles）和本条请求、材料；另开子 agent 按判定标准打分 | 过 | 过 | 过 | —（1.0.0 没有这条） | 全过 | `~/Library/Application Support/my-skills/evidence/2026-11-27-three-versions/blind2/` |
+| 2026-11-28 | 1.1.0（第一轮） | 每条新开一个子 agent（Opus 5.5，不真发布 Artifact），只给 skill 目录（含 ui-preflight、ui-styles，去掉 evals.md）和本条请求、材料；另开子 agent 按判定标准打分 | 过 | 过 | 过 | 不过：回复没写读了哪几份规范（第 6 步没要求） | 补第 6 步、第 4 步抄组件补回尺寸算法，整组重跑 | `~/Library/Application Support/my-skills/evidence/2026-11-28-three-versions/blind-r1/` |
+| 2026-11-28 | 1.1.0（第二轮） | 同上 | 不过：类名重名把三个阶段画成同一种颜色，执行方只读了 CSS，回复说没动 | 过 | 过 | 过 | 补第 5 步已定内容按实际显示的值核对，整组重跑 | `~/Library/Application Support/my-skills/evidence/2026-11-28-three-versions/blind-r2/` |
+| 2026-11-28 | 1.1.0（第三轮） | 同上；打分方自己在浏览器里量实际显示的值 | 过 | 过 | 过 | 过 | 全过 | `~/Library/Application Support/my-skills/evidence/2026-11-28-three-versions/blind/` |
 
 评分方记的弱点（不影响判定）：E1 给已定的阶段标签加了小圆点、时间票时间字号 12→13px，没先问（盲测后第 1 步已写明「尺寸、字号和装饰也不加不改」，未重跑）；`check.mjs` 只读静态 HTML，画板内容由脚本生成时「画板有内容」计数偏少；E2 依赖 Google Fonts，有一轮 ui-preflight 打开页面超时，重跑通过；E3 没写出规则来源（常浩 11-25）。
+
+1.1.0 第三轮评分方记的弱点（不影响判定，留作下一版）：「照真实组件画」和「不拿字符当图标」会打架（E4 把现有行尾的 ↗ 换成了 SVG）；新元素在版式规范里没有位置规定时，没写照哪个先例放；evals 要求附结果表、第 6 步没要求；按实际显示值核对没有脚本支持，执行方各写一套；第 6 步要列的东西多，回复偏长；画板字数统计偏少、外部字体超时不重试（上一轮已记）；E3 仍没写出规则来源（常浩 11-25）。
