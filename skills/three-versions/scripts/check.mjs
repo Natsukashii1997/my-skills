@@ -21,8 +21,9 @@ const PREFLIGHT = path.join(skills, 'ui-preflight', 'scripts', 'ui-preflight.mjs
 const SHOT = path.join(skills, 'ui-styles', 'scripts', 'shot.mjs');
 
 const args = process.argv.slice(2);
-const { page, out, original } = parseArgs(args);
+const { page, out, original, error } = parseArgs(args);
 const die = (msg) => { console.error(msg); process.exit(2); };
+if (error) die(error);
 if (!page || !out) die('用法：node check.mjs <三版页面.html> --out <证据目录> [--original <原页面.html 或网址>]');
 const file = path.resolve(page);
 const outDir = path.resolve(out.replace(/^~(?=\/)/, os.homedir()));
@@ -40,7 +41,7 @@ function findPlaywright() {
 }
 
 const rows = [];
-const add = (item, pass, note) => rows.push({ item, pass, note });
+const add = (item, pass, note, status) => rows.push({ item, pass, note, status });
 
 // 1. 结构
 const html = fs.readFileSync(file, 'utf8');
@@ -84,11 +85,11 @@ if (original) {
   const r = spawnSync(process.execPath, [path.join(here, 'style-diff.mjs'), file, '--out', outDir, '--original', original],
     { encoding: 'utf8', env: { ...process.env, UI_PREFLIGHT_PLAYWRIGHT: pw } });
   const counts = [...(r.stdout || '').matchAll(/^## 方案 (\w)：原页面没有的值（(.+?)）/gm)].map((m) => `${m[1]} ${m[2]}`).join('，');
-  add('样式比对：原页面没有的值（只列不判）', r.status === 0, r.status === 0 ? `${counts}；见 ${path.join(outDir, 'style-diff.md')}，回复里逐个交代` : (r.stderr || '').trim().split('\n').pop());
+  add('样式比对：原页面没有的值', r.status === 0, r.status === 0 ? `${counts}；见 ${path.join(outDir, 'style-diff.md')}，回复里逐个交代；脚本不比的宽高、间距等照 SKILL 第 5 步人工补查` : (r.stderr || '').trim().split('\n').pop(), '已生成，待逐个交代');
 }
 
 const md = ['# 三版预览自查', '', `页面：${file}`, `时间：${new Date().toISOString()}`, '', '| 检查 | 结果 | 说明 |', '|---|---|---|',
-  ...rows.map((r) => `| ${r.item} | ${r.pass ? '通过' : '**不通过**'} | ${r.note || ''} |`), '',
+  ...rows.map((r) => `| ${r.item} | ${r.pass ? (r.status || '通过') : '**不通过**'} | ${r.note || ''} |`), '',
   `截图：${shotDir}（外壳）；ui-preflight 的整页和标注截图在它自己的报告目录里。截图要自己打开看，脚本过了不等于好看。`].join('\n');
 fs.writeFileSync(path.join(outDir, 'three-versions-check.md'), md + '\n');
 console.log(md);

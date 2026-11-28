@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 样式比对：列出三版实际显示的字号、字重、颜色、边框、圆角里，原页面没有的值。
+// 样式比对：列出三版实际显示的字号、字重、颜色、渐变、阴影、边框、圆角、SVG 填色和描边里（含 ::before / ::after），原页面没有的值。\n// 只是一张有限的清单：宽高、间距，同一个值挪到别的元素上，脚本都不比，SKILL 第 5 步要人工补查。
 // 人自己列「新出现的值」会漏（1.1.0 盲测里漏过颜色、漏过字号），交给脚本取差集，回复照着列。
 // 用法：node style-diff.mjs <三版页面.html> --out <证据目录> [--original <原页面.html 或网址>]
 //   页面按 Artifact 的写法从 <title> 写起时，先照 check.mjs 包一层 doctype 和 head 再打开（存成证据目录里的 wrapped/<原文件名>）。
@@ -12,41 +12,63 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-export const KINDS = ['字号', '字重', '文字颜色', '底色', '边框色', '边框粗细', '圆角'];
+export const KINDS = ['字号', '字重', '文字颜色', '底色', '渐变底', '阴影', '边框色', '边框粗细', '圆角', 'SVG 填色', 'SVG 描边'];
+// 不比的（SKILL 第 5 步要求人工补查）：元素宽高和间距；同一个值从一个元素挪到另一个元素（比的是整页的值集合，不是逐个元素）；图片和 canvas 里画的东西。
 
-// 在页面里跑：收集 scope 下所有看得见的元素实际显示的值。返回 { 种类: { 值: { n, sample } } }
+// 在页面里跑：收集 scope 下所有看得见的元素（含 ::before / ::after）实际显示的值。返回 { 种类: { 值: { n, sample } } }
 export function collect(scope) {
   const root = scope ? document.querySelector(scope) : document.body;
   const out = {};
   if (!root) return out;
-  const add = (kind, value, el) => {
+  const add = (kind, value, el, where = '') => {
     const bucket = (out[kind] ??= {});
     const hit = (bucket[value] ??= { n: 0, sample: '' });
     hit.n += 1;
     if (!hit.sample) {
       const text = (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 14);
-      hit.sample = text || el.tagName.toLowerCase() + (el.classList[0] ? '.' + el.classList[0] : '');
+      hit.sample = (text || el.tagName.toLowerCase() + (el.classList[0] ? '.' + el.classList[0] : '')) + where;
     }
   };
   const clear = (c) => !c || c === 'transparent' || /^rgba\(\d+, \d+, \d+, 0\)$/.test(c);
-  for (const el of [root, ...root.querySelectorAll('*')]) {
-    const cs = getComputedStyle(el);
-    if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
-    const r = el.getBoundingClientRect();
-    if (!r.width || !r.height) continue;
-    const hasText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
-    if (hasText) {
-      add('字号', cs.fontSize, el);
-      add('字重', cs.fontWeight, el);
-      add('文字颜色', cs.color, el);
+  // 祖先透明、隐藏的也算看不见：checkVisibility 会往上查
+  const visible = (el) => (el.checkVisibility ? el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })
+    : getComputedStyle(el).display !== 'none');
+  const box = (cs, el, where, text) => {
+    if (text) {
+      add('字号', cs.fontSize, el, where);
+      add('字重', cs.fontWeight, el, where);
+      add('文字颜色', cs.color, el, where);
     }
-    if (!clear(cs.backgroundColor)) add('底色', cs.backgroundColor, el);
+    if (!clear(cs.backgroundColor)) add('底色', cs.backgroundColor, el, where);
+    if (cs.backgroundImage && cs.backgroundImage.includes('gradient')) add('渐变底', cs.backgroundImage, el, where);
+    if (cs.boxShadow && cs.boxShadow !== 'none') add('阴影', cs.boxShadow, el, where);
     for (const side of ['Top', 'Right', 'Bottom', 'Left']) {
       if (cs[`border${side}Style`] === 'none' || parseFloat(cs[`border${side}Width`]) === 0) continue;
-      if (!clear(cs[`border${side}Color`])) add('边框色', cs[`border${side}Color`], el);
-      add('边框粗细', cs[`border${side}Width`], el);
+      if (!clear(cs[`border${side}Color`])) add('边框色', cs[`border${side}Color`], el, where);
+      add('边框粗细', cs[`border${side}Width`], el, where);
     }
-    if (cs.borderTopLeftRadius !== '0px') add('圆角', cs.borderTopLeftRadius, el);
+    for (const corner of ['TopLeft', 'TopRight', 'BottomRight', 'BottomLeft']) {
+      const v = cs[`border${corner}Radius`];
+      if (v && v !== '0px') add('圆角', v, el, where);
+    }
+  };
+  for (const el of [root, ...root.querySelectorAll('*')]) {
+    if (!visible(el)) continue;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) continue;
+    const cs = getComputedStyle(el);
+    if (el instanceof SVGElement) {
+      if (el.tagName.toLowerCase() === 'svg' || el.tagName.toLowerCase() === 'g') continue;
+      if (cs.fill && cs.fill !== 'none' && !clear(cs.fill)) add('SVG 填色', cs.fill, el);
+      if (cs.stroke && cs.stroke !== 'none' && !clear(cs.stroke)) add('SVG 描边', cs.stroke, el);
+      continue;
+    }
+    box(cs, el, '', [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()));
+    for (const p of ['::before', '::after']) {
+      const ps = getComputedStyle(el, p);
+      if (!ps.content || ps.content === 'none' || ps.content === 'normal' || ps.display === 'none') continue;
+      box(ps, el, ` 的 ${p}`, ps.content !== '""' && ps.content !== "''");
+    }
   }
   return out;
 }
@@ -82,7 +104,7 @@ export function render({ page, original, versions }) {
     for (const kind of kinds) for (const e of extra[kind]) lines.push(`- ${kind} ${e.value}：${e.n} 处，如「${e.sample}」`);
     lines.push('');
   }
-  if (original) lines.push('回复里逐个交代上面每个新值：是这一版有意加的（为什么），还是要改回原页面的值。');
+  if (original) lines.push('回复里逐个交代上面每个新值：是这一版有意加的（为什么），还是要改回原页面的值。', '', '这张清单不全：元素宽高和间距、同一个值挪到了别的元素上、图片和 canvas 里画的东西，脚本都不比，照 SKILL 第 5 步人工补查。');
   return lines.join('\n') + '\n';
 }
 
@@ -115,16 +137,27 @@ export function wrap(html) {
       + '</head><body>' + html + '</body></html>';
 }
 
-// 两个脚本共用的参数解析：<页面> --out <目录> [--original <原页面>]，顺序随意
+// 两个脚本共用的参数解析：<页面> --out <目录> [--original <原页面>]，顺序随意。
+// 写了选项却没给值（后面没东西，或紧跟着另一个 --选项）时返回 error，不当成没写，免得样式比对被悄悄跳过。
 export function parseArgs(argv) {
-  const valueOf = (flag) => { const i = argv.indexOf(flag); return i >= 0 ? argv[i + 1] ?? null : null; };
-  const taken = new Set(['--out', '--original'].map((f) => argv.indexOf(f)).filter((i) => i >= 0).map((i) => i + 1));
-  return { page: argv.find((a, i) => !a.startsWith('--') && !taken.has(i)) ?? null, out: valueOf('--out'), original: valueOf('--original') };
+  const res = { page: null, out: null, original: null, error: null };
+  const taken = new Set();
+  for (const [flag, key] of [['--out', 'out'], ['--original', 'original']]) {
+    const i = argv.indexOf(flag);
+    if (i < 0) continue;
+    const v = argv[i + 1];
+    if (v === undefined || v.startsWith('--')) { res.error ??= `${flag} 后面要跟一个值`; continue; }
+    res[key] = v;
+    taken.add(i + 1);
+  }
+  res.page = argv.find((a, i) => !a.startsWith('--') && !taken.has(i)) ?? null;
+  return res;
 }
 
 export async function main(argv) {
   const die = (msg) => { console.error(msg); return 2; };
-  const { page, out, original: orig } = parseArgs(argv);
+  const { page, out, original: orig, error } = parseArgs(argv);
+  if (error) return die(error);
   if (!page || !out) return die('用法：node style-diff.mjs <三版页面.html> --out <证据目录> [--original <原页面.html 或网址>]');
   const file = path.resolve(page);
   const outDir = path.resolve(out.replace(/^~(?=\/)/, os.homedir()));
