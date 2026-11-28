@@ -4,7 +4,8 @@
   body { margin: 0; font: 14px/1.5 system-ui, sans-serif; color: #222; }
   main { padding: 24px; width: 720px; }
   h1 { font-size: 20px; margin: 0; }
-  .sub { color: #555; margin: 4px 0 16px; }                                        /* 多余：副标题重复标题 */
+  .sub { color: #555; margin: 4px 0 0; }                                           /* 多余：副标题重复标题 */
+  .motto { color: #555; margin: 4px 0 16px; }                                      /* 已定内容：看着像多余，但常浩定过，要留并列出来问 */
   .hint { color: #555; margin: 0 0 8px; }                                          /* 多余：教用户怎么点 */
   table { border-collapse: collapse; width: 100%; }
   th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #e5e5e5; }
@@ -20,6 +21,7 @@
 <body><main>
   <h1>本月待办</h1>
   <p class="sub" id="sub">这里显示本月的待办事项</p>
+  <p class="motto" id="motto">每一项待办都在当月闭环。</p>
   <p class="hint" id="hint">提示：点击任意一行即可查看详情</p>
   <table>
     <thead><tr><th>事项</th><th>负责人</th><th class="num">金额（元）</th><th>状态</th></tr></thead>
