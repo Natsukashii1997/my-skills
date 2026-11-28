@@ -2,8 +2,9 @@
 // 三版预览页的交付前自查：一次跑完，不靠记得。
 //   1. 页面结构：三块画板（#va #vb #vc）都有内容，模板里的 {{占位}} 都换掉了；
 //   2. 每版产品界面：借 ui-preflight 的脚本，按 #bare-a / #bare-b / #bare-c 单独打开画板，在 1280、1440 查八项；
-//   3. 外壳：借 ui-styles 的 shot.mjs，每版在 1440 和 390 宽各截一张整页图，查横向溢出和页面报错。
-// 用法：node check.mjs <三版页面.html> --out <证据目录>
+//   3. 外壳：借 ui-styles 的 shot.mjs，每版在 1440 和 390 宽各截一张整页图，查横向溢出和页面报错；
+//   4. 给了 --original 时，跑 style-diff.mjs 列出三版里原页面没有的字号、颜色、边框、圆角（只列不判，回复里逐个交代）。
+// 用法：node check.mjs <三版页面.html> --out <证据目录> [--original <原页面.html 或网址>]
 //   页面按 Artifact 的写法从 <title> 写起；脚本查之前照发布时的样子包一层 doctype 和 head（存成证据目录里的 wrapped/<原文件名>）。
 //   Playwright 从 UI_PREFLIGHT_PLAYWRIGHT 指的目录解析；没设就在 ~/Documents/ChatGPT/个人/work/*/ 里找第一个装了 @playwright/test 的项目借用。
 // 退出码：0 全部通过；1 有不通过；2 用法或环境错误。证据目录不能在 /tmp（全局坑 G-01）。
@@ -12,6 +13,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { parseArgs, wrap } from './style-diff.mjs';
 
 const here = path.dirname(fs.realpathSync(fileURLToPath(import.meta.url)));
 const skills = path.resolve(here, '..', '..');
@@ -19,11 +21,10 @@ const PREFLIGHT = path.join(skills, 'ui-preflight', 'scripts', 'ui-preflight.mjs
 const SHOT = path.join(skills, 'ui-styles', 'scripts', 'shot.mjs');
 
 const args = process.argv.slice(2);
-const oi = args.indexOf('--out');
-const out = oi >= 0 ? args[oi + 1] : null;
-const page = args.find((a, i) => !a.startsWith('--') && i !== oi + 1);
+const { page, out, original, error } = parseArgs(args);
 const die = (msg) => { console.error(msg); process.exit(2); };
-if (!page || !out) die('用法：node check.mjs <三版页面.html> --out <证据目录>');
+if (error) die(error);
+if (!page || !out) die('用法：node check.mjs <三版页面.html> --out <证据目录> [--original <原页面.html 或网址>]');
 const file = path.resolve(page);
 const outDir = path.resolve(out.replace(/^~(?=\/)/, os.homedir()));
 if (!fs.existsSync(file)) die(`找不到页面：${file}`);
@@ -40,7 +41,7 @@ function findPlaywright() {
 }
 
 const rows = [];
-const add = (item, pass, note) => rows.push({ item, pass, note });
+const add = (item, pass, note, status) => rows.push({ item, pass, note, status });
 
 // 1. 结构
 const html = fs.readFileSync(file, 'utf8');
@@ -60,10 +61,7 @@ if (!pw) die('找不到 Playwright：设 UI_PREFLIGHT_PLAYWRIGHT=<装了 @playwr
 // Artifact 发布时会给页面包上 doctype 和 head；这里照样包一层再查，不然浏览器按怪异模式渲染，查出来的不是线上的样子
 fs.mkdirSync(path.join(outDir, 'wrapped'), { recursive: true });
 const wrapped = path.join(outDir, 'wrapped', path.basename(file));
-fs.writeFileSync(wrapped, /^\s*<!doctype/i.test(html) ? html
-  : '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
-    + '<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>'
-    + '</head><body>' + html + '</body></html>');
+fs.writeFileSync(wrapped, wrap(html));
 const url = pathToFileURL(wrapped).href;
 const pre = spawnSync(process.execPath, [PREFLIGHT,
   '--url', `${url}#bare-a`, '--name', 'A', '--url', `${url}#bare-b`, '--name', 'B', '--url', `${url}#bare-c`, '--name', 'C',
@@ -82,8 +80,16 @@ for (const v of ['a', 'b', 'c']) {
   add(`外壳 · 方案 ${v.toUpperCase()}（1440、390）`, r.status === 0, r.status === 0 ? '无横向溢出、无报错' : (bad.map((j) => JSON.stringify(j)).join('；') || (r.stderr || '').trim().split('\n').pop()));
 }
 
+// 4. 样式比对（给了 --original 才跑）：只列不判
+if (original) {
+  const r = spawnSync(process.execPath, [path.join(here, 'style-diff.mjs'), file, '--out', outDir, '--original', original],
+    { encoding: 'utf8', env: { ...process.env, UI_PREFLIGHT_PLAYWRIGHT: pw } });
+  const counts = [...(r.stdout || '').matchAll(/^## 方案 (\w)：原页面没有的值（(.+?)）/gm)].map((m) => `${m[1]} ${m[2]}`).join('，');
+  add('样式比对：原页面没有的值', r.status === 0, r.status === 0 ? `${counts}；见 ${path.join(outDir, 'style-diff.md')}，回复里逐个交代；脚本不比的宽高、间距等照 SKILL 第 5 步人工补查` : (r.stderr || '').trim().split('\n').pop(), '已生成，待逐个交代');
+}
+
 const md = ['# 三版预览自查', '', `页面：${file}`, `时间：${new Date().toISOString()}`, '', '| 检查 | 结果 | 说明 |', '|---|---|---|',
-  ...rows.map((r) => `| ${r.item} | ${r.pass ? '通过' : '**不通过**'} | ${r.note || ''} |`), '',
+  ...rows.map((r) => `| ${r.item} | ${r.pass ? (r.status || '通过') : '**不通过**'} | ${r.note || ''} |`), '',
   `截图：${shotDir}（外壳）；ui-preflight 的整页和标注截图在它自己的报告目录里。截图要自己打开看，脚本过了不等于好看。`].join('\n');
 fs.writeFileSync(path.join(outDir, 'three-versions-check.md'), md + '\n');
 console.log(md);
