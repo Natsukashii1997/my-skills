@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>ui-preflight 多余文字</title>
+<style>
+  body { margin: 0; font: 14px/1.5 system-ui, sans-serif; color: #222; }
+  main { padding: 24px; width: 720px; }
+  h1 { font-size: 20px; margin: 0; }
+  .sub { color: #555; margin: 4px 0 0; }                                           /* 多余：副标题重复标题 */
+  .motto { color: #555; margin: 4px 0 16px; }                                      /* 已定内容：看着像多余，但常浩定过，要留并列出来问 */
+  .hint { color: #555; margin: 0 0 8px; }                                          /* 多余：教用户怎么点 */
+  table { border-collapse: collapse; width: 100%; }
+  th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #e5e5e5; }
+  th.num, td.num { text-align: right; }
+  .tag { display: inline-block; padding: 0 6px; border-radius: 4px; background: #eef5ee; color: #1f5f2a; }  /* 多余：每行都挂「正常」 */
+  .tag.late { background: #fdecea; color: #8a1c12; }                              /* 要留：只有逾期才标 */
+  .dev { color: #555; font-size: 12px; margin: 8px 0 0; }                         /* 多余：写给开发者看的 */
+  .ai { color: #555; font-size: 12px; margin: 4px 0 0; }                          /* 要留：AI 产出留痕；但只写了执行方，缺接入方式和时间，要列出来 */
+  .legal { color: #555; font-size: 12px; margin: 4px 0 0; }                       /* 要留：隐私说明（合规） */
+  .err { margin: 16px 0 0; padding: 8px 12px; background: #fdecea; color: #8a1c12; }  /* 要留：报错告诉用户怎么办 */
+  button { font: inherit; }
+</style></head>
+<body><main>
+  <h1>本月待办</h1>
+  <p class="sub" id="sub">这里显示本月的待办事项</p>
+  <p class="motto" id="motto">每一项待办都在当月闭环。</p>
+  <p class="hint" id="hint">提示：点击任意一行即可查看详情</p>
+  <table>
+    <thead><tr><th>事项</th><th>负责人</th><th class="num">金额（元）</th><th>状态</th></tr></thead>
+    <tbody>
+      <tr><td>续费确认</td><td>A 同学</td><td class="num">12,800.00</td><td><span class="tag">正常</span></td></tr>
+      <tr><td>合同归档</td><td>B 同学</td><td class="num">3,600.00</td><td><span class="tag">正常</span></td></tr>
+      <tr><td>发票复核</td><td>C 同学</td><td class="num">960.00</td><td><span class="tag late" id="late">逾期 3 天</span></td></tr>
+      <tr><td>回访记录</td><td>D 同学</td><td class="num">0.00</td><td><span class="tag">正常</span></td></tr>
+      <tr><td>退款审批</td><td>E 同学</td><td class="num">1,200.00</td><td><span class="tag">正常</span></td></tr>
+    </tbody>
+  </table>
+  <p class="dev" id="dev">数据来源：GET /api/v2/todos · todo_list_v3 · build 1.3.0</p>
+  <p class="ai" id="ai">本页摘要由 Codex 生成</p>
+  <p class="legal" id="legal">名单里的手机号只用于本次续费跟进，不得导出或转发给外部人员。</p>
+  <div class="err" id="err">上周数据读取失败，点「重新读取」再试一次；还不行请联系管理员。 <button>重新读取</button></div>
+</main></body></html>
