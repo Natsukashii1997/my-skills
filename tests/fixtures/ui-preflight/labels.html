@@ -12,7 +12,8 @@
   .tag { display: inline-block; padding: 0 6px; border-radius: 4px; background: #eef5ee; color: #1f5f2a; }  /* 多余：每行都挂「正常」 */
   .tag.late { background: #fdecea; color: #8a1c12; }                              /* 要留：只有逾期才标 */
   .dev { color: #555; font-size: 12px; margin: 8px 0 0; }                         /* 多余：写给开发者看的 */
-  .ai { color: #555; font-size: 12px; margin: 4px 0 0; }                          /* 要留：AI 产出留痕 */
+  .ai { color: #555; font-size: 12px; margin: 4px 0 0; }                          /* 要留：AI 产出留痕；但只写了执行方，缺接入方式和时间，要列出来 */
+  .legal { color: #555; font-size: 12px; margin: 4px 0 0; }                       /* 要留：隐私说明（合规） */
   .err { margin: 16px 0 0; padding: 8px 12px; background: #fdecea; color: #8a1c12; }  /* 要留：报错告诉用户怎么办 */
   button { font: inherit; }
 </style></head>
@@ -32,5 +33,6 @@
   </table>
   <p class="dev" id="dev">数据来源：GET /api/v2/todos · todo_list_v3 · build 1.3.0</p>
   <p class="ai" id="ai">本页摘要由 Codex 生成</p>
+  <p class="legal" id="legal">名单里的手机号只用于本次续费跟进，不得导出或转发给外部人员。</p>
   <div class="err" id="err">上周数据读取失败，点「重新读取」再试一次；还不行请联系管理员。 <button>重新读取</button></div>
 </main></body></html>
