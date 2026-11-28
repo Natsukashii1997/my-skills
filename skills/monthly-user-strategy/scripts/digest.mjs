@@ -12,6 +12,7 @@ const f = JSON.parse(readFileSync(args[0], 'utf8'));
 
 const REGIONS = [['uk', '英国'], ['us', '美国'], ['hk', '香港'], ['au', '澳洲'], ['ca', '加拿大'], ['other', '其他']];
 const OWN = new Set(['uk', 'us', 'hk', 'au', 'ca']);
+const REGION_NAME = Object.fromEntries(REGIONS);
 const STRENGTH = { verified: 'strong', ruled: 'strong', source: 'partial', guess: 'weak', conflict: 'weak' };
 const BIZ = { 事实记录: 'strong', 业务观察: 'partial', 管理判断: 'weak' };
 // 05 第 7 节默认矩阵。
@@ -46,9 +47,12 @@ p('## 业务背景卡条目');
 p('');
 if (!business.length) p('（无）');
 else {
-  p('| evidenceId | 字段 | 类型 | 强度上限 | 原文 | 依据 |');
-  p('|---|---|---|---|---|---|');
-  for (const e of business) p(`| ${e.evidenceId} | ${e.field} | ${e.bizType} | ${BIZ[e.bizType] ?? '?'} | ${cell(e.text)} | ${cell(e.basis)} |`);
+  // 适用国家、适用人群、来源（GPT 2.0.0 审核 P1-03）：洞察的适用范围不能比证据宽，没填就明写范围不明。
+  const UNSET = '未填（范围不明）';
+  const countries = e => (e.countries || []).length ? e.countries.map(c => REGION_NAME[c] ? `${REGION_NAME[c]}（${c}）` : c).join('、') : UNSET;
+  p('| evidenceId | 字段 | 类型 | 强度上限 | 适用国家 | 适用人群 | 原文 | 依据 | 来源 |');
+  p('|---|---|---|---|---|---|---|---|---|');
+  for (const e of business) p(`| ${e.evidenceId} | ${e.field} | ${e.bizType} | ${BIZ[e.bizType] ?? '?'} | ${countries(e)} | ${e.relation || UNSET} | ${cell(e.text)} | ${cell(e.basis) || '未写'} | ${cell(e.source?.ref) || '未写'} |`);
 }
 p('');
 
@@ -89,14 +93,16 @@ for (const [key, name] of REGIONS) {
   const xunGroups = new Map();
   for (const e of events.filter(x => !context.includes(x) && x.dates.precision === 'day' && (x.dates.to || x.dates.from || '').startsWith(f.month))) {
     const end = e.dates.to || e.dates.from, d = Number(end.slice(8, 10));
-    const g = xunGroups.get(e.eventType) || [[], [], []];
-    g[d <= 10 ? 0 : d <= 20 ? 1 : 2].push(`${e.school} ${end.slice(5)}`);
+    // 按学校计数：同一所学校同一旬有两段日期只算一所，日期并列（2.1.0 模拟试跑发现按事件计数会多算）
+    const g = xunGroups.get(e.eventType) || [new Map(), new Map(), new Map()];
+    const bucket = g[d <= 10 ? 0 : d <= 20 ? 1 : 2];
+    bucket.set(e.school, [...(bucket.get(e.school) || []), end.slice(5)]);
     xunGroups.set(e.eventType, g);
   }
   if (xunGroups.size) {
     p('');
     p('结束日分旬（本月精确到日的事件；写「上旬 / 中旬 / 下旬」前逐校对照）：');
-    for (const [type, g] of xunGroups) p(`- ${type}：${['上旬（1–10 日）', '中旬（11–20 日）', '下旬（21 日起）'].map((n, i) => `${n}${g[i].length} 所${g[i].length ? `：${g[i].map(cell).join('、')}` : ''}`).join('｜')}`);
+    for (const [type, g] of xunGroups) p(`- ${type}：${['上旬（1–10 日）', '中旬（11–20 日）', '下旬（21 日起）'].map((n, i) => `${n}${g[i].size} 所${g[i].size ? `：${[...g[i]].map(([s, ds]) => cell(`${s} ${ds.join('、')}`)).join('；')}` : ''}`).join('｜')}`);
   }
   const doubts = events.filter(e => e.dates.precision !== 'day' || ['guess', 'conflict'].includes(e.verification) || e.anchorType === 'anchor_unknown' || e.ambiguous);
   p('');

@@ -1,5 +1,7 @@
 # generate 模式的阶段要求（批 1）
 
+> **2.0.0 起**：本文是第 1 轮（完整研究）的阶段要求。阶段 05 之后的「策略综合与主线形成」、阶段 06 策略设计、阶段 07 论证自检，按 niuma-home `10-报告内容规格.md`（report-v2.1）第 7.2 节在第 2–5 轮完成，见 `insight.md`、`design.md`、`quality-content.md`。下文「批 1 不做 06–07」「`opportunities`、`strategies` 必须为空」只约束研究层文档（当前 Schema），机会、产品、促销写在 `design.md` 和报告里。
+
 摘自 niuma-home `docs/策略规则/06-SCOUT-8运行规范.md` **scout-v1.1**。规则以原文为准；原文版本号变了，先核对本文再用。
 
 批 1 的 generate 只做阶段 01–05 和 08。06 策略设计、07 论证自检（独立复审）在批 2；批 1 的提交里 `opportunities`、`strategies` 必须是空数组，服务端会拦截非空。
