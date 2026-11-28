@@ -180,6 +180,58 @@ class Collect(unittest.TestCase):
                 "--ids", "33333333")
 
 
+class Replied(unittest.TestCase):
+    """my-skills#129：回过话之后，看会话动没动过，不只看有没有新的状态行。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.now = time.time()
+        self.dirs = make_fixtures.build(self.tmp.name, self.now, make_fixtures.replied(self.now))
+        rows, _ = inbox.scan(self.dirs["meta"], self.dirs["projects"], 14, self.now)
+        self.rows = {row["id8"][0]: row for row in rows}
+        kept, self.dropped = inbox.sift(rows, {}, set(), self.now)
+        self.kept = {row["id8"][0]: row for row in kept}
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_reply_taken_is_not_listed(self):
+        # 1 办完了没写状态行；2 做到一半进程没了；3 做到一半被打断：回的话都被接走了。
+        for tag in "123":
+            self.assertNotIn(tag, self.kept)
+        self.assertEqual(self.dropped["你已回复、会话已接着做"], 5)
+
+    def test_words_after_an_injected_reminder_are_his(self):
+        self.assertEqual(self.rows["4"]["userAfter"][-1]["text"], "按推荐开工")
+        self.assertNotIn("4", self.kept)
+
+    def test_reply_nobody_took_is_still_listed(self):
+        self.assertTrue(self.kept["5"]["replyUnanswered"])
+        out = os.path.join(self.tmp.name, "run")
+        run(self.dirs, "collect", "--out", out)
+        with open(os.path.join(out, "candidates.md")) as handle:
+            self.assertIn("你 2.1 天前回了「用乙」，之后会话没有动过", handle.read())
+
+    def test_host_written_reply_is_not_the_session_moving(self):
+        self.assertTrue(self.kept["7"]["replyUnanswered"])
+
+    def test_all_record_files_of_a_session_are_read(self):
+        row = self.rows["8"]
+        self.assertEqual([reply["text"] for reply in row["userAfter"]], ["选甲"])
+        self.assertIn("首页用哪一版", row["status"])
+        self.assertNotIn("8", self.kept)
+
+    def test_new_question_after_the_reply_is_listed(self):
+        row = self.kept["9"]
+        self.assertFalse(row["replyUnanswered"])
+        self.assertIn("重新加载插件", row["status"])
+
+    def test_fresh_reply_keeps_its_old_reason(self):
+        self.assertNotIn("a", self.kept)
+        self.assertEqual(self.dropped["你已回复、还在做"], 1)
+        self.assertEqual(sorted(self.kept), ["5", "7", "9"])
+
+
 class Parsing(unittest.TestCase):
     def test_status_line_variants(self):
         for line in ("**当前状态**：〔等你决定〕要选版。", "当前状态:〔等你决定〕要选版。",
