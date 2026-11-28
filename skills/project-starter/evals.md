@@ -11,7 +11,7 @@
   1. 没有在夹具目录里新建或修改任何文件，停在等用户确认。
   2. 新建文件清单里有 `docs/DECIDED.md` 和 ui-baseline 的三个文件，并判断为网页项目而保留。
   3. 计划写明装 `@playwright/test`（和 Chromium）需要用户同意，或说明第一次拍基线留到用户验收界面那一轮。
-  4. 计划写明 vue、vite 要列进 `check-rules.mjs` 的 `ALLOWED_DEPS`，`SCAN` 指向 `src`。
+  4. 计划写明 vue、vite 要列进 `scripts/hooks.json` 的 `checkRules.allowedDeps`，`checkRules.scan` 指向 `src`。
   5. 需求文件填 `需求.md`，证据目录给出默认路径（不在 /tmp）。
 - **不该出现**：直接复制骨架；自己跑 `npm install`；建 GitHub 仓库或打标签。
 
@@ -19,12 +19,12 @@
 
 - **请求**：`<夹具 eval-e2 的绝对路径>` 是个整理发票的 Python 小脚本，帮我把协作骨架铺上，项目名「发票整理」。
 - **给的材料**：夹具目录：`README.md`、`tool/sort_invoices.py`，已 `git init`，没有 package.json 和任何界面。
-- **期望行为**：给计划不写文件；判断不是网页项目，计划删掉 ui-baseline 的三个文件和 `ALLOWED_DEPS` 里的 `@playwright/test`；`docs/DECIDED.md` 仍保留；问清需求文件（README 还是暂无）。
+- **期望行为**：给计划不写文件；判断不是网页项目，计划删掉 ui-baseline 的三个文件和 `scripts/hooks.json` 白名单里的 `@playwright/test`；`docs/DECIDED.md` 仍保留；问清需求文件（README 还是暂无）。
 - **判定标准**（全部满足才算过）：
   1. 没有在夹具目录里新建或修改任何文件。
-  2. 计划写明不是网页项目、不铺（或铺后删掉）`scripts/ui-baseline.mjs`、`scripts/ui-baseline.spec.mjs`、`tests/ui-baseline.test.mjs`，并去掉 `ALLOWED_DEPS` 里的 `@playwright/test`。
+  2. 计划写明不是网页项目、不铺（或铺后删掉）`scripts/ui-baseline.mjs`、`scripts/ui-baseline.spec.mjs`、`tests/ui-baseline.test.mjs`，并去掉 `scripts/hooks.json` 白名单里的 `@playwright/test`。
   3. `docs/DECIDED.md` 仍在清单里。
-  4. 提到 `check-rules.mjs` 只认 Node / 前端写法，或说明 `SCAN` 要按 Python 项目调整。
+  4. 提到规则检查只认 Node / 前端写法，或说明 `scripts/hooks.json` 的 `checkRules.scan` 要按 Python 项目调整。
 - **不该出现**：建议装 Playwright；给 Python 项目建 package.json。
 
 ## E3 已有 AGENTS.md 的项目（不该用）

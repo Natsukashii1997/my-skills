@@ -1,8 +1,8 @@
 ---
 name: project-starter
-description: 「项目起步」：给新项目、或还没有 AGENTS.md / LESSONS 的项目铺 Claude 与 Codex 接力用的两层骨架：协作规矩（AGENTS 入口与导航表、LESSONS 与三级升级、交接模板与格式测试、防伪造五条、通用规则检查脚本、已定内容登记表、网页基线截图对比）和 Matt Pocock 开发流程（GitHub Issues 看板、分流标签、领域文档约定、AGENTS 里的 Agent skills 一节）。仅在用户要求给项目铺协作骨架、或显式调用 project-starter 时使用；先列计划等确认，不覆盖已有文件。
+description: 「项目起步」：给新项目、或还没有 AGENTS.md / LESSONS 的项目铺 Claude 与 Codex 接力用的两层骨架：协作规矩（AGENTS 入口与导航表、LESSONS 与三级升级、交接模板与格式测试、防伪造五条、提交和推送前钩子（转发到 agent-kit 共用实现，差异写 scripts/hooks.json）、已定内容登记表、网页基线截图对比）和 Matt Pocock 开发流程（GitHub Issues 看板、分流标签、领域文档约定、AGENTS 里的 Agent skills 一节）。仅在用户要求给项目铺协作骨架、或显式调用 project-starter 时使用；先列计划等确认，不覆盖已有文件。
 metadata:
-  version: "0.5.2"
+  version: "0.6.0"
   governance:
     network: none
     external-writes: required
@@ -34,11 +34,11 @@ metadata:
    - `AGENTS.md`：`{{项目名}}`、`{{一句话说明}}`（这是什么、给谁用）、`{{需求文件}}`、`{{证据目录}}`。没有需求文件时，把引用它的那句和那一行改成「暂无需求文件」。
    - `docs/agents/issue-tracker.md`：`{{GitHub仓库}}`。
    - `CURRENT.md`：`{{日期}}`、`{{阶段}}`、`{{下一步}}`、`{{执行方}}`（Claude / Codex）、`{{提交状态}}`、`{{开工时刻}}`、`{{测试结果}}`、`{{检查输出}}`、`{{遗留}}`。
-6. 按项目实际改 `AGENTS.md`：「结构」列出项目里已有的目录和文件；「运行」加项目自己的命令；「规则」不适用的条删掉。`scripts/check-rules.mjs` 的 `SCAN` 指向项目源码目录；项目已有依赖要列进 `ALLOWED_DEPS`，并在交接里写明。
-   - 网页项目：基线截图要用 `@playwright/test`（已在 `ALLOWED_DEPS` 里）。装依赖、建 `docs/design/pages.json`（格式见 `scripts/ui-baseline.mjs` 开头）列进第 3 步的计划，用户同意再装；第一次拍基线等用户验收界面的那一轮再拍，并登记进 `docs/DECIDED.md`。
-   - 不是网页项目：删掉 `scripts/ui-baseline.mjs`、`scripts/ui-baseline.spec.mjs`、`tests/ui-baseline.test.mjs`，`ALLOWED_DEPS` 里的 `@playwright/test` 和 AGENTS.md 里提到它们的几处一起删；`docs/DECIDED.md` 照样留着（文案、交互、数据格式也会定）。
-7. 跑 `node --test tests/*.test.mjs` 和 `node scripts/check-rules.mjs`（在项目根目录），把原样结果填进 `CURRENT.md` 顶部那一节，再跑一次测试。
-7b. 装钩子：`git config core.hooksPath scripts/hooks`（本机配置，不进仓库）。全量测试超过 3 分钟的项目，把 `scripts/hooks/pre-push` 里的 `TESTS` 改成只跑快的部分，并在 AGENTS「运行」写明全量在哪跑。不在 git 仓库里时跳过，写进交接。
+6. 按项目实际改 `AGENTS.md`：「结构」列出项目里已有的目录和文件；「运行」加项目自己的命令；「规则」不适用的条删掉。`scripts/hooks.json` 的 `checkRules.scan` 指向项目源码目录；项目已有依赖要列进 `checkRules.allowedDeps`，并在交接里写明（写法见 agent-kit `git-hooks/config.mjs`）。
+   - 网页项目：基线截图要用 `@playwright/test`（已在 `allowedDeps` 里）。装依赖、建 `docs/design/pages.json`（格式见 `scripts/ui-baseline.mjs` 开头）列进第 3 步的计划，用户同意再装；第一次拍基线等用户验收界面的那一轮再拍，并登记进 `docs/DECIDED.md`。
+   - 不是网页项目：删掉 `scripts/ui-baseline.mjs`、`scripts/ui-baseline.spec.mjs`、`tests/ui-baseline.test.mjs`，`scripts/hooks.json` 白名单里的 `@playwright/test` 和 AGENTS.md 里提到它们的几处一起删；`docs/DECIDED.md` 照样留着（文案、交互、数据格式也会定）。
+7. 跑 `node --test tests/*.test.mjs` 和 `node ~/Library/Application\ Support/agent-kit/runtime/git-hooks/check-rules.mjs .`（在项目根目录；本机还没装 agent-kit 共用钩子时先在 agent-kit 主目录 main 上跑 `node tools/install.mjs --apply`），把原样结果填进 `CURRENT.md` 顶部那一节，再跑一次测试。
+7b. 装钩子：`git config core.hooksPath scripts/hooks`（本机配置，不进仓库）。钩子只是转发：实现在 agent-kit `git-hooks/`，本机没装就拦下推送和提交。全量测试超过 3 分钟的项目，把 `scripts/hooks.json` 的 `prePushTests` 改成只跑快的部分，并在 AGENTS「运行」写明全量在哪跑。不在 git 仓库里时跳过，写进交接。
 8. 有 GitHub 远端时，把 `docs/agents/triage-labels.md` 里的 5 个标签建上：`gh label create <标签> --description <含义> --force`（外部写入，列进第 3 步的计划，用户确认后再做）。
 9. 用户同意提交时才提交，只提交本次新建的文件。
 
@@ -52,4 +52,6 @@ metadata:
 
 ## 骨架怎么进化
 
-在某个项目里发现骨架（模板、测试、检查脚本）该改的，先出提案、用户批准，再改本 skill 的 `skeleton/`，按本仓库流程走 PR；已经起步的项目不自动同步，需要时按 diff 手工带过去。
+在某个项目里发现骨架（模板、测试）该改的，先出提案、用户批准，再改本 skill 的 `skeleton/`，按本仓库流程走 PR；已经起步的项目不自动同步，需要时按 diff 手工带过去。
+
+钩子（pre-push、commit-msg）和规则检查不在这里改：实现只在 agent-kit `git-hooks/` 留一份，骨架只铺几行转发和 `scripts/hooks.json` 模板（agent-kit#133）。在那边改、装机后，所有转发的项目一起生效，不用手工带。

@@ -1,0 +1,8 @@
+{
+  "说明": "推送前检查（规则检查 + 测试）和提交说明检查的实现在 agent-kit git-hooks/，各项目只写和默认值不同的地方，写法见 agent-kit git-hooks/config.mjs。@playwright/test 只给 scripts/ui-baseline.mjs 用；不是网页项目、删了那个脚本的，白名单里这一项也删掉。",
+  "prePushTests": "node --test tests/*.test.mjs",
+  "checkRules": {
+    "scan": ["src", "server"],
+    "allowedDeps": ["@playwright/test"]
+  }
+}
